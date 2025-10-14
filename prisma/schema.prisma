@@ -1,6 +1,7 @@
-// Simplified E-commerce Prisma Schema
-// Removed multi-tenant domains/subdomains complexity
-// Kept advanced features for single-tenant e-commerce
+// ============================================================================
+// SOFTWARE COMPANY WEBSITE SCHEMA
+// Features: Portfolio, Services, Team, Blog, Contact, Analytics
+// ============================================================================
 
 generator client {
   provider = "prisma-client-js"
@@ -17,23 +18,71 @@ datasource db {
 // ============================================================================
 
 enum UserRole {
-  ADMIN // Platform admin
+  ADMIN
+  EDITOR
+  VIEWER
 }
 
 enum Gender {
   MALE
   FEMALE
+  OTHER
 }
 
-enum providerSession {
-  GOOGLE
-  CREDENTIALS
+enum ImageType {
+  PROFILE
+  SERVICE
+  PROJECT
+  SLIDESHOW
+  CLIENT
+  BLOG
+  TEAM
+  HERO
+}
+
+enum SlideshowType {
+  SERVICES
+  PROJECTS
+  TESTIMONIALS
+  TEAM
+  CLIENTS
+  HERO
+  CUSTOM
+}
+
+enum CompositionType {
+  SINGLE
+  GRID
+  CAROUSEL
+  STACKED
+  FADE
+  CUSTOM
+}
+
+enum ProjectStatus {
+  PLANNING
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
+}
+
+enum ContactStatus {
+  NEW
+  READ
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum BlogStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
 }
 
 // ============================================================================
 // USER MANAGEMENT
 // ============================================================================
-
 model User {
   id                      String   @id @default(cuid())
   name                    String
@@ -48,10 +97,10 @@ model User {
   isVerifiedForEachDevice Boolean  @default(false)
   emailConfirmed          Boolean  @default(false)
   googleId                String?
- 
 
   profile  Profile?
   sessions Session[]
+  blogs Blog[]
 
   @@map("users")
 }
@@ -86,88 +135,422 @@ model Profile {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   isProfileComplete Boolean   @default(false)
-
   // Relations
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  avatar Image? @relation("ProfileAvatar", fields: [avatarId], references: [id])
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  avatar            Image?    @relation("ProfileAvatar", fields: [avatarId], references: [id], onDelete: Cascade)
 
   @@map("profiles")
 }
 
-// apparanceThemes  for later 
+
 
 // ============================================================================
-// CUSTOMER FEATURES
+// COMPANY INFO
 // ============================================================================
 
-model Address {
-
-  id         String   @id @default(cuid())
-  userId     String
-
-  CompanyInfo    String?
-  address1   String
-  address2   String?
-  city       String
-  state      String
-  country    String
-  postalCode String
-  phone      String?
-  isDefault  Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  AboutId String
-  // Relations
-  About About @relation(fields: [AboutId] , references: [id])
-  @@map("addresses")
-}
-
-// ============================================================================
-// MARKETING & PROMOTIONS
-// ============================================================================
-
-// ============================================================================
-// CONTENT MANAGEMENT
-// ============================================================================
-model Services {
-  id          String @unique   @default(cuid())
-  description String?
+model CompanyInfo {
+  id          String  @id @default(cuid())
   name        String
-  imageId     String
-  Image       Image    @relation("ServiseImage", fields: [imageId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  tagline     String?
+  description String?
+  email       String
+  phone       String?
+  address     String?
+  city        String?
+  country     String?
+  postalCode  String?
+
+  // Social Media
+  facebook  String?
+  twitter   String?
+  linkedin  String?
+  instagram String?
+  github    String?
+  youtube   String?
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+  metaKeywords    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("company_info")
 }
 
+// ============================================================================
+// SERVICES
+// ============================================================================
+
+model Service {
+  id              String  @id @default(cuid())
+  name            String
+  slug            String  @unique
+  description     String?
+  richDescription String? @db.Text
+  icon            String? // Icon name or URL
+  imageId         String?
+  price           String? // e.g., "Starting from $5000"
+  isActive        Boolean @default(true)
+  isFeatured      Boolean @default(false)
+  order           Int     @default(0)
+
+  image      Image?             @relation("ServiceImage", fields: [imageId], references: [id])
+  slideShows ServiceSlideShow[]
+  projects   Project[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([isActive] )
+  @@map("services")
+}
+
+// ============================================================================
+// PROJECTS/PORTFOLIO
+// ============================================================================
+
+model Project {
+  id              String        @id @default(cuid())
+  title           String
+  slug            String        @unique
+  description     String?
+  richDescription String?       @db.Text
+  clientName      String?
+  clientCompany   String?
+  projectUrl      String?
+  githubUrl       String?
+  status          ProjectStatus @default(COMPLETED)
+  startDate       DateTime?
+  endDate         DateTime?
+  imageId         String?
+  isFeatured      Boolean       @default(false)
+  order           Int           @default(0)
+
+  image        Image?              @relation("ProjectImage", fields: [imageId], references: [id])
+  technologies ProjectTechnology[]
+  services     Service[]
+  slideShows   ProjectSlideShow[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([isFeatured])
+  @@map("projects")
+}
+
+model Technology {
+  id       String  @id @default(cuid())
+  name     String  @unique
+  slug     String  @unique
+  icon     String? // Icon name or URL
+  category String? // e.g., "Frontend", "Backend", "Database"
+
+  projects  ProjectTechnology[]
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@map("technologies")
+}
+
+model ProjectTechnology {
+  projectId    String
+  technologyId String
+
+  project    Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  technology Technology @relation(fields: [technologyId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, technologyId])
+}
+
+// ============================================================================
+// TEAM
+// ============================================================================
+
+model TeamMember {
+  id       String  @id @default(cuid())
+  name     String
+  slug     String  @unique
+  position String
+  bio      String? @db.Text
+  email    String?
+  phone    String?
+  imageId  String?
+
+  // Social
+  linkedin String?
+  github   String?
+  twitter  String?
+
+  isActive   Boolean @default(true)
+  isFeatured Boolean @default(false)
+  order      Int     @default(0)
+
+  image      Image?          @relation("TeamImage", fields: [imageId], references: [id])
+  slideShows TeamSlideShow[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@map("team_members")
+}
+
+// ============================================================================
+// CLIENTS
+// ============================================================================
+
+model Client {
+  id              String  @id @default(cuid())
+  name            String
+  slug            String  @unique
+  description     String?
+  richDescription String? @db.Text
+  website         String?
+  industry        String?
+  imageId         String?
+  logoId          String?
+  isActive        Boolean @default(true)
+  isFeatured      Boolean @default(false)
+  order           Int     @default(0)
+
+  image      Image?            @relation("ClientImage", fields: [imageId], references: [id])
+  logo       Image?            @relation("ClientLogo", fields: [logoId], references: [id])
+  slideShows ClientSlideShow[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@map("clients")
+}
+
+// ============================================================================
+// TESTIMONIALS
+// ============================================================================
+
+model Testimonial {
+  id             String  @id @default(cuid())
+  clientName     String
+  clientPosition String?
+  clientCompany  String?
+  content        String  @db.Text
+  rating         Int     @default(5)
+  avatarId       String?
+  isActive       Boolean @default(true)
+  isFeatured     Boolean @default(false)
+  order          Int     @default(0)
+
+  avatar     Image?                 @relation("TestimonialAvatar", fields: [avatarId], references: [id])
+  slideShows TestimonialSlideShow[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("testimonials")
+}
+
+// ============================================================================
+// BLOG
+// ============================================================================
+
+model Blog {
+  id              String     @id @default(cuid())
+  title           String
+  slug            String     @unique
+  excerpt         String?
+  content         String     @db.Text
+  imageId         String?
+  authorId        String
+  status          BlogStatus @default(DRAFT)
+  publishedAt     DateTime?
+  isFeatured      Boolean    @default(false)
+  views           Int        @default(0)
+  readingTime     Int? // in minutes
+  metaTitle       String?
+  metaDescription String?
+  metaKeywords    String?
+
+  image      Image?         @relation("BlogImage", fields: [imageId], references: [id])
+  author     User           @relation(fields: [authorId], references: [id])
+  categories BlogCategory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([status])
+  @@index([publishedAt])
+  @@map("blogs")
+}
+
+model Category {
+  id   String @id @default(cuid())
+  name String @unique
+  slug String @unique
+
+  blogs     BlogCategory[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@map("categories")
+}
+
+model BlogCategory {
+  blogId     String
+  categoryId String
+
+  blog     Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([blogId, categoryId])
+}
+
+// ============================================================================
+// SLIDESHOW SYSTEM
+// ============================================================================
 model SlideShow {
-  id          String @unique   @default(cuid())
+  
+  id          String          @id @default(cuid())
+  title       String
+  slug        String          @unique
   description String?
-  name        String
-  imageId     String
-  // Image       Image    @relation("SlideShowImage", fields: [imageId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  Image       Image    @relation( "SlideShowImage",fields: [imageId], references: [id])
+  type        SlideshowType
+  composition CompositionType
+  background  String? // CSS color or gradient
+  isActive    Boolean         @default(true)
+  autoPlay    Boolean         @default(false)
+  interval    Int             @default(5000) // milliseconds
+  order       Int             @default(0)
+
+  services     ServiceSlideShow[]
+  projects     ProjectSlideShow[]
+  clients      ClientSlideShow[]
+  testimonials TestimonialSlideShow[]
+  team         TeamSlideShow[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([type])
+  @@map("slideshows")
 }
 
-model Clients {
-  id          String  @unique  @default(cuid())
-  description String?
-  // clientLink  String?
-  name        String
-  imageId     String
-  Image       Image    @relation("ClientImage", fields: [imageId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model ServiceSlideShow {
+  id          String  @id @default(cuid())
+  serviceId   String
+  slideShowId String
+  order       Int     @default(0)
+  isVisible   Boolean @default(true)
+  customTitle String?
+  customDesc  String?
+
+  service   Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  slideShow SlideShow @relation(fields: [slideShowId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([serviceId, slideShowId])
+  @@index([slideShowId, order])
 }
 
-model About {
-  id   String  @unique @default(cuid())
-  info String?
-  phoneNumber  String?
-  Email     String?
-  Address  Address[]
+model ProjectSlideShow {
+  id          String  @id @default(cuid())
+  projectId   String
+  slideShowId String
+  order       Int     @default(0)
+  isVisible   Boolean @default(true)
 
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  slideShow SlideShow @relation(fields: [slideShowId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, slideShowId])
+  @@index([slideShowId, order])
+}
+
+model ClientSlideShow {
+  id          String  @id @default(cuid())
+  clientId    String
+  slideShowId String
+  order       Int     @default(0)
+  isVisible   Boolean @default(true)
+
+  client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  slideShow SlideShow @relation(fields: [slideShowId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clientId, slideShowId])
+  @@index([slideShowId, order])
+}
+
+model TestimonialSlideShow {
+  id            String  @id @default(cuid())
+  testimonialId String
+  slideShowId   String
+  order         Int     @default(0)
+  isVisible     Boolean @default(true)
+
+  testimonial Testimonial @relation(fields: [testimonialId], references: [id], onDelete: Cascade)
+  slideShow   SlideShow   @relation(fields: [slideShowId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([testimonialId, slideShowId])
+  @@index([slideShowId, order])
+}
+
+model TeamSlideShow {
+  id          String  @id @default(cuid())
+  teamId      String
+  slideShowId String
+  order       Int     @default(0)
+  isVisible   Boolean @default(true)
+
+  team      TeamMember @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  slideShow SlideShow  @relation(fields: [slideShowId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teamId, slideShowId])
+  @@index([slideShowId, order])
+}
+
+// ============================================================================
+// CONTACT & INQUIRIES
+// ============================================================================
+
+model Contact {
+  id          String        @id @default(cuid())
+  name        String
+  email       String
+  phone       String?
+  company     String?
+  subject     String?
+  message     String        @db.Text
+  status      ContactStatus @default(NEW)
+  ipAddress   String?
+  userAgent   String?
+  respondedAt DateTime?
+  notes       String?       @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("contacts")
 }
 
 // ============================================================================
@@ -175,30 +558,33 @@ model About {
 // ============================================================================
 
 model Image {
-  id        String   @id @default(cuid())
-  filename  String
-  url       String
-  alt       String?
-  size      Int? // File size in bytes
-  width     Int?
-  height    Int?
-  blurHash  String?
+  id       String    @id @default(cuid())
+  filename String
+  url      String
+  alt      String?
+  size     Int? // bytes
+  width    Int?
+  height   Int?
+  blurHash String?
+  fileHash String
+  key      String
+  imageType ImageType  
+  type  String
+  customId String?
+
+  profileAvatars Profile[]     @relation("ProfileAvatar")
+  services       Service[]     @relation("ServiceImage")
+  projects       Project[]     @relation("ProjectImage")
+  clients        Client[]      @relation("ClientImage")
+  clientLogos    Client[]      @relation("ClientLogo")
+  testimonials   Testimonial[] @relation("TestimonialAvatar")
+  teamMembers    TeamMember[]  @relation("TeamImage")
+  blogs          Blog[]        @relation("BlogImage")
+
   createdAt DateTime @default(now())
-  //
-  fileHash  String
-  key       String
-  typeImage String
-  customId  String?
+  updatedAt DateTime @updatedAt
 
-  //
-
-  // Relations
-  profileAvatars Profile[]   @relation("ProfileAvatar")
-  Services       Services[]  @relation("ServiseImage")
-  SlideShow      SlideShow[] @relation("SlideShowImage")
-  Clients        Clients[] @relation("ClientImage")
-  // Clients        Clients[]
-
+  @@index([type])
   @@map("images")
 }
 
@@ -208,12 +594,25 @@ model Image {
 
 model Analytics {
   id        String   @id @default(cuid())
-  date      DateTime @db.Date
+  date      DateTime @unique @db.Date
   visitors  Int      @default(0)
   pageViews Int      @default(0)
-  revenue   Decimal  @default(0) @db.Decimal(10, 2)
+  contacts  Int      @default(0)
   createdAt DateTime @default(now())
 
-  @@unique([date])
+  @@index([date])
   @@map("analytics")
+}
+
+model PageView {
+  id        String   @id @default(cuid())
+  path      String
+  referrer  String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([path])
+  @@index([createdAt])
+  @@map("page_views")
 }

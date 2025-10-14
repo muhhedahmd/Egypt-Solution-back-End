@@ -9,6 +9,10 @@ import authRoutes from "./routes/authRoutes"
 import ProfileRoutes from "./routes/profileRoute"
 import bodyParser from "body-parser"
 import cookieParser from "cookie-parser";
+import { ServicesModule } from "./services/service-parts/service.module"
+import prisma from "./config/prisma"
+import { errorHandler } from "./middlewares/errorHandler"
+import { slideShowModules } from "./services/slideShow/slidwshow.modules"
 
 const app = express()
 app.use(cookieParser());
@@ -22,6 +26,10 @@ app.use(
 )
 
 // 2. Configure multer properly
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+app.use(upload.any()); // Accept any file uploads
+
 
 // 3. Body parsing middleware for non-multipart requests
 app.use(express.json({ limit: "10mb" }))
@@ -40,10 +48,16 @@ app.use(
 
 // 5. Auth routes (no files)
 app.use("/api/auth", authRoutes)
-
-// 6. Routes with potential file uploads - Apply multer here
 app.use("/api" ,  ProfileRoutes)
 
+// Mount modules
+const servicesModule = new ServicesModule(prisma);
+const slideShowModule = new slideShowModules(prisma);
+app.use('/api/services', servicesModule.getRoutes());
+app.use('/api/slide-show', slideShowModule.getRoutes());
+
+
+app.use(errorHandler as any);
 
 // 7. Error handling middleware1
 app.use((err: any, req: any, res: any, next: any) => {

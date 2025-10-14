@@ -2,7 +2,6 @@ import prisma from "../config/prisma"
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../lib/jwt"
 
 export class TokenService {
-  // 🔄 Generate token pair (access + refresh)
   static async generateTokenPair(userId: string, userAgent?: string, ipAddress?: string , 
     needAvatar : boolean = false 
   )  {
@@ -53,17 +52,7 @@ export class TokenService {
         profileComplete: user.profile?.isProfileComplete,
         avatarUrl : avatarUrl|| ""
       })
-      // console.log({
-      //     userId: user.id,
-      //   name: user.name,
-      //   email: user.email,
-      //   role: user.role,
-      //   emailConfirmation: user.emailConfirmed,
-      //   deviceVerification: true,
-      //   profileId: user.profile?.id,
-      //   profileComplete: user.profile?.isProfileComplete,
-      //   avatarUrl : user.profile?.avatar?.url || ""
-      // })
+
 
       const refreshToken = generateRefreshToken(userId)
 
@@ -193,7 +182,7 @@ export class TokenService {
     }
   }
 
-  // 🚪 Logout all devices
+  // 🚪 Logout from all devices
   static async logoutAllDevices(userId: string) {
     try {
       await prisma.session.updateMany({
