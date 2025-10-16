@@ -1,4 +1,15 @@
-import type { SlideShow as slideShowType, Image , CompositionType , SlideshowType, ServiceSlideShow, ClientSlideShow, ProjectSlideShow, TestimonialSlideShow, TeamSlideShow, Prisma } from "@prisma/client";
+import type {
+  SlideShow as slideShowType,
+  Image,
+  CompositionType,
+  SlideshowType,
+  ServiceSlideShow,
+  ClientSlideShow,
+  ProjectSlideShow,
+  TestimonialSlideShow,
+  TeamSlideShow,
+  Prisma,
+} from "@prisma/client";
 import { DefaultArgs } from "@prisma/client/runtime/library";
 
 type slideShowWithImage = slideShowType & {
@@ -9,6 +20,26 @@ export interface IslideShowRepositoryCreateResponse {
   Image: Image | null;
   slideShow: slideShowType;
 }
+export interface deattachManyDTO {
+  slideShowId: string;
+  items: {
+    type: "service" | "client" | "project" | "testimonial" | "teamMember";
+    id: string;
+  }[];
+}
+export interface deattachDTO {
+  slideShowId: string;
+  type: "service" | "client" | "project" | "testimonial" | "teamMember";
+  id: string;
+}
+
+export type AttachmentWithSlideShowRelationsModels =
+  | TestimonialSlideShow
+  | TeamSlideShow
+  | ClientSlideShow
+  | ProjectSlideShow
+  | ServiceSlideShow;
+
 export interface PaginationDTO {
   skip: number;
   take: number;
@@ -17,8 +48,8 @@ export interface CreateslideShowDTO {
   title: string;
   slug: string;
   description?: string;
-  type: SlideshowType,
-  composition: CompositionType
+  type: SlideshowType;
+  composition: CompositionType;
   background?: string;
   isActive?: boolean;
   autoPlay?: boolean;
@@ -31,8 +62,8 @@ export interface UpdateslideShowDTO {
   title?: string;
   slug?: string;
   description?: string;
-  type?: SlideshowType
-  composition?: CompositionType
+  type?: SlideshowType;
+  composition?: CompositionType;
   background?: string;
   isActive?: boolean;
   autoPlay?: boolean;
@@ -80,7 +111,7 @@ export interface AttachTeamDTO {
 export interface BulkAttachDTO {
   slideShowId: string;
   items: Array<{
-    type: slideShowType
+    type: slideShowType;
     id: string;
     order?: number;
     isVisible?: boolean;
@@ -100,12 +131,22 @@ export interface ReorderItemsDTO {
 export interface DetachItemDTO {
   slideShowId: string;
   itemId: string;
-  itemType: slideShowType
+  itemType: slideShowType;
 }
 
-export interface AttachItemsDTO extends AttachServiceDTO, AttachProjectDTO, AttachClientDTO, AttachTestimonialDTO, AttachTeamDTO {}
+export interface AttachItemsDTO
+  extends AttachServiceDTO,
+    AttachProjectDTO,
+    AttachClientDTO,
+    AttachTestimonialDTO,
+    AttachTeamDTO {}
 
-export type AttachmentTypes =  ServiceSlideShow | ClientSlideShow | ProjectSlideShow | TestimonialSlideShow | TeamSlideShow;
+export type AttachmentTypes =
+  | ServiceSlideShow
+  | ClientSlideShow
+  | ProjectSlideShow
+  | TestimonialSlideShow
+  | TeamSlideShow;
 export type modelMap = {
   service: Prisma.ServiceDelegate<DefaultArgs, Prisma.PrismaClientOptions>;
   project: Prisma.ProjectDelegate<DefaultArgs, Prisma.PrismaClientOptions>;

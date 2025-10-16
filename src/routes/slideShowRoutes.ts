@@ -17,10 +17,10 @@ export class slideShowRoutes {
       "/",
       asyncHandler(this.controller.getAllSlideShows.bind(this.controller))
     );
-    this.router.get(
-      "/single/:id",
-      asyncHandler(this.controller.getSlideShowById.bind(this.controller))
-    );
+    // this.router.get(
+    //   "/single/:id",
+    //   asyncHandler(this.controller.getSlideShowById.bind(this.controller))
+    // );
     this.router.post(
       "/",
       asyncHandler(requireAuthv2),
@@ -31,11 +31,11 @@ export class slideShowRoutes {
       asyncHandler(requireAuthv2),
       asyncHandler(this.controller.updateSlideShow.bind(this.controller))
     );
-    this.router.delete(
-      "/:id",
-      asyncHandler(requireAuthv2),
-      asyncHandler(this.controller.deleteSlideShow.bind(this.controller))
-    );
+    // this.router.delete(
+    //   "/:id",
+    //   asyncHandler(requireAuthv2),
+    //   asyncHandler(this.controller.deleteSlideShow.bind(this.controller))
+    // );
     this.router.post(
       "/attach-many",
       asyncHandler(requireAuthv2),
@@ -53,6 +53,11 @@ export class slideShowRoutes {
     this.router.get(
       "/attaches-by-type/:id",
       asyncHandler(this.controller.getAttachesByType.bind(this.controller))
+    );
+    this.router.delete(
+      "/detach-many",
+      // asyncHandler(requireAuthv2),
+      asyncHandler(this.controller.deAttachMany.bind(this.controller))
     );
   }
   getRoutes(): Router {

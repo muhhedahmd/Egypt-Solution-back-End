@@ -4,6 +4,7 @@ import {
   CreateslideShowDTO,
   PaginationDTO,
   UpdateslideShowDTO,
+  deattachManyDTO
 } from "../types/slideShow";
 import { SlideshowType } from "@prisma/client";
 export class SlideShowValidator {
@@ -133,22 +134,20 @@ export class SlideShowValidator {
 
   private deattchGlobalSchema = z.object({
     slideShowId: z.string().cuid("Invalid slideshow ID"),
-    attachType: z.enum([
+    type: z.enum([
       "service",
       "client",
       "project",
       "testimonial",
       "teamMember",
     ]),
-    attachId: z.string().cuid("Invalid service ID"),
+    id: z.string().cuid("Invalid service ID"),
   });
   private bulkDeattachSchema = z.object({
     slideShowId: z.string().cuid("Invalid slideshow ID"),
     items: z
       .array(
-        this.deattchGlobalSchema.omit({
-          slideShowId: true,
-        })
+        this.deattchGlobalSchema.omit({ slideShowId : true})
       )
       .min(1, "At least one item is required"),
   });
@@ -350,7 +349,8 @@ export class SlideShowValidator {
       );
     }
   }
-  validateBulkDeattach(data: unknown) {
+  
+  validateBulkDeattach(data: unknown) : deattachManyDTO {
     try {
       return this.bulkDeattachSchema.parse(data);
     } catch (error) {

@@ -5,9 +5,11 @@ import {
   CreateslideShowDTO,
   UpdateslideShowDTO,
   AttachmentTypes,
+  deattachManyDTO,
+  deattachDTO,
+  AttachmentWithSlideShowRelationsModels,
 } from "../../types/slideShow";
 import { randomUUID } from "crypto";
-import { ServicesRepository } from "../service-parts/services.Repository";
 import {
   ClientSlideShow,
   Prisma,
@@ -19,7 +21,6 @@ import {
   TestimonialSlideShow,
 } from "@prisma/client";
 import { txInstance } from "../../lib/helpers";
-import { Aggregate, GetAggregateResult } from "@prisma/client/runtime/client";
 
 export class slideShowRepository {
   constructor(
@@ -192,6 +193,7 @@ export class slideShowRepository {
             slideShowUpdate: find,
             orderBeforeUpdate: find.order,
           });
+          
         const updateSlideShow = await tx.slideShow.update({
           where: {
             id: data.slideShowId,
@@ -408,6 +410,8 @@ export class slideShowRepository {
     }
   }
 
+  // reorder  on the slide show attachments and reodred in slide show attachmentJoinsModel
+
   async attachMany({
     slideShowId,
     attachobj,
@@ -455,17 +459,14 @@ export class slideShowRepository {
 
   async Deattach({
     slideShowId,
-    attachType,
-    attachId,
+    type: attachType,
+    id: attachId,
     isMany = false,
     tx,
-  }: {
-    slideShowId: string;
-    attachType: "service" | "client" | "project" | "testimonial" | "teamMember";
-    attachId: string; // refering to the attach table has already created
-    isMany?: boolean;
+  }: deattachDTO & {
     tx?: txInstance;
-  }): Promise<AttachmentTypes> {
+    isMany?: boolean;
+  }): Promise<AttachmentWithSlideShowRelationsModels> {
     try {
       const prismaTouse = tx || this.prisma;
       if (!isMany) await this.findById(slideShowId, prismaTouse);
@@ -475,6 +476,7 @@ export class slideShowRepository {
         attachType,
         prismaTouse
       );
+
       if (!findTheAttachedTable) {
         throw new ServiceError(
           "Attach entity not found id: " + attachId,
@@ -493,15 +495,17 @@ export class slideShowRepository {
         this.modelAttachMap(prismaTouse || this.prisma)[attachType]
           .delete as any
       )({
-        where: { [fieldName]: attachId, slideShowId },
+        where: {
+          [`${fieldName}_slideShowId`]: {
+            slideShowId,
+            [fieldName]: attachId,
+          },
+
+          // [fieldName]: attachId, slideShowId
+        },
       });
 
-      return attach as
-        | TestimonialSlideShow
-        | TeamSlideShow
-        | ClientSlideShow
-        | ProjectSlideShow
-        | ServiceSlideShow;
+      return attach as AttachmentWithSlideShowRelationsModels;
     } catch (error) {
       console.error(error);
       throw new ServiceError(
@@ -511,21 +515,7 @@ export class slideShowRepository {
       );
     }
   }
-  async DeattachMany({
-    slideShowId,
-    attachobj,
-  }: {
-    slideShowId: string;
-    attachobj: Array<{
-      attachType:
-        | "service"
-        | "client"
-        | "project"
-        | "testimonial"
-        | "teamMember";
-      attachId: string;
-    }>;
-  }) {
+  async DeattachMany({ slideShowId, items: attachobj }: deattachManyDTO) {
     try {
       const tranisction = this.prisma.$transaction(async (tx) => {
         await this.findById(slideShowId, tx);
@@ -533,8 +523,8 @@ export class slideShowRepository {
           attachobj.map((att) => {
             return this.Deattach({
               slideShowId,
-              attachType: att.attachType,
-              attachId: att.attachId,
+              type: att.type,
+              id: att.id,
               isMany: true,
               tx,
             });
@@ -604,12 +594,10 @@ export class slideShowRepository {
     });
   }
   async getslideShowByType({
-    // slideShowId,
     type,
     skip,
     take,
   }: {
-    // slideShowId: string;
     type: SlideshowType;
     skip: number;
     take: number;
@@ -623,7 +611,11 @@ export class slideShowRepository {
           order: "asc",
         },
         include: {
-          services: true,
+          [type.toLowerCase()]: {
+            orderBy: {
+              order: "asc",
+            },
+          },
         },
         skip: skip * take,
         take: take,
@@ -645,10 +637,9 @@ export class slideShowRepository {
     slideShowId: string;
     type: "service" | "client" | "project" | "testimonial" | "teamMember";
   }) {
-    const d = await(this.modelAttachMap(this.prisma)[type] as any).count({});
-    return d
+    const d = await (this.modelAttachMap(this.prisma)[type] as any).count({});
+    return d;
   }
-
   async getAttachesByType({
     slideShowId,
     type,
@@ -666,10 +657,12 @@ export class slideShowRepository {
         return await (this.modelAttachMap(tx)[type] as any).findMany({
           skip: skip * take,
           take: take,
-
-          // include: {
-          //   [type]: true,
-          // },
+          include: {
+            [type]: true,
+          },
+          orderBy: {
+            order: "asc",
+          },
         });
       });
       return transaction;

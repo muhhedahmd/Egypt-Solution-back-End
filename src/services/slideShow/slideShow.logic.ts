@@ -63,6 +63,7 @@ export class slideShowLogic {
     const deleteSlideShow = await this.repository.delete(validId);
     return deleteSlideShow;
   }
+  
   async findById(id: string): Promise<SlideShow> {
     const validId = this.validator.validateId(id);
     const findSlideShow = await this.repository.findById(validId);
@@ -74,6 +75,7 @@ export class slideShowLogic {
     return createAttachSlideShow;
   }
   async deattach(data: unknown): Promise<AttachmentTypes> {
+
     const valid = this.validator.validateDeattachGlobal(data);
     const updatedService = await this.repository.Deattach(valid);
     return updatedService;
@@ -87,13 +89,15 @@ export class slideShowLogic {
     return updatedService;
   }
   async deattchMany(data: unknown): Promise<AttachmentTypes[]> {
+    console.log(data)
     const valid = this.validator.validateBulkDeattach(data);
     const updatedService = await this.repository.DeattachMany({
-      attachobj: valid.items,
+      items: valid.items,
       slideShowId: valid.slideShowId,
     });
     return updatedService;
   }
+
   async getAttachedsGrouped({
     skip,
     take,

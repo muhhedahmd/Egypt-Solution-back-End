@@ -200,4 +200,18 @@ export class slideShowController {
       next(error);
     }
   }
+  async deAttachMany(req: Request, res: Response, next: NextFunction) {
+    try {
+      const body = req.body;
+console.log(body)
+      const updated = await this.logic.deattchMany(body);
+      return res.status(200).json({
+        success: true,
+        message: "Slideshow deattached successfully",
+        data: updated,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
