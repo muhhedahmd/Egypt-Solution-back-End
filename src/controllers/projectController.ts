@@ -1,22 +1,27 @@
 import { NextFunction, Request, Response } from "express";
-import { projectLogic } from "../services/project/project.logic"
+import { projectLogic } from "../services/project/project.logic";
 import { ProjectStatus } from "@prisma/client";
 
-
-
 export class projectController {
-    private logic: projectLogic
-    constructor(logic: projectLogic) {
-        this.logic = logic
-    }
-      async createProject(req: Request, res: Response, next: NextFunction) {
+  private logic: projectLogic;
+  constructor(logic: projectLogic) {
+    this.logic = logic;
+  }
+  async createProject(req: Request, res: Response, next: NextFunction) {
     try {
       const body = req.body;
-      const file = req.file; // From multer
+      const image =
+        Array.isArray(req.files) && req.files.length > 0
+          ? req.files[0].buffer
+          : null;
+      console.log({
+        ...body,
+        image,
+      });
 
       const newProject = await this.logic.create({
         ...body,
-        image: file?.buffer,
+        image: image,
         isFeatured: body.isFeatured === "true" ? true : false,
         order: Number(body.order) || 0,
         status: body.status || "COMPLETED",
@@ -186,9 +191,7 @@ export class projectController {
     }
   }
 
-  
   // TECHNOLOGY ENDPOINTS
-  
 
   async createTechnology(req: Request, res: Response, next: NextFunction) {
     try {
@@ -327,7 +330,6 @@ export class projectController {
     }
   }
 
-  
   // PROJECT-TECHNOLOGY RELATIONSHIP ENDPOINTS
 
   async assignProjectToTechnology(
@@ -374,8 +376,32 @@ export class projectController {
     next: NextFunction
   ) {
     try {
-      const body = req.body;
-      const result = await this.logic.createTechnologyAndProject(body);
+      const technologyRaw = req.body.technology;
+      const projectsRaw = req.body.projects;
+
+      // 🔹 Parse JSON text fields
+      const technology = JSON.parse(technologyRaw);
+      const projects = JSON.parse(projectsRaw);
+
+      console.log(req.files)
+      const FixedBody =  {
+        technology: {
+          name: technology.name,
+          icon: technology.icon,
+          category: technology.category,
+        },
+        projects:  projects.map((p : any) => {
+            return { 
+                ...p,
+                image: Array.isArray(req.files) && req.files ? req.files.find((f) => f.originalname === p.image)?.buffer : undefined,
+            }
+        })
+      }
+
+
+
+
+        const result = await this.logic.createTechnologyAndProject(FixedBody);
 
       return res.status(201).json({
         success: true,
@@ -434,5 +460,4 @@ export class projectController {
       next(error);
     }
   }
-
 }

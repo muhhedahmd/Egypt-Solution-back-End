@@ -134,7 +134,7 @@ export class projectRepository {
   }
 
   async create(
-    data: CreateProjectDTO & { slug: string },
+    data: CreateProjectDTO & { slug: string  , imageId ?: string}, 
     prismaTouse?: txInstance
   ): Promise<{ project: Project; Image: Image | null }> {
     try {
@@ -144,21 +144,23 @@ export class projectRepository {
             lower: true,
           });
           if (!slug) throw new Error("error create slug");
-          if (!data.image) throw new Error("no image provided");
-          const createImage = await UploadImage(data.image, data.title);
-          if (!createImage) throw new Error("error upload image");
-          const imageToDB = await AssignImageToDBImage(
-            {
-              imageType: "PROJECT",
-              blurhash: createImage.blurhash,
-              width: createImage.width,
-              height: createImage.height,
-              data: createImage.data,
-            },
-            tx
-          );
 
-          if (!imageToDB) throw new Error("error create imageToDB");
+          if (data.image) {
+            const createImage = await UploadImage(data.image, data.title);
+            if (!createImage) throw new Error("error upload image");
+            const imageToDB = await AssignImageToDBImage(
+              {
+                imageType: "PROJECT",
+                blurhash: createImage.blurhash,
+                width: createImage.width,
+                height: createImage.height,
+                data: createImage.data,
+              },
+              tx
+            );
+            data.imageId = imageToDB.id;
+          }
+
           const lastOrder = (await this.count()) - 1;
           const findIstheretheOrder = await tx.project.findFirst({
             where: {
@@ -177,7 +179,7 @@ export class projectRepository {
           const project = await tx.project.create({
             data: {
               ...CerateRest,
-              imageId: imageToDB.id,
+              // imageId: imageToDB.id || null,
               order: data.order || 0,
               slug: slug,
             },
@@ -470,7 +472,6 @@ export class projectRepository {
     }
   }
   async deleteTechnology(id: string): Promise<Technology> {
-
     try {
       await this.prisma.projectTechnology.deleteMany({
         where: { technologyId: id },
@@ -507,7 +508,7 @@ export class projectRepository {
             data.map(async (data) => {
               await this.findById(data.projectId, prismaTx);
               await this.findTechById(data.technologyId, prismaTx);
-
+              console.log({ data });
               const projectTechnology = await prismaTx.projectTechnology.create(
                 {
                   data: {
@@ -591,21 +592,44 @@ export class projectRepository {
           data.CreateTechnology,
           prismaTx
         );
+
         const projectIds = (
           await Promise.all(
-            data.CreateProject.map((project) => this.create(project))
+            data.CreateProject.map((project) => this.create(project, prismaTx))
           )
         ).map((project) => project.project.id);
-        const assignToTech = await this.assignProjectToTechnolgy(
-          projectIds.map((id) => ({
-            projectId: id,
-            technologyId: technology.id,
-          }))
+
+        console.log(projectIds, technology.id);
+
+        const dataToAssign = projectIds.map((projectId) => ({
+          projectId,
+          technologyId: technology.id,
+        }));
+        const projectWithTechnology = await Promise.all(
+          dataToAssign.map(async (data) => {
+            await this.findById(data.projectId, prismaTx);
+            await this.findTechById(data.technologyId, prismaTx);
+            const projectTechnology = await prismaTx.projectTechnology.create({
+              data: {
+                projectId: data.projectId,
+                technologyId: data.technologyId,
+              },
+              include: { project: true, technology: true },
+            });
+            return projectTechnology;
+          })
         );
 
-        return { technology, assignToTech };
+        return { technology, projectWithTechnology} 
+      } , {
+        timeout: 20000,
+        maxWait: 5000,
       });
-      return transaction;
+      const result = transaction.projectWithTechnology.map((projectWithTechnology) => {
+        return  projectWithTechnology.project
+          // technology: projectWithTechnology.technology,
+      })
+      return  { technology : transaction.technology, projects : {...result}} ;
     } catch (error) {
       console.log(error);
       throw new ServiceError(
@@ -748,10 +772,9 @@ export class projectRepository {
       );
     }
   }
-  async countSearchResults (searchTerm: string): Promise<number> {
-
+  async countSearchResults(searchTerm: string): Promise<number> {
     try {
-     return await this.prisma.project.count({
+      return await this.prisma.project.count({
         where: {
           OR: [
             {
@@ -925,9 +948,7 @@ export class projectRepository {
       );
     }
   }
-  async countTechnologiesByCategory(
-    category: string,
-  ): Promise<number> {
+  async countTechnologiesByCategory(category: string): Promise<number> {
     try {
       return await this.prisma.technology.count({
         where: {
@@ -936,7 +957,6 @@ export class projectRepository {
             mode: "insensitive",
           },
         },
-      
       });
     } catch (error) {
       console.error(error);

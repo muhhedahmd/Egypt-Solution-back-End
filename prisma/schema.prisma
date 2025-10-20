@@ -395,11 +395,11 @@ model Category {
   blogs     BlogCategory[]
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
-
   @@map("categories")
 }
 
 model BlogCategory {
+
   blogId     String
   categoryId String
 

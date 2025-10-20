@@ -13,6 +13,8 @@ import { ServicesModule } from "./services/service-parts/service.module"
 import prisma from "./config/prisma"
 import { errorHandler } from "./middlewares/errorHandler"
 import { slideShowModules } from "./services/slideShow/slidwshow.modules"
+import { projectModules } from "./services/project/project.modules"
+import {  blogModules } from "./services/blog/blog.modules"
 
 const app = express()
 app.use(cookieParser());
@@ -53,8 +55,12 @@ app.use("/api" ,  ProfileRoutes)
 // Mount modules
 const servicesModule = new ServicesModule(prisma);
 const slideShowModule = new slideShowModules(prisma);
+const projectModule = new projectModules(prisma);
+const blogModule = new blogModules(prisma);
 app.use('/api/services', servicesModule.getRoutes());
 app.use('/api/slide-show', slideShowModule.getRoutes());
+app.use('/api/projects', projectModule.getRoutes());
+app.use('/api/blogs', blogModule.getRoutes());
 
 
 app.use(errorHandler as any);

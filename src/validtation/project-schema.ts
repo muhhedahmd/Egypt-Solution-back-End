@@ -1,6 +1,11 @@
 import { z } from "zod";
-import { CreateProjectDTO, CreateTechnologyDTO, UpdateProjectDTO } from "../types/project";
+import {
+  CreateProjectDTO,
+  CreateTechnologyDTO,
+  UpdateProjectDTO,
+} from "../types/project";
 import { ServiceError, ServiceValidationError } from "../errors/services.error";
+import { ZodError } from "zod/v4";
 
 export class ProjectsValidator {
   private createSchema = z.object({
@@ -80,7 +85,7 @@ export class ProjectsValidator {
     }
   }
 
- private createTechnologySchema = z.object({
+  private createTechnologySchema = z.object({
     name: z.string().min(2).max(100),
     icon: z.string().optional(),
     category: z.string().max(50).optional(),
@@ -124,7 +129,9 @@ export class ProjectsValidator {
         clientCompany: z.string().max(100).optional(),
         projectUrl: z.string().url().optional(),
         githubUrl: z.string().url().optional(),
-        status: z.enum(["COMPLETED", "IN_PROGRESS", "PLANNING", "ON_HOLD"]).default("COMPLETED"),
+        status: z
+          .enum(["COMPLETED", "IN_PROGRESS", "PLANNING", "ON_HOLD"])
+          .default("COMPLETED"),
         startDate: z.string().datetime().optional().or(z.date().optional()),
         endDate: z.string().datetime().optional().or(z.date().optional()),
         image: z.instanceof(Buffer).optional(),
@@ -133,8 +140,6 @@ export class ProjectsValidator {
       })
     ),
   });
-
- 
 
   validateCreateTechnology(data: unknown): CreateTechnologyDTO {
     try {
@@ -168,7 +173,6 @@ export class ProjectsValidator {
     }
   }
 
-
   validateBulkRemove(data: unknown) {
     try {
       return this.bulkRemoveSchema.parse(data);
@@ -180,8 +184,21 @@ export class ProjectsValidator {
   validateCreateTechWithProjects(data: unknown) {
     try {
       return this.createTechWithProjectsSchema.parse(data);
-    } catch (error) {
-      throw new ServiceValidationError("Invalid technology with projects data");
+    } catch (error: any) {
+        console.log({issues : error.issues});
+      if (error instanceof ZodError) {
+
+        throw new ServiceValidationError(
+          "Invalid technology with projects data",
+          undefined,
+          "UNKNOWN_VALIDATION_ERROR"
+        );
+    }
+    throw new ServiceValidationError(
+      "Invalid technology with projects data",
+      error.issues.map((issue: any) => issue.message).join(", "),
+      "UNKNOWN_VALIDATION_ERROR"
+    );
     }
   }
 

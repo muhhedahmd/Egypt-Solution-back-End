@@ -20,31 +20,6 @@ export class AuthController {
         return res.status(500).json({ error: userCreated });
       if (!userCreated)
         return res.status(500).json({ error: "Internal server error" });
-      // return res.json(user);
-
-      // console.log("admin-send-otp")
-      // if (userCreated.role === "ADMIN") {
-
-      //     await userService.sendOTP({
-      //         Method: "email",
-      //         userId: userCreated.id
-      //     })
-      //     // console.log("admin-send-otp")
-      // }
-      // else {
-
-      //     const findStore = await prisma.storeSettings.findFirst({
-      //     })
-      //     if (findStore?.requireEmailVerification) {
-      //         await userService.sendOTP({
-      //             Method: "email",
-      //             userId: userCreated.id
-      //         })
-      //     }
-      //     // else {
-      //     //     // return;
-      //     // }
-      // }
 
       const tokens = await TokenService.generateTokenPair(
         userCreated.id,
@@ -55,10 +30,6 @@ export class AuthController {
       if (!tokens)
         return res.status(500).json({ error: "Internal server error" });
 
-      // console.log({
-      //     tokens ,
-      //     // userCreated
-      // })
       return res
         .cookie("refreshToken", tokens.refreshToken, {
           httpOnly: true,
@@ -72,7 +43,7 @@ export class AuthController {
           secure: false,
           sameSite: "lax",
           path: "/",
-          maxAge: 15 * 60 * 1000, //
+          maxAge: 30 * 24 * 60 * 60 * 1000, //
         })
         .status(201)
         .json(
@@ -80,7 +51,6 @@ export class AuthController {
           // refreshToken :tokens?.refreshToken,
         );
     } catch (error: any) {
-      console.log(error);
       return res
         .status(500)
         .json(

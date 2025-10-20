@@ -119,9 +119,11 @@ export class projectLogic {
   }
 
   async createTechnologyAndProject(data: unknown): Promise<{
+
     technology: Technology;
-    assignToTech: ProjectTechnology[];
+    projects: Project[];
   }> {
+    
     const validData = this.validator.validateCreateTechWithProjects(data);
 
     const result = await this.repository.createTechnologyAndProject({
