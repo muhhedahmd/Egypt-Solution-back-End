@@ -5,7 +5,7 @@ import {
   UpdateProjectDTO,
 } from "../types/project";
 import { ServiceError, ServiceValidationError } from "../errors/services.error";
-import { ZodError } from "zod/v4";
+import { date, string, ZodError } from "zod/v4";
 
 export class ProjectsValidator {
   private createSchema = z.object({
@@ -28,11 +28,22 @@ export class ProjectsValidator {
     status: z
       .enum(["COMPLETED", "IN_PROGRESS", "PLANNING", "ON_HOLD"])
       .default("COMPLETED"),
-    startDate: z.string().datetime().optional().or(z.date().optional()),
-    endDate: z.string().datetime().optional().or(z.date().optional()),
+    startDate: z.preprocess((val) => {
+      if (typeof val === "string") {
+        return new Date(val).toISOString();
+      }
+    }, z.string().datetime().optional().or(z.date().optional())),
+    endDate: z.preprocess((val) => {
+      if (typeof val === "string") {
+        return new Date(val).toISOString();
+      }
+    }, z.string().datetime().optional().or(z.date().optional())),
     image: z.instanceof(Buffer).optional(),
-    isFeatured: z.boolean().default(false),
-    order: z.number().int().min(0).default(0),
+    isFeatured: z.preprocess(
+      (val) => val === "true" || val === true,
+      z.boolean().default(false)
+    ),
+    order: z.number().int().min(0).optional().default(0),
     technologyIds: z.array(z.string()).optional(),
     serviceIds: z.array(z.string()).optional(),
   });
@@ -87,7 +98,7 @@ export class ProjectsValidator {
 
   private createTechnologySchema = z.object({
     name: z.string().min(2).max(100),
-    icon: z.string().optional(),
+    icon: z.instanceof(Buffer).optional(),
     category: z.string().max(50).optional(),
   });
 
@@ -117,7 +128,7 @@ export class ProjectsValidator {
   private createTechWithProjectsSchema = z.object({
     technology: z.object({
       name: z.string().min(2).max(100),
-      icon: z.string().optional(),
+      icon: z.instanceof(Buffer).optional(),
       category: z.string().max(50).optional(),
     }),
     projects: z.array(
@@ -141,10 +152,23 @@ export class ProjectsValidator {
     ),
   });
 
-  validateCreateTechnology(data: unknown): CreateTechnologyDTO {
+  validateCreateProjectAndAssignTechsAndServices(data: unknown): {
+    project: CreateProjectDTO;
+    technologies?: string[];
+    services?: string[];
+  } {
     try {
-      return this.createTechnologySchema.parse(data);
+      const x = z
+        .object({
+          project: this.createSchema,
+          technologies: z.array(z.string().cuid()).optional(),
+          services: z.array(z.string().cuid()).optional(),
+        })
+        .parse(data);
+
+      return x;
     } catch (error) {
+      console.log(error);
       throw new ServiceValidationError("Invalid technology data");
     }
   }
@@ -185,20 +209,32 @@ export class ProjectsValidator {
     try {
       return this.createTechWithProjectsSchema.parse(data);
     } catch (error: any) {
-        console.log({issues : error.issues});
+      console.log({ issues: error.issues });
       if (error instanceof ZodError) {
-
         throw new ServiceValidationError(
           "Invalid technology with projects data",
           undefined,
           "UNKNOWN_VALIDATION_ERROR"
         );
+      }
+      throw new ServiceValidationError(
+        "Invalid technology with projects data",
+        error.issues.map((issue: any) => issue.message).join(", "),
+        "UNKNOWN_VALIDATION_ERROR"
+      );
     }
-    throw new ServiceValidationError(
-      "Invalid technology with projects data",
-      error.issues.map((issue: any) => issue.message).join(", "),
-      "UNKNOWN_VALIDATION_ERROR"
-    );
+  }
+
+  validateCreateTechnology(data: unknown) {
+    try {
+      const result = this.createTechnologySchema.parse(data);
+      return result;
+    } catch (error) {
+      throw new ServiceValidationError(
+        "Invalid project with technologies data",
+        undefined,
+        "UNKNOWN_VALIDATION_ERROR"
+      );
     }
   }
 

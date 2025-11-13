@@ -37,6 +37,8 @@ export async function generateBlurhash_with_size(buffer: Buffer): Promise<{
 }
 
 export const UploadImage = async (logo: Buffer | null, name?: string) => {
+  
+
   let logoUpload: {
     blurhash: string;
     width: number;
@@ -63,6 +65,37 @@ export const UploadImage = async (logo: Buffer | null, name?: string) => {
         blurhash: blurHashAndSize.blurHash,
         height: blurHashAndSize.height,
         width: blurHashAndSize.width,
+        data: uploadResult,
+      };
+
+      return logoUpload;
+    } catch (uploadError) {
+      console.error("Logo upload failed:", uploadError);
+    }
+  }
+};
+export const UploadImageWithoutBlurHAsh = async (logo: Buffer | null, name?: string) => {
+  
+  let logoUpload: {
+   
+    data: UploadFileResult[];
+  } | null = null;
+  if (logo) {
+    try {
+      // Generate blur hash and get dimensions
+      const buffer = Buffer.from(logo);
+      //   const arrayBuffer = await logo .buffer;
+
+      // Create File object for UploadThing
+      const logoBlob = new Blob([buffer], { type: "image/jpeg" });
+      const logoFile = new File([logoBlob], name || "logo.jpg", {
+        type: "image/jpeg",
+      });
+
+      // Upload to UploadThing
+      const uploadResult = await utapi.uploadFiles([logoFile]);
+
+      logoUpload = {
         data: uploadResult,
       };
 

@@ -125,7 +125,74 @@ export class slideShowController {
       next(error);
     }
   }
-
+  async CreateAndAttachMany(req: Request, res: Response, next: NextFunction) {
+    try {
+      const body = req.body;
+      const created = await this.logic.createAndAttachMany(body);
+      return res.status(200).json({
+        success: true,
+        message: "Slideshow created and attached successfully",
+        data: created,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+  async getPaginatedSlides(req: Request, res: Response, next: NextFunction) {
+    try {
+      const  {
+        page,
+        perPage,
+        pagesPerType
+      } = req.body ;
+      const { id } = req.params;
+      
+      const data = await this.logic.getSlidesInSlideShow({
+        id,
+        page: Number(page) || 1,
+        pagesPerType: {
+          clients:
+            pagesPerType &&
+            typeof pagesPerType === "object" &&
+            "clients" in pagesPerType
+              ? Number(pagesPerType["clients"])
+              : undefined,
+          projects:
+            pagesPerType &&
+            typeof pagesPerType === "object" &&
+            "projects" in pagesPerType
+              ? Number(pagesPerType["projects"])
+              : undefined,
+          services:
+            pagesPerType &&
+            typeof pagesPerType === "object" &&
+            "services" in pagesPerType
+              ? Number(pagesPerType["services"])
+              : undefined,
+          team:
+            pagesPerType &&
+            typeof pagesPerType === "object" &&
+            "team" in pagesPerType
+              ? Number(pagesPerType["team"])
+              : undefined,
+          testimonials:
+            pagesPerType &&
+            typeof pagesPerType === "object" &&
+            "testimonials" in pagesPerType
+              ? Number(pagesPerType["testimonials"])
+              : undefined,
+        },
+        perPage: perPage ? Number(perPage) : 10,
+      });
+      return res.status(200).json({
+        success: true,
+        message: "Slideshows fetched successfully",
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
   async getAttachedsGrouped(req: Request, res: Response, next: NextFunction) {
     try {
       const { skip, take } = req.query;
@@ -203,7 +270,7 @@ export class slideShowController {
   async deAttachMany(req: Request, res: Response, next: NextFunction) {
     try {
       const body = req.body;
-console.log(body)
+      console.log(body);
       const updated = await this.logic.deattchMany(body);
       return res.status(200).json({
         success: true,

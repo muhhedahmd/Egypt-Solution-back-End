@@ -2,9 +2,16 @@ import prisma from "../config/prisma"
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../lib/jwt"
 
 export class TokenService {
-  static async generateTokenPair(userId: string, userAgent?: string, ipAddress?: string , 
-    needAvatar : boolean = false 
-  )  {
+  // Use 24 hours for access tokens, 30 days for refresh tokens
+  static ACCESS_TOKEN_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
+  static REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
+
+  static async generateTokenPair(
+    userId: string,
+    userAgent?: string,
+    ipAddress?: string,
+    needAvatar: boolean = false
+  ) {
     try {
       // Get user data for access token
       const user = await prisma.user.findUnique({
@@ -14,33 +21,31 @@ export class TokenService {
             select: {
               id: true,
               isProfileComplete: true,
-
             },
           },
         },
       })
 
-      let avatarUrl : string  = ""
       if (!user) throw new Error("User not found")
-        if(needAvatar){
 
-          const avatar = await prisma.profile.findUnique({
-            where:{
-              userId : userId
+      let avatarUrl: string = ""
+      if (needAvatar) {
+        const avatar = await prisma.profile.findUnique({
+          where: {
+            userId: userId, // assuming userId is unique in profile model
+          },
+          select: {
+            avatar: {
+              select: {
+                url: true,
+              },
             },
-            select:{
-              avatar : {
-                select : {
-                  url : true
-                }
-              }
-            }
-          })
+          },
+        })
+        avatarUrl = avatar?.avatar?.url || ""
+      }
 
-          avatarUrl = avatar?.avatar?.url || ""
-        }
-
-      // Generate tokens
+      // Generate tokens (assumes these functions create tokens but don't persist expiration themselves)
       const accessToken = generateAccessToken({
         userId: user.id,
         name: user.name,
@@ -50,23 +55,21 @@ export class TokenService {
         deviceVerification: true,
         profileId: user.profile?.id,
         profileComplete: user.profile?.isProfileComplete,
-        avatarUrl : avatarUrl|| ""
+        avatarUrl: avatarUrl || ""
       })
-
 
       const refreshToken = generateRefreshToken(userId)
 
-      // Store refresh token in database
       const session = await prisma.session.create({
         data: {
           userId,
           token: accessToken,
           refreshToken,
-          refreshTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          refreshTokenExpiresAt: new Date(Date.now() + TokenService.REFRESH_TOKEN_TTL_MS), // 30 days
           userAgent: userAgent || "",
           ipAddress: ipAddress || "",
           deviceVerification: true,
-          expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
+          expiresAt: new Date(Date.now() + TokenService.ACCESS_TOKEN_TTL_MS), // access token expires at (24 hours)
           isActive: true,
         },
       })
@@ -75,8 +78,8 @@ export class TokenService {
         accessToken,
         refreshToken,
         sessionId: session.id,
-        expiresIn: 15 * 60, // 15 minutes in seconds
-        refreshExpiresIn: 7 * 24 * 60 * 60, // 7 days in seconds
+        expiresIn: Math.floor(TokenService.ACCESS_TOKEN_TTL_MS / 1000), // in seconds
+        refreshExpiresIn: Math.floor(TokenService.REFRESH_TOKEN_TTL_MS / 1000), // in seconds
       }
     } catch (error) {
       console.error("Generate token pair error:", error)
@@ -86,17 +89,14 @@ export class TokenService {
 
   static async refreshAccessToken(refreshToken: string) {
     try {
-      // Verify refresh token
+      // Verify refresh token (your verifyRefreshToken should return payload with userId or null on fail)
       const decoded = verifyRefreshToken(refreshToken)
       if (!decoded) {
         return { error: "Invalid refresh token" }
       }
 
-      // Check if refresh token exists and is active
+      // Find active session for this refresh token
       const session = await prisma.session.findFirst({
-
-
-
         where: {
           refreshToken,
           userId: decoded.userId,
@@ -118,7 +118,6 @@ export class TokenService {
           },
         },
       })
-      console.log(session)
 
       if (!session) {
         throw new Error("Refresh token not found or expired")
@@ -135,26 +134,27 @@ export class TokenService {
         profileId: session.user.profile?.id,
         profileComplete: session.user.profile?.isProfileComplete,
       })
+
+      // If you want to rotate refresh tokens uncomment this and use generateRefreshToken:
       // const newRefreshToken = generateRefreshToken(session.user.id)
 
-      // Update session with new access token
+      // Update session with new access token and (optionally) new refresh token expiry
       await prisma.session.update({
-        where: { id: session.id  , 
-          refreshToken: session.refreshToken
-        },
-
+        where: { id: session.id }, // only id is required & correct for Prisma
         data: {
           token: newAccessToken,
-          // refreshToken : newRefreshToken, 
-          refreshTokenExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-          expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
+          // If rotating refresh tokens, set refreshToken: newRefreshToken
+          // refreshToken: newRefreshToken,
+          // extend refresh token expiry only if you want sliding expiration (optional)
+          refreshTokenExpiresAt: new Date(Date.now() + TokenService.REFRESH_TOKEN_TTL_MS), // extend 30 days from now (optional)
+          expiresAt: new Date(Date.now() + TokenService.ACCESS_TOKEN_TTL_MS), // new access token expiry (24 hours)
         },
       })
 
       return {
         accessToken: newAccessToken,
-        refreshToken: refreshToken,
-        expiresIn: 15 * 60, // 15 minutes in seconds
+        refreshToken: refreshToken, // or newRefreshToken if you rotate
+        expiresIn: Math.floor(TokenService.ACCESS_TOKEN_TTL_MS / 1000),
         user: {
           id: session.user.id,
           name: session.user.name,
@@ -182,7 +182,6 @@ export class TokenService {
     }
   }
 
-  // 🚪 Logout from all devices
   static async logoutAllDevices(userId: string) {
     try {
       await prisma.session.updateMany({
@@ -196,12 +195,14 @@ export class TokenService {
     }
   }
 
-  // 🧹 Clean expired tokens (run this periodically)
   static async cleanExpiredTokens() {
     try {
       const result = await prisma.session.deleteMany({
         where: {
-          OR: [{ refreshTokenExpiresAt: { lt: new Date() } }, { isActive: false }],
+          OR: [
+            { refreshTokenExpiresAt: { lt: new Date() } },
+            { isActive: false },
+          ],
         },
       })
       console.log(`Cleaned ${result.count} expired sessions`)

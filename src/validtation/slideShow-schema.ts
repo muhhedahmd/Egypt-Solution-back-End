@@ -9,6 +9,7 @@ import {
 import { SlideshowType } from "@prisma/client";
 export class SlideShowValidator {
   private createSchema = z.object({
+
     title: z
       .string()
       .min(3, "Title must be at least 3 characters")
@@ -45,6 +46,7 @@ export class SlideShowValidator {
     interval: z.number().min(1000).max(30000).default(5000),
     order: z.number().int().min(0).default(0),
   });
+  
 
   private updateSchema = z.object({
     slideShowId: z.string().cuid("Invalid slideshow ID format"),
@@ -152,6 +154,9 @@ export class SlideShowValidator {
       .min(1, "At least one item is required"),
   });
 
+  private validateCreateAndAttachManySchema = this.createSchema.extend({
+    slides : this.attachGlobalSchema.omit({ slideShowId : true }).array(),
+  })
   private reorderSchema = z.object({
     slideShowId: z.string().cuid("Invalid slideshow ID"),
     items: z
@@ -369,6 +374,24 @@ export class SlideShowValidator {
         undefined,
         "SlideShowValidationError"
       );
+    }
+  }
+  validCreateAndAttachManySchema(data: unknown){
+    try {
+      const parsed = this.validateCreateAndAttachManySchema.parse(data);
+      return parsed;
+
+    }catch (error) {
+      if (error instanceof z.ZodError) {
+        const messages = error.errors
+          .map((e) => `${e.path.join(".")}: ${e.message}`)
+          .join(", ");
+        throw new ServiceValidationError(
+          `Validation failed: ${messages}`,
+          undefined,
+          "SlideShowValidationError"
+        );
+      }
     }
   }
 

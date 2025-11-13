@@ -11,7 +11,10 @@ import {
   PaginationParams,
   updateService,
 } from "../../types/services";
-import { ServiceNotFoundError } from "../../errors/services.error";
+import {
+  ServiceError,
+  ServiceNotFoundError,
+} from "../../errors/services.error";
 
 export class ServicesLogic {
   constructor(
@@ -19,8 +22,13 @@ export class ServicesLogic {
     private validator: ServicesValidator
   ) {}
 
+  async isValidOrder({ order }: { order: number }) {
+    const isValid = await this.repository.isValidOrder({
+      order,
+    });
+    return isValid;
+  }
   async getAllServices(
-
     params: PaginationParams
   ): Promise<PaginatedResponse<IService>> {
     const skip = params.skip || 0;
@@ -30,7 +38,7 @@ export class ServicesLogic {
       this.repository.findMany(skip, take),
       this.repository.count(),
     ]);
-    const remainingItems  = totalItems - (skip * take + services.length);
+    const remainingItems = totalItems - (skip * take + services.length);
 
     return {
       data: services as any,
@@ -46,31 +54,45 @@ export class ServicesLogic {
   }
 
   async getServiceById(id: string): Promise<any> {
+    console.log({
+      id
+    })
     this.validator.validateId(id);
     const service = await this.repository.findById(id);
     if (!service) {
       throw new ServiceNotFoundError(id);
     }
-    const {  image, ...rest} = service
-    return  { 
-      Image : image , 
-      service : rest
-
+    const { image, ...rest } = service;
+    return {
+      Image: image,
+      service: rest,
     };
   }
 
-  async createService(data: CreateServiceDTO): Promise<IServiceRepositoryCreateResponse> {
+  async getServiceBySlug(
+    slug: string
+  ): Promise<Awaited<ReturnType<typeof this.repository.findBySlug>>> {
+    this.validator.validateSlug(slug);
+    const service = await this.repository.findBySlug(slug);
+    if (!service) {
+      throw new ServiceError( 
+        `service with slug not found ${slug} `,
+        404,
+        "SERVICE_NOT_FOUND"
+       );
+    }
+    return service;
+  }
 
-   const valid =  this.validator.validateCreate(data);
+  async createService(
+    data: CreateServiceDTO
+  ): Promise<IServiceRepositoryCreateResponse> {
+    const valid = this.validator.validateCreate(data);
     const slug = slugify(data.name + randomUUID().substring(0, 8), {
       lower: true,
     });
     const serices = await this.repository.create({
-     ...valid,
-      // description: data.description,
-      // name: data.name,
-      // richDescription: data.richDescription,
-      // image: data.image,
+      ...valid,
       slug: slug,
     });
     if (!serices) throw new Error("error create services");
@@ -84,26 +106,37 @@ export class ServicesLogic {
       const deletedService = await this.repository.delete(serviceId);
       if (!deletedService) throw new Error("error deleting service");
       return deletedService;
-
     } catch (error) {
       console.log(error);
       throw new Error("Error deleting service");
     }
   }
-
-  async updateService(
-
-    data: updateService
-  ) {
-
-      this.validator.validateUpdate(data);
-      const updatedService = await this.repository.update(data);
-      if (!updatedService) throw new Error("error updating service");
-      const { Image, ...rest } = updatedService;
-      return { Image,  ...rest };
-    
+  async Search(q: string) {
+    if (!q)
+      throw new ServiceError(
+        "search query is required",
+        400,
+        "SEARCH_QUERY_REQUIRED"
+      );
+    const services = await this.repository.SearchService(q, 0, 10);
+    if (!services)
+      throw new ServiceError(
+        "error searching services",
+        400,
+        "ERROR_SEARCHING_SERVICES"
+      );
+    return services;
   }
-
-
-
+  async updateService(data: updateService) {
+    this.validator.validateUpdate(data);
+    const updatedService = await this.repository.update(data);
+    if (!updatedService)
+      throw new ServiceError(
+        "error updating service",
+        400,
+        "ERROR_UPDATING_SERVICE"
+      );
+    const { Image, ...rest } = updatedService;
+    return { Image, ...rest };
+  }
 }

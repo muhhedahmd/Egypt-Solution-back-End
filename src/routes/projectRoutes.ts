@@ -8,44 +8,11 @@ export class projectRoutes {
     this.router = Router();
     this.initializeRoutes();
   }
-  
-  initializeRoutes(){
-      const asyncHandler = (fn: any) => (req: any, res: any, next: any) => {
+
+  initializeRoutes() {
+    const asyncHandler = (fn: any) => (req: any, res: any, next: any) => {
       Promise.resolve(fn(req, res, next)).catch(next);
     };
-
-     this.router.get(
-      "/",
-      asyncHandler(this.controller.getAllProjects.bind(this.controller))
-    );
-
-    // Get single project by ID
-    this.router.get(
-      "/:id",
-      asyncHandler(this.controller.getProjectById.bind(this.controller))
-    );
-
-    // Create new project (with image upload)
-    this.router.post(
-      "/",
-      asyncHandler(requireAuthv2),
-      // upload.single("image"),
-      asyncHandler(this.controller.createProject.bind(this.controller))
-    );
-
-    // Update project (with optional image upload)
-    this.router.put(
-      "/:id",
-      asyncHandler(requireAuthv2),
-      asyncHandler(this.controller.updateProject.bind(this.controller))
-    );
-
-    // Delete project
-    this.router.delete(
-      "/:id",
-      asyncHandler(requireAuthv2),
-      asyncHandler(this.controller.deleteProject.bind(this.controller))
-    );
 
     // Get featured projects
     this.router.get(
@@ -64,10 +31,12 @@ export class projectRoutes {
       "/search/query",
       asyncHandler(this.controller.searchProjects.bind(this.controller))
     );
-
-   
+    
     // TECHNOLOGY ROUTES
-   
+    this.router.get(
+      "/tech-search",
+      asyncHandler(this.controller.techSearch.bind(this.controller))
+    );
 
     // Get all technologies
     this.router.get(
@@ -105,7 +74,9 @@ export class projectRoutes {
     // Get technologies by category
     this.router.get(
       "/technologies/category/:category",
-      asyncHandler(this.controller.getTechnologiesByCategory.bind(this.controller))
+      asyncHandler(
+        this.controller.getTechnologiesByCategory.bind(this.controller)
+      )
     );
 
     // Get all categories
@@ -114,9 +85,7 @@ export class projectRoutes {
       asyncHandler(this.controller.getAllCategories.bind(this.controller))
     );
 
-   
     // PROJECT-TECHNOLOGY RELATIONSHIP ROUTES
-   
 
     // Assign projects to technology (bulk)
     this.router.post(
@@ -136,7 +105,24 @@ export class projectRoutes {
       )
     );
 
-    // Create technology with projects
+    // cerate project and assign techs 
+    this.router.post(
+      "/projects-assign-technologies",
+      asyncHandler(requireAuthv2),
+      asyncHandler(
+        this.controller.createProjectAndAssignTechnology.bind(this.controller)
+      )
+    );
+
+    // Create project with technologies
+    this.router.post(
+      "/projects-with-technologies",
+      asyncHandler(requireAuthv2),
+      asyncHandler(
+        this.controller.createProjectWithTechnologies.bind(this.controller)
+      )
+    );
+
     this.router.post(
       "/technology-with-projects",
       asyncHandler(requireAuthv2),
@@ -148,16 +134,51 @@ export class projectRoutes {
     // Get all projects by technology ID
     this.router.get(
       "/by-technology/:id",
-      asyncHandler(this.controller.getProjectsByTechnology.bind(this.controller))
+      asyncHandler(
+        this.controller.getProjectsByTechnology.bind(this.controller)
+      )
     );
 
     // Get all technologies by project ID
     this.router.get(
       "/project-technologies/:id",
-      asyncHandler(this.controller.getTechnologiesByProject.bind(this.controller))
+      asyncHandler(
+        this.controller.getTechnologiesByProject.bind(this.controller)
+      )
     );
 
-    
+    this.router.get(
+      "/",
+      asyncHandler(this.controller.getAllProjects.bind(this.controller))
+    );
+
+    // Get single project by ID
+    this.router.get(
+      "/:slug",
+      asyncHandler(this.controller.getProjectBySlugFull.bind(this.controller))
+    );
+
+    // Create new project (with image upload)
+    this.router.post(
+      "/",
+      asyncHandler(requireAuthv2),
+      // upload.single("image"),
+      asyncHandler(this.controller.createProject.bind(this.controller))
+    );
+
+    // Update project (with optional image upload)
+    this.router.put(
+      "/:id",
+      asyncHandler(requireAuthv2),
+      asyncHandler(this.controller.updateProject.bind(this.controller))
+    );
+
+    // Delete project
+    this.router.delete(
+      "/:id",
+      asyncHandler(requireAuthv2),
+      asyncHandler(this.controller.deleteProject.bind(this.controller))
+    );
   }
   getRoutes() {
     return this.router;

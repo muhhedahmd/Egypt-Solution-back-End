@@ -1,9 +1,18 @@
-import { deleteImageById, UploadImage } from "../../lib/helpers";
-import { CreateServiceDTO, updateService } from "../../types/services";
+import {
+  deleteImageById,
+  UploadImage,
+  UploadImageWithoutBlurHAsh,
+} from "../../lib/helpers";
+import {
+  CreateServiceDTO,
+  updateService,
+  interFaceSearchService,
+} from "../../types/services";
 import { PrismaClientConfig } from "../../config/prisma";
 import { AssignImageToDBImage } from "../../lib/helpers";
 import slugify from "slugify";
 import { randomUUID } from "crypto";
+import { ServiceError } from "../../errors/services.error";
 
 export class ServicesRepository {
   constructor(private prisma: PrismaClientConfig) {}
@@ -17,6 +26,21 @@ export class ServicesRepository {
     });
   }
 
+  async isValidOrder({ order }: { order: number }) {
+    console.log({ order });
+    try {
+      const find = await this.prisma.service.findFirst({
+        where: { order },
+      });
+      return {
+        isValid: !find,
+        takenby: find,
+      };
+    } catch (error) {
+      console.log(error);
+      throw new Error("Error finding service by order");
+    }
+  }
   async count() {
     return this.prisma.service.count();
   }
@@ -33,8 +57,102 @@ export class ServicesRepository {
     }
   }
 
-  async create(data: CreateServiceDTO & { slug: string }) {
+  async findBySlug(slug: string) {
+    try {
+      const findedService = await this.prisma.service.findUnique({
+        where: { slug },
+        include: {
+          image: true,
+          projects: {
+            include: {
+              image: true,
+            },
+          },
+        },
+      });
 
+      if (!findedService) {
+        return null;
+      }
+
+      // const image = findedService?.image
+      const { image, projects, ...rest } = findedService;
+      return {
+        image: image || null,
+        projects: projects.map((project) => {
+          const { image: PImage, ...pRest } = project;
+          return {
+            project: pRest,
+            image: PImage || null,
+          };
+        }),
+        service: rest,
+      };
+    } catch (error) {
+      console.error(error);
+      throw new ServiceError(
+        "Error finding service",
+        400,
+        "SERVICE_SEARCH_ERROR"
+      );
+    }
+  }
+  async SearchService(
+    searchTerm: string,
+    skip: number,
+    take: number
+  ): Promise<interFaceSearchService[]> {
+    try {
+      const Services = await this.prisma.service.findMany({
+        where: {
+          OR: [
+            {
+              name: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+            {
+              description: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+            {
+              richDescription: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+            {
+              slug: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+          ],
+        },
+        include: {
+          image: true,
+        },
+        skip: skip * take,
+        take,
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      return Services;
+    } catch (error) {
+      console.error(error);
+      throw new ServiceError(
+        "Error searching service",
+        400,
+        "SERVICE_SEARCH_ERROR"
+      );
+    }
+  }
+  async create(data: CreateServiceDTO & { slug: string }) {
     try {
       const transication = await this.prisma.$transaction(
         async (tx) => {
@@ -57,6 +175,16 @@ export class ServicesRepository {
             tx
           );
           if (!imageToDB) throw new Error("error create imageToDB");
+
+          let iconUrl = data.icon;
+          if (!iconUrl && data.iconImage) {
+            const createIconImage = await UploadImageWithoutBlurHAsh(
+              data.iconImage,
+              data.name + "icon"
+            );
+            if (createIconImage)
+              iconUrl = createIconImage.data?.[0]?.data?.ufsUrl;
+          }
           const service = await tx.service.create({
             data: {
               slug: slug,
@@ -64,11 +192,11 @@ export class ServicesRepository {
               description: data.description,
               richDescription: data.richDescription,
               imageId: imageToDB.id,
-              icon: data.icon || "",
-              price: data.price ||   "",
-              isActive: data.isActive ||  false,
-              isFeatured: data.isFeatured ||  false,
-              order: data.order  || 0,
+              icon: iconUrl || "",
+              price: data.price || "",
+              isActive: data.isActive || false,
+              isFeatured: data.isFeatured || false,
+              order: data.order || 0,
             },
             include: {
               image: true,
@@ -171,9 +299,9 @@ export class ServicesRepository {
               name: data.name || service.name,
               description: data.description || service.description,
               richDescription: data.richDescription || service.richDescription,
-              imageId: NewImageId, 
+              imageId: NewImageId,
               icon: data.icon || service.icon || "",
-              price: data.price ||  service.price|| "",
+              price: data.price || service.price || "",
               isActive: data.isActive || service.isActive || false,
               isFeatured: data.isFeatured || service.isFeatured || false,
               order: data.order || service.order || 0,
@@ -213,7 +341,6 @@ export class ServicesRepository {
         },
         {
           timeout: 20000, // (milliseconds)
-          isolationLevel: "Serializable",
           maxWait: 5000, // default: 2000
         }
       );

@@ -11,12 +11,18 @@ export class projectController {
     try {
       const body = req.body;
       const image =
-        Array.isArray(req.files) && req.files.length > 0
-          ? req.files[0].buffer
+        Array?.isArray(req.files) && req?.files?.length > 0
+          ? req?.files[0]?.buffer
           : null;
+
       console.log({
         ...body,
         image,
+        isFeatured: body.isFeatured === "true" ? true : false,
+        order: Number(body.order) || 0,
+        status: body.status || "COMPLETED",
+        startDate: body.startDate ? new Date(body.startDate) : undefined,
+        endDate: body.endDate ? new Date(body.endDate) : undefined,
       });
 
       const newProject = await this.logic.create({
@@ -80,6 +86,29 @@ export class projectController {
     }
   }
 
+  async getProjectBySlugFull(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { slug } = req.params;
+
+      const project = await this.logic.findBySlugFull(slug);
+
+      if (!project) {
+        return res.status(404).json({
+          success: false,
+          message: `Project with slug ${slug} not found`,
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Project fetched successfully",
+        data: project,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async updateProject(req: Request, res: Response, next: NextFunction) {
     try {
       const body = req.body;
@@ -124,6 +153,7 @@ export class projectController {
   }
 
   async searchProjects(req: Request, res: Response, next: NextFunction) {
+
     try {
       const { skip, take, q } = req.query;
 
@@ -149,6 +179,31 @@ export class projectController {
     }
   }
 
+  async techSearch(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { skip, take, q } = req.query;
+
+      if (!q || typeof q !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Search query 'q' is required",
+        });
+      }
+
+      const projects = await this.logic.techSearch(q, {
+        skip: Number(skip) || 0,
+        take: Number(take) || 10,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Projects search results",
+        ...projects,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
   async getFeaturedProjects(req: Request, res: Response, next: NextFunction) {
     try {
       const { skip, take } = req.query;
@@ -196,9 +251,18 @@ export class projectController {
   async createTechnology(req: Request, res: Response, next: NextFunction) {
     try {
       const body = req.body;
+
+      console.log({
+        name: body.name,
+        // icon: Array.isArray(req.files) && req.files ? req.files[0]?.buffer :  null,
+        category: body.category || "",
+      });
       const newTechnology = await this.logic.createTechnology({
         name: body.name,
-        icon: body.icon || "",
+        icon:
+          Array.isArray(req?.files) && req?.files
+            ? req?.files?.[0]?.buffer
+            : null,
         category: body.category || "",
       });
 
@@ -318,12 +382,18 @@ export class projectController {
 
   async getAllCategories(req: Request, res: Response, next: NextFunction) {
     try {
-      const categories = await this.logic.getAllCategories();
+      const { skip, take } = req.query;
+      const categories = await this.logic.getAllCategories({
+        params: {
+          skip: Number(skip) || 0,
+          take: Number(take) || 10,
+        },
+      });
 
       return res.status(200).json({
-        success: true,
         message: "Categories fetched successfully",
-        data: categories,
+        data: categories.data,
+        pagination: categories.pagination,
       });
     } catch (error) {
       next(error);
@@ -345,6 +415,51 @@ export class projectController {
         success: true,
         message: "Projects assigned to technology successfully",
         data: assigned,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async createProjectAndAssignTechnology(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      // const project = req.body.project;
+      // const technology = req.body.technologies;
+      const { technologies,  services, ...project  } = req.body;
+
+
+      console.log({
+        project: {
+          ...project,
+          image:
+            Array?.isArray(req?.files) && req?.files
+              ? req?.files?.[0]?.buffer
+              : undefined,
+        },
+        technologies: technologies ? JSON.parse(technologies) : [],
+        services: technologies ? JSON.parse(services) : [],
+      });
+
+      const created = await this.logic.createProjectAndAssignTechnology({
+        project: {
+          ...project,
+          image:
+            Array?.isArray(req?.files) && req?.files
+              ? req?.files?.[0]?.buffer
+              : undefined,
+        },
+        technologies: technologies ? JSON.parse(technologies) : [],
+                services: technologies ? JSON.parse(services) : [],
+
+      });
+      return res.status(200).json({
+        success: true,
+        message: "Project and technology assigned successfully",
+        data: created,
       });
     } catch (error) {
       next(error);
@@ -383,29 +498,63 @@ export class projectController {
       const technology = JSON.parse(technologyRaw);
       const projects = JSON.parse(projectsRaw);
 
-      console.log(req.files)
-      const FixedBody =  {
+      console.log(req.files);
+      const FixedBody = {
         technology: {
           name: technology.name,
           icon: technology.icon,
           category: technology.category,
         },
-        projects:  projects.map((p : any) => {
-            return { 
-                ...p,
-                image: Array.isArray(req.files) && req.files ? req.files.find((f) => f.originalname === p.image)?.buffer : undefined,
-            }
-        })
-      }
+        projects: projects.map((p: any) => {
+          return {
+            ...p,
+            image:
+              Array?.isArray(req.files) && req?.files
+                ? req.files.find((f) => f.originalname === p.image)?.buffer
+                : undefined,
+          };
+        }),
+      };
 
-
-
-
-        const result = await this.logic.createTechnologyAndProject(FixedBody);
+      const result = await this.logic.createTechnologyAndProject(FixedBody);
 
       return res.status(201).json({
         success: true,
         message: "Technology and projects created successfully",
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+  //** */
+  async createProjectWithTechnologies(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const projectRaw = req.body.project;
+      const technologiesRaw = req.body.technologies;
+
+      // 🔹 Parse JSON text fields
+      const project = JSON.parse(projectRaw);
+      const technologies = JSON.parse(technologiesRaw);
+
+      const result = await this.logic.createProjectAndTechnologies({
+        project: {
+          ...project,
+          image:
+            Array.isArray(req.files) && req.files
+              ? req.files.find((f) => f.originalname === project.image)?.buffer
+              : undefined,
+        },
+        technologies: technologies,
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: "Project and technologies created successfully",
         data: result,
       });
     } catch (error) {

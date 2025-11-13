@@ -11,6 +11,7 @@ import type {
   Prisma,
 } from "@prisma/client";
 import { DefaultArgs } from "@prisma/client/runtime/library";
+import { serviceWithImage } from "./services";
 
 type slideShowWithImage = slideShowType & {
   Image: Image | null;
@@ -159,4 +160,42 @@ export type modelMap = {
     DefaultArgs,
     Prisma.PrismaClientOptions
   >;
+};
+
+
+export interface CreateAndAttachMany extends Omit<CreateslideShowDTO, "slug"> {
+  slides: {
+    type: "service" | "project" | "teamMember" | "client" | "testimonial";
+    id: string;
+    order: number;
+    isVisible: boolean;
+    customTitle?: string | undefined;
+    customDesc?: string | undefined;
+  }[];
+}
+
+export type slideshowsWithRelations=  {
+  
+  ServiceSlideShows: ServiceSlideShowRelation[];
+  ClientSlideShows: ClientSlideShowRelation[];
+  ProjectSlideShows: ProjectSlideShowRelation[];
+  TestimonialSlideShows: testimonialSlideShowRelation[];
+  TeamSlideShows: TeamSlideShowRelation[];
+}
+export type ServiceSlideShowRelation = ServiceSlideShow & {
+  
+  service: serviceWithImage;
+};
+
+export type ClientSlideShowRelation = ClientSlideShow & {
+  client: ClientWithImages;
+};
+export type ProjectSlideShowRelation = ProjectSlideShow & {
+  project: ProjectWithRelations;
+};
+export type testimonialSlideShowRelation = TestimonialSlideShow & {
+  testimonial: TestimonialWithImage;
+};
+export type TeamSlideShowRelation = TeamSlideShow & {
+  teamMember: ClientWithImages;
 };

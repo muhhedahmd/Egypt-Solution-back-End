@@ -12,6 +12,7 @@ import {
   deleteImageById,
   txInstance,
   UploadImage,
+  UploadImageWithoutBlurHAsh,
 } from "../../lib/helpers";
 import { ServiceError } from "../../errors/services.error";
 import {
@@ -19,6 +20,7 @@ import {
   Project,
   ProjectStatus,
   ProjectTechnology,
+  Service,
   Technology,
 } from "@prisma/client";
 
@@ -103,7 +105,20 @@ export class projectRepository {
 
   async findMany(skip: number, take: number) {
     return this.prisma.project.findMany({
-      include: { image: true },
+      include: {
+        image: true,
+        technologies: {
+          select: {
+            technology: {
+              select: {
+                icon: true,
+                name: true,
+                category: true,
+              },
+            },
+          },
+        },
+      },
       skip: skip * take,
       take: take,
     });
@@ -113,6 +128,70 @@ export class projectRepository {
     return this.prisma.project.count();
   }
 
+  async findBySlugFull(
+    id: string,
+    prismaTouse?: txInstance
+  ): Promise<{
+    image: Image | null;
+    technologies: Partial<Technology>[];
+    project: Project;
+    servicesData: {
+      image: Image | null;
+      service: Service;
+    }[];
+  } | null> {
+    try {
+      const project = await (prismaTouse || this.prisma).project.findUnique({
+        where: {
+          slug: id,
+        },
+        include: {
+          image: true,
+          technologies: {
+            select: {
+              technology: {
+                select: {
+                  slug: true,
+                  id: true,
+                  icon: true,
+                  name: true,
+                  category: true,
+                },
+              },
+            },
+          },
+          services: {
+            include: {
+              image: true,
+            },
+          },
+        },
+      });
+      if (!project) return null;
+      const { image, technologies, services, ...rest } = project;
+
+      return {
+        image,
+        servicesData: services.map((service) => {
+          const { image, ...rest } = service;
+          return {
+            image: image || null,
+            service: rest,
+          };
+        }),
+        technologies: technologies.map((tech) => tech.technology),
+        project: rest,
+      };
+    } catch (error) {
+      console.log(error);
+      throw new ServiceError(
+        "error finding project by ID",
+        400,
+        "PROJECT_GET_ERROR"
+      );
+    }
+  }
+
   async findById(
     id: string,
     prismaTouse?: txInstance
@@ -120,7 +199,20 @@ export class projectRepository {
     try {
       const project = (prismaTouse || this.prisma).project.findUnique({
         where: { id },
-        include: { image: true },
+        include: {
+          image: true,
+          technologies: {
+            select: {
+              technology: {
+                select: {
+                  icon: true,
+                  name: true,
+                  category: true,
+                },
+              },
+            },
+          },
+        },
       });
       return project;
     } catch (error) {
@@ -134,7 +226,7 @@ export class projectRepository {
   }
 
   async create(
-    data: CreateProjectDTO & { slug: string  , imageId ?: string}, 
+    data: CreateProjectDTO & { slug: string; imageId?: string },
     prismaTouse?: txInstance
   ): Promise<{ project: Project; Image: Image | null }> {
     try {
@@ -204,6 +296,139 @@ export class projectRepository {
         "PROJECT_CREATE_ERROR"
       );
     }
+  }
+  async createTransiaction(
+    data: CreateProjectDTO & { slug: string; imageId?: string },
+    prismaTouse?: txInstance
+  ): Promise<{ project: Project; Image: Image | null }> {
+    try {
+      const prismaTx = prismaTouse || this.prisma;
+
+      const slug = slugify(data.title + randomUUID().substring(0, 8), {
+        lower: true,
+      });
+      if (!slug) throw new Error("error create slug");
+
+      if (data.image) {
+        const createImage = await UploadImage(data.image, data.title);
+        if (!createImage) throw new Error("error upload image");
+        const imageToDB = await AssignImageToDBImage(
+          {
+            imageType: "PROJECT",
+            blurhash: createImage.blurhash,
+            width: createImage.width,
+            height: createImage.height,
+            data: createImage.data,
+          },
+          prismaTx
+        );
+        data.imageId = imageToDB.id;
+      }
+
+      const lastOrder = (await this.count()) - 1;
+      const findIstheretheOrder = await prismaTx.project.findFirst({
+        where: {
+          order: data.order,
+        },
+      });
+      if (findIstheretheOrder) {
+        data.order = lastOrder + 1;
+      }
+      if (data.order && data.order > lastOrder) {
+        data.order = lastOrder + 1;
+      }
+
+      const { slug: _slug, image: _image, ...CerateRest } = data;
+
+      const project = await prismaTx.project.create({
+        data: {
+          ...CerateRest,
+          // imageId: imageToDB.id || null,
+          order: data.order || 0,
+          slug: slug,
+        },
+        include: {
+          image: true,
+        },
+      });
+      const { image, ...rest } = project;
+      return { Image: image, project: rest };
+    } catch (error) {
+      console.log(error);
+      throw new ServiceError(
+        "error creating a project",
+        400,
+        "PROJECT_CREATE_ERROR"
+      );
+    }
+  }
+
+  async CreateProjecAndAssignTechnologies({
+    project,
+    technologies,
+    services,
+  }: {
+    project: CreateProjectDTO;
+    technologies?: string[];
+    services?: string[];
+  }) {
+    const slug = slugify(project.title, { lower: true });
+    const transaction = await this.prisma.$transaction(
+      async (prismaTx) => {
+        const createdProject = await this.createTransiaction(
+          { ...project, slug },
+          prismaTx
+        );
+        let projectTechnologies: Technology[] = [];
+        let projectServices: Service[] = [];
+        if (technologies) {
+          projectTechnologies = await Promise.all(
+            technologies.map(async (tech) => {
+              const Tech = await prismaTx.projectTechnology.create({
+                data: {
+                  projectId: createdProject.project.id,
+                  technologyId: tech,
+                },
+                select: {
+                  technology: true,
+                },
+              });
+              return Tech.technology;
+            })
+          );
+        }
+        if (services) {
+          projectServices = await Promise.all(
+            services.flatMap(async (service, idx) => {
+              const serviceTech = await prismaTx.project.update({
+                where: {
+                  id: createdProject.project.id,
+                },
+                data: {
+                  services: {
+                    connect: {
+                      id: service,
+                    },
+                  },
+                },
+                select: {
+                  services: true,
+                },
+              });
+              return serviceTech.services.filter(
+                (s, index) => s.id === service
+              )[0];
+            })
+          );
+        }
+        return { createdProject, projectTechnologies, projectServices };
+      },
+      {
+        timeout: 20000,
+        maxWait: 5000,
+      }
+    );
+    return transaction;
   }
 
   async update(
@@ -416,20 +641,26 @@ export class projectRepository {
     }
   }
   async createTechnology(
-    data: CreateTechnologyDTO,
+    data: CreateTechnologyDTO & { icon?: Buffer | null },
     tx?: txInstance
   ): Promise<Technology> {
     try {
-      const technology = await (tx || this.prisma).technology.create({
+      const slug = slugify(data.name + randomUUID().substring(0, 8), {
+        lower: true,
+      });
+      const pxToUse = tx ? tx : this.prisma;
+      let icon: any = "";
+
+      if (data.icon) icon = await UploadImageWithoutBlurHAsh(data.icon, slug);
+      const technology = await pxToUse.technology.create({
         data: {
           name: data.name,
-          icon: data.icon || "",
+          icon: icon?.data?.[0].data?.ufsUrl || "",
           category: data.category || "",
-          slug: slugify(data.name + randomUUID().substring(0, 8), {
-            lower: true,
-          }),
+          slug,
         },
       });
+
       return technology;
     } catch (error) {
       console.log(error);
@@ -450,7 +681,7 @@ export class projectRepository {
         where: { id },
         data: {
           name: data.name,
-          icon: data.icon,
+          // icon: data.icon,
           category: data.category,
         },
       });
@@ -587,55 +818,115 @@ export class projectRepository {
     CreateProject: (CreateProjectDTO & { slug: string })[];
   }) {
     try {
-      const transaction = await this.prisma.$transaction(async (prismaTx) => {
-        const technology = await this.createTechnology(
-          data.CreateTechnology,
-          prismaTx
-        );
+      const transaction = await this.prisma.$transaction(
+        async (prismaTx) => {
+          const technology = await this.createTechnology(
+            {
+              icon: data.CreateTechnology.icon || null,
+              name: data.CreateTechnology.name,
+              category: data.CreateTechnology.category,
+            },
+            prismaTx
+          );
 
-        const projectIds = (
-          await Promise.all(
-            data.CreateProject.map((project) => this.create(project, prismaTx))
-          )
-        ).map((project) => project.project.id);
+          const projectIds = (
+            await Promise.all(
+              data.CreateProject.map((project) =>
+                this.create(project, prismaTx)
+              )
+            )
+          ).map((project) => project.project.id);
 
-        console.log(projectIds, technology.id);
+          console.log(projectIds, technology.id);
 
-        const dataToAssign = projectIds.map((projectId) => ({
-          projectId,
-          technologyId: technology.id,
-        }));
-        const projectWithTechnology = await Promise.all(
-          dataToAssign.map(async (data) => {
-            await this.findById(data.projectId, prismaTx);
-            await this.findTechById(data.technologyId, prismaTx);
-            const projectTechnology = await prismaTx.projectTechnology.create({
-              data: {
-                projectId: data.projectId,
-                technologyId: data.technologyId,
-              },
-              include: { project: true, technology: true },
-            });
-            return projectTechnology;
-          })
-        );
+          const dataToAssign = projectIds.map((projectId) => ({
+            projectId,
+            technologyId: technology.id,
+          }));
+          const projectWithTechnology = await Promise.all(
+            dataToAssign.map(async (data) => {
+              await this.findById(data.projectId, prismaTx);
+              await this.findTechById(data.technologyId, prismaTx);
+              const projectTechnology = await prismaTx.projectTechnology.create(
+                {
+                  data: {
+                    projectId: data.projectId,
+                    technologyId: data.technologyId,
+                  },
+                  include: { project: true, technology: true },
+                }
+              );
+              return projectTechnology;
+            })
+          );
 
-        return { technology, projectWithTechnology} 
-      } , {
-        timeout: 20000,
-        maxWait: 5000,
-      });
-      const result = transaction.projectWithTechnology.map((projectWithTechnology) => {
-        return  projectWithTechnology.project
+          return { technology, projectWithTechnology };
+        },
+        {
+          timeout: 20000,
+          maxWait: 5000,
+        }
+      );
+      const result = transaction.projectWithTechnology.map(
+        (projectWithTechnology) => {
+          return projectWithTechnology.project;
           // technology: projectWithTechnology.technology,
-      })
-      return  { technology : transaction.technology, projects : {...result}} ;
+        }
+      );
+      return { technology: transaction.technology, projects: { ...result } };
     } catch (error) {
       console.log(error);
       throw new ServiceError(
         "error creating technology and project",
         400,
         "TECHNOLOGY_CREATE_ERROR"
+      );
+    }
+  }
+
+  async createProjectAndTechnologies({
+    project,
+    technologies,
+  }: {
+    project: CreateProjectDTO & { slug: string };
+    technologies: CreateTechnologyDTO[];
+  }) {
+    try {
+      const transaction = await this.prisma.$transaction(
+        async (prismaTx) => {
+          const createdProject = await this.create(project, prismaTx);
+
+          const createdTechnologies = await Promise.all(
+            technologies.map((tech) =>
+              this.createTechnology(tech as any, prismaTx)
+            )
+          );
+
+          const projectTechnologies = await Promise.all(
+            createdTechnologies.map(async (tech) => {
+              return await prismaTx.projectTechnology.create({
+                data: {
+                  projectId: createdProject.project.id,
+                  technologyId: tech.id,
+                },
+              });
+            })
+          );
+
+          return { createdProject, createdTechnologies };
+        },
+        {
+          timeout: 20000,
+          maxWait: 5000,
+        }
+      );
+      return transaction;
+    } catch (error) {
+      console.log(error);
+      throw new ServiceError(
+        "error creating project and technologies",
+        400,
+        "PROJECT_CREATE_ERROR"
       );
     }
   }
@@ -718,9 +1009,15 @@ export class projectRepository {
     searchTerm: string,
     skip: number,
     take: number
-  ): Promise<Project[]> {
+  ): Promise<
+    {
+      project: Project;
+      image: Image | null;
+      technologies: Partial<Technology>[];
+    }[]
+  > {
     try {
-      return await this.prisma.project.findMany({
+      const find = await this.prisma.project.findMany({
         where: {
           OR: [
             {
@@ -763,6 +1060,33 @@ export class projectRepository {
           createdAt: "desc",
         },
       });
+      if (!find) {
+        throw new ServiceError(
+          "No projects found",
+          400,
+          "PROJECT_SEARCH_ERROR"
+        );
+      }
+
+      const projects = find.map((project) => {
+        const { image, technologies, ...rest } = project;
+        return {
+          project: rest,
+          image,
+          technologies:
+            technologies?.map((item) => {
+              return {
+                id: item.technology.id,
+                slug: item.technology.slug,
+                icon: item.technology.icon,
+                name: item.technology.name,
+                category: item.technology.category,
+              };
+            }) || [],
+        };
+      });
+
+      return projects;
     } catch (error) {
       console.error(error);
       throw new ServiceError(
@@ -813,6 +1137,49 @@ export class projectRepository {
         "Error counting featured projects",
         400,
         "PROJECT_COUNT_ERROR"
+      );
+    }
+  }
+  async searchTechnologies(searchTerm: string, skip: number, take: number) {
+    try {
+      return await this.prisma.technology.findMany({
+        where: {
+          name: {
+            contains: searchTerm,
+            mode: "insensitive",
+          },
+        },
+        skip: skip * take,
+        take,
+        orderBy: {
+          name: "asc",
+        },
+      });
+    } catch (error) {
+      console.error(error);
+      throw new ServiceError(
+        "Error searching technologies",
+        400,
+        "TECHNOLOGY_SEARCH_ERROR"
+      );
+    }
+  }
+  async countSearchResultsTech(searchTerm: string) {
+    try {
+      return await this.prisma.technology.count({
+        where: {
+          name: {
+            contains: searchTerm,
+            mode: "insensitive",
+          },
+        },
+      });
+    } catch (error) {
+      console.error(error);
+      throw new ServiceError(
+        "Error counting search results",
+        400,
+        "TECHNOLOGY_COUNT_ERROR"
       );
     }
   }
@@ -967,7 +1334,13 @@ export class projectRepository {
       );
     }
   }
-  async getAllCategories(): Promise<string[]> {
+  async getAllCategories({
+    skip,
+    take,
+  }: {
+    skip: number;
+    take: number;
+  }): Promise<string[]> {
     try {
       const technologies = await this.prisma.technology.findMany({
         select: {
@@ -975,15 +1348,56 @@ export class projectRepository {
         },
         distinct: ["category"],
         where: {
-          category: {
-            not: null,
-          },
+          AND: [
+            {
+              category: {
+                not: null,
+              },
+            },
+            {
+              category: {
+                not: "",
+              },
+            },
+          ],
+        },
+        skip: skip * take,
+        take,
+        orderBy: {
+          name: "asc",
         },
       });
 
       return technologies
         .map((t) => t.category)
         .filter((c): c is string => c !== null);
+    } catch (error) {
+      console.error(error);
+      throw new ServiceError(
+        "Error getting categories",
+        400,
+        "TECHNOLOGY_GET_ERROR"
+      );
+    }
+  }
+  async getCountCategories(): Promise<number> {
+    try {
+      return await this.prisma.technology.count({
+        where: {
+          AND: [
+            {
+              category: {
+                not: null,
+              },
+            },
+            {
+              category: {
+                not: "",
+              },
+            },
+          ],
+        },
+      });
     } catch (error) {
       console.error(error);
       throw new ServiceError(

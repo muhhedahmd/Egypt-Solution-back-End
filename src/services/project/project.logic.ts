@@ -9,18 +9,23 @@ import {
   Technology,
   ProjectTechnology,
   ProjectStatus,
+  Image,
 } from "@prisma/client";
 
-
+// ==================== PROJECT LOGIC ====================
 export class projectLogic {
   constructor(
     private repository: projectRepository,
     private validator: ProjectsValidator
   ) {}
 
-  async getAllProjects(
-    params: PaginationParams
-  ): Promise<PaginatedResponse<Project>> {
+  async getAllProjects(params: PaginationParams): Promise<
+    PaginatedResponse<{
+      project: Project;
+      image: Image | null;
+      technologies: Partial<Technology>[];
+    }>
+  > {
     this.validator.validatePagination(params);
     const skip = params.skip || 0;
     const take = params.take || 10;
@@ -33,7 +38,15 @@ export class projectLogic {
     const remainingItems = totalItems - (skip * take + projects.length);
 
     return {
-      data: projects,
+      data: projects.map((project) => {
+        const { image, technologies, ...rest } = project;
+
+        return {
+          project: rest,
+          image: image || null,
+          technologies: technologies.map((tech) => tech.technology) || [],
+        };
+      }),
       pagination: {
         totalItems,
         remainingItems,
@@ -79,6 +92,13 @@ export class projectLogic {
     const findProject = await this.repository.findById(validId);
     return findProject;
   }
+  async findBySlugFull(
+    id: string
+  ): Promise<Awaited<ReturnType<typeof this.repository.findBySlugFull>>> {
+    // const validId = this.validator.validateSlug(id);
+    const findProject = await this.repository.findBySlugFull(id);
+    return findProject;
+  }
 
   // Technology methods
   async createTechnology(data: unknown): Promise<Technology> {
@@ -91,6 +111,28 @@ export class projectLogic {
         "TECHNOLOGY_CREATION_ERROR"
       );
     return technology;
+  }
+
+  async createProjectAndAssignTechnology(
+    data: unknown
+  ): Promise<
+    Awaited<
+      ReturnType<typeof this.repository.CreateProjecAndAssignTechnologies>
+    >
+  > {
+    const validData = this.validator.validateCreateProjectAndAssignTechsAndServices(data);
+
+    const ProjectWithTechs =
+      await this.repository.CreateProjecAndAssignTechnologies(validData);
+
+    if (!ProjectWithTechs)
+      throw new ServiceError(
+        "error create technology",
+        400,
+        "TECHNOLOGY_CREATION_ERROR"
+      );
+
+    return ProjectWithTechs;
   }
 
   async findTechById(id: string): Promise<Technology | null> {
@@ -119,15 +161,17 @@ export class projectLogic {
   }
 
   async createTechnologyAndProject(data: unknown): Promise<{
-
     technology: Technology;
     projects: Project[];
   }> {
-    
     const validData = this.validator.validateCreateTechWithProjects(data);
 
     const result = await this.repository.createTechnologyAndProject({
-      CreateTechnology: validData.technology,
+      CreateTechnology: {
+        icon: validData.technology.icon || null,
+        name: validData.technology.name,
+        category: validData.technology.category,
+      },
       CreateProject: validData.projects.map((p) => {
         const slug = slugify(
           validData.technology.name + randomUUID().substring(0, 6),
@@ -142,6 +186,28 @@ export class projectLogic {
     });
 
     return result;
+  }
+
+  async createProjectAndTechnologies(
+    data: unknown // : Promise<{
+  ) // createdProject: {
+  // project: Project;
+  // Image: Image | null;
+  // };
+  // createdTechnologies: Technology[];
+  // }>
+  {
+    // const validData =
+    //   this.validator.validateCreateProjectAndAssignTechs(data);
+    // const slug = slugify(
+    //   validData.project.title + randomUUID().substring(0, 6),
+    //   { lower: true }
+    // );
+    // const result = await this.repository.createProjectAndTechnologies({
+    //   project: { ...validData.project, slug },
+    //   technologies: validData.technologies,
+    // });
+    // return result;
   }
 
   // Get projects by technology
@@ -209,10 +275,13 @@ export class projectLogic {
       },
     };
   }
+
   async searchProjects(
     searchTerm: string,
     params: PaginationParams
-  ): Promise<PaginatedResponse<Project>> {
+  ): Promise<PaginatedResponse< 
+  Awaited< ReturnType < typeof this.repository.searchProjects > > 
+  >> {
     this.validator.validatePagination(params);
 
     if (!searchTerm || searchTerm.trim().length === 0) {
@@ -233,12 +302,50 @@ export class projectLogic {
 
     const remainingItems = totalItems - (skip * take + projects.length);
 
+  
     return {
-      data: projects,
+     data: projects,
+
       pagination: {
         totalItems,
         remainingItems,
         nowCount: projects.length,
+        totalPages: Math.ceil(totalItems / take),
+        currentPage: skip + 1,
+        pageSize: take,
+      },
+    };
+  }
+
+  async techSearch(
+    searchTerm: string,
+    params: PaginationParams
+  ): Promise<PaginatedResponse<Technology>> {
+    this.validator.validatePagination(params);
+
+    if (!searchTerm || searchTerm.trim().length === 0) {
+      throw new ServiceError(
+        "Search term is required",
+        400,
+        "INVALID_SEARCH_TERM"
+      );
+    }
+
+    const skip = params.skip || 0;
+    const take = params.take || 10;
+    const [technologies, totalItems] = await Promise.all([
+      this.repository.searchTechnologies(searchTerm, skip, take),
+      this.repository.countSearchResultsTech(searchTerm),
+    ]);
+
+    const remainingItems = totalItems - (skip * take + technologies.length);
+
+    return {
+      data: technologies,
+      pagination: {
+        totalItems,
+        remainingItems,
+        nowCount: technologies.length,
         totalPages: Math.ceil(totalItems / take),
         currentPage: skip + 1,
         pageSize: take,
@@ -274,7 +381,6 @@ export class projectLogic {
   }
 
   async getProjectsByStatus(
-
     status: ProjectStatus,
     params: PaginationParams
   ): Promise<PaginatedResponse<Project>> {
@@ -374,8 +480,38 @@ export class projectLogic {
     };
   }
 
-  async getAllCategories(): Promise<string[]> {
-    const categories = await this.repository.getAllCategories();
-    return categories;
+  async getAllCategories({
+    params,
+  }: {
+    params: PaginationParams;
+  }): Promise<PaginatedResponse<string>> {
+    const skip = params.skip || 0;
+    const take = params.take || 10;
+
+    const [categories, totalItems] = await Promise.all([
+      this.repository.getAllCategories({
+        skip,
+        take,
+      }),
+      this.repository.getCountCategories(),
+    ]);
+
+    const remainingItems = totalItems - (skip * take + categories.length);
+
+    return {
+      data: categories,
+      pagination: {
+        totalItems,
+        remainingItems,
+        nowCount: categories.length,
+        totalPages: Math.ceil(totalItems / take),
+        currentPage: skip + 1,
+        pageSize: take,
+      },
+    };
+  }
+  async getCountCategories(): Promise<number> {
+    const count = await this.repository.getCountCategories();
+    return count;
   }
 }

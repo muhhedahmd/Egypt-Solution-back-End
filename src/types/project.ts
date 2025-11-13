@@ -68,7 +68,7 @@ export interface ProjectDTO {
 
 export interface CreateTechnologyDTO {
   name: string;
-  icon?: string;
+  icon?: Buffer | null;
   category?: string;
 }
 

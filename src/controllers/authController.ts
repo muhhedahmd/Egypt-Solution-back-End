@@ -86,14 +86,14 @@ export class AuthController {
           sameSite: "lax",
           path: "/",
 
-          maxAge: tokens.refreshExpiresIn * 1000, // ⏱️ أسبوع
+          maxAge: tokens.refreshExpiresIn * 1000, 
         })
         .cookie("accessToken", tokens.accessToken, {
           secure: false,
           sameSite: "lax",
           path: "/",
           expires: new Date(Date.now() + tokens.expiresIn),
-          maxAge: tokens.expiresIn * 1000, // ⏱️ 15 دقيقة
+          maxAge: tokens.expiresIn * 1000, 
         })
         .status(201)
         .json(
@@ -153,8 +153,8 @@ export class AuthController {
   }
   static async refreshToken(req: Request, res: Response) {
     try {
-      const refreshToken = req.cookies.refreshToken;
-      console.log(refreshToken);
+      const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
+      console.log("Refresh token:", refreshToken);
       if (!refreshToken) {
         return res.status(400).json({ error: "Refresh token is required" });
       }
@@ -176,6 +176,7 @@ export class AuthController {
           maxAge: 30 * 24 * 60 * 60 * 1000,
         })
         .cookie("accessToken", accessToken, {
+          
           secure: false,
           sameSite: "lax",
           path: "/",

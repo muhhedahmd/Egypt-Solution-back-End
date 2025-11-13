@@ -63,7 +63,7 @@ export class slideShowLogic {
     const deleteSlideShow = await this.repository.delete(validId);
     return deleteSlideShow;
   }
-  
+
   async findById(id: string): Promise<SlideShow> {
     const validId = this.validator.validateId(id);
     const findSlideShow = await this.repository.findById(validId);
@@ -75,10 +75,60 @@ export class slideShowLogic {
     return createAttachSlideShow;
   }
   async deattach(data: unknown): Promise<AttachmentTypes> {
-
     const valid = this.validator.validateDeattachGlobal(data);
     const updatedService = await this.repository.Deattach(valid);
     return updatedService;
+  }
+  // ***
+  async createAndAttachMany(
+    data: unknown
+  ): Promise<{ slideShow: SlideShow; attacheds: AttachmentTypes[] }> {
+    const valid = this.validator.validCreateAndAttachManySchema(data);
+    if (!valid)
+      throw new ServiceError(
+        "Invalid data for create and attach many",
+        400,
+        "SLIDESHOW_CREATE_ATTACH_MANY_ERROR"
+      );
+
+    const { slides, ...rest } = valid;
+    const createdAndAttached = await this.repository.createAndAttachMany({
+      slides: slides.map((slide) => ({
+        id: slide.attachId,
+        type: slide.attachType,
+        order: slide.order,
+        isVisible: slide.isVisible,
+        customTitle: slide.customTitle,
+        customDesc: slide.customDesc,
+      })),
+      ...rest,
+    });
+    return createdAndAttached;
+  }
+  // ***
+  async getSlidesInSlideShow({
+    id,
+    page,
+    pagesPerType,
+    perPage,
+  }: {
+    id: string;
+    page: number;
+    pagesPerType?: Partial<
+      Record<
+        "services" | "projects" | "clients" | "testimonials" | "team",
+        number
+      >
+    >;
+    perPage: number;
+  }) {
+    const validId = this.validator.validateId(id);
+    const slides = await this.repository.getSlidesPaged(validId, {
+      page,
+      pagesPerType,
+      perPage,
+    });
+    return slides;
   }
   async attachMany(data: unknown): Promise<AttachmentTypes[]> {
     const valid = this.validator.validateBulkAttach(data);
@@ -89,7 +139,6 @@ export class slideShowLogic {
     return updatedService;
   }
   async deattchMany(data: unknown): Promise<AttachmentTypes[]> {
-    console.log(data)
     const valid = this.validator.validateBulkDeattach(data);
     const updatedService = await this.repository.DeattachMany({
       items: valid.items,
@@ -149,6 +198,7 @@ export class slideShowLogic {
     }
   }
   async getSlideshowsByType({
+
     skip,
     take,
     type,
@@ -201,7 +251,6 @@ export class slideShowLogic {
     }
   }
   async getAttachesByType(
-
     data: unknown
   ): Promise<
     PaginatedResponse<
@@ -231,7 +280,7 @@ export class slideShowLogic {
         }),
       ]);
 
-      console.log(attaches.length ,count , "Ss")
+      console.log(attaches.length, count, "Ss");
       const totalItems = +count;
       const remainingItems = totalItems - (skip * take + attaches.length);
       return {

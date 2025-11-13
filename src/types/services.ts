@@ -1,6 +1,7 @@
-import type { Service as ServiceType, Image } from "@prisma/client";
+import { type Service as ServiceType, type Image, ImageType } from "@prisma/client";
 
-type serviceWithImage = ServiceType & {
+
+export type serviceWithImage = ServiceType & {
   Image: Image | null;
 };
 export interface IService extends serviceWithImage {
@@ -16,12 +17,17 @@ export interface IServiceRepositoryCreateResponse {
   service: ServiceType;
 }
 
+export interface interFaceSearchService extends ServiceType {
+  image: Image | null
+  
+}
 export interface CreateServiceDTO {
   name: string;
   description: string;
   richDescription: string;
   image?: Buffer;
   icon?: string;
+  iconImage?: Buffer;
   price?: string;
   isActive?: boolean;
   isFeatured?: boolean;

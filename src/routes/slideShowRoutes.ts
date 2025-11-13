@@ -17,25 +17,18 @@ export class slideShowRoutes {
       "/",
       asyncHandler(this.controller.getAllSlideShows.bind(this.controller))
     );
-    // this.router.get(
-    //   "/single/:id",
-    //   asyncHandler(this.controller.getSlideShowById.bind(this.controller))
-    // );
+    this.router.post(
+      "/create-attach-many",
+      asyncHandler(requireAuthv2),
+      asyncHandler(this.controller.CreateAndAttachMany.bind(this.controller))
+    );
+    
     this.router.post(
       "/",
       asyncHandler(requireAuthv2),
       asyncHandler(this.controller.createSlideShow.bind(this.controller))
     );
-    this.router.put(
-      "/:id",
-      asyncHandler(requireAuthv2),
-      asyncHandler(this.controller.updateSlideShow.bind(this.controller))
-    );
-    // this.router.delete(
-    //   "/:id",
-    //   asyncHandler(requireAuthv2),
-    //   asyncHandler(this.controller.deleteSlideShow.bind(this.controller))
-    // );
+   
     this.router.post(
       "/attach-many",
       asyncHandler(requireAuthv2),
@@ -43,7 +36,7 @@ export class slideShowRoutes {
     );
     this.router.get(
       "/grouped-type/:id",
-      // asyncHandler(requireAuthv2),
+      asyncHandler(requireAuthv2),
       asyncHandler(this.controller.getAttachedsGrouped.bind(this.controller))
     );
     this.router.get(
@@ -56,8 +49,26 @@ export class slideShowRoutes {
     );
     this.router.delete(
       "/detach-many",
-      // asyncHandler(requireAuthv2),
+      asyncHandler(requireAuthv2),
       asyncHandler(this.controller.deAttachMany.bind(this.controller))
+    );
+     this.router.get(
+      "/:id",
+      asyncHandler(this.controller.getSlideShowById.bind(this.controller))
+    );
+    this.router.post(
+        "/get-paginated-slides/:id",
+        asyncHandler(this.controller.getPaginatedSlides.bind(this.controller))
+    );
+    this.router.delete(
+        "/:id",
+        asyncHandler(requireAuthv2),
+        asyncHandler(this.controller.deleteSlideShow.bind(this.controller))
+    );
+    this.router.put(
+      "/:id",
+      asyncHandler(requireAuthv2),
+      asyncHandler(this.controller.updateSlideShow.bind(this.controller))
     );
   }
   getRoutes(): Router {

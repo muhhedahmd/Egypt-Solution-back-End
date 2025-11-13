@@ -54,13 +54,13 @@ app.use("/api" ,  ProfileRoutes)
 
 // Mount modules
 const servicesModule = new ServicesModule(prisma);
-const slideShowModule = new slideShowModules(prisma);
-const projectModule = new projectModules(prisma);
-const blogModule = new blogModules(prisma);
 app.use('/api/services', servicesModule.getRoutes());
+const slideShowModule = new slideShowModules(prisma);
 app.use('/api/slide-show', slideShowModule.getRoutes());
+const projectModule = new projectModules(prisma);
 app.use('/api/projects', projectModule.getRoutes());
-app.use('/api/blogs', blogModule.getRoutes());
+// const blogModule = new blogModules(prisma);
+// app.use('/api/blogs', blogModule.getRoutes());
 
 
 app.use(errorHandler as any);
