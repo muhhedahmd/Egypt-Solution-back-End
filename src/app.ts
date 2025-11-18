@@ -15,6 +15,9 @@ import { errorHandler } from "./middlewares/errorHandler"
 import { slideShowModules } from "./services/slideShow/slidwshow.modules"
 import { projectModules } from "./services/project/project.modules"
 import {  blogModules } from "./services/blog/blog.modules"
+import { ClientModule } from "./services/client/client.module"
+import { TeamModule } from "./services/team/team.module"
+import { TestimonialModule } from "./services/testtimonials/testimonial.module"
 
 const app = express()
 app.use(cookieParser());
@@ -58,10 +61,20 @@ app.use('/api/services', servicesModule.getRoutes());
 const slideShowModule = new slideShowModules(prisma);
 app.use('/api/slide-show', slideShowModule.getRoutes());
 const projectModule = new projectModules(prisma);
-app.use('/api/projects', projectModule.getRoutes());
-// const blogModule = new blogModules(prisma);
-// app.use('/api/blogs', blogModule.getRoutes());
 
+app.use('/api/projects', projectModule.getRoutes());
+const blogModule = new blogModules(prisma);
+app.use('/api/blogs', blogModule.getRoutes());
+
+
+const clientModule = new ClientModule(prisma);
+app.use('/api/clients', clientModule.getRoutes());
+
+const teamModule = new TeamModule(prisma);
+app.use('/api/team', teamModule.getRoutes());
+
+const testimonialModule = new TestimonialModule(prisma);
+app.use('/api/testimonials', testimonialModule.getRoutes());
 
 app.use(errorHandler as any);
 

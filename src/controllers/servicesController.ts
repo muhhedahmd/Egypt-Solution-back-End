@@ -20,7 +20,7 @@ export class ServicesController {
       if (!services) throw new ServiceNotFoundError("error get services");
 
       return res.json({
-        data: services,
+        ...services,
         message: "services fetched successfully",
       });
     } catch (error) {

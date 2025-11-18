@@ -21,7 +21,7 @@ export class ClientController {
       if (!clients) throw new ClientNotFoundError('error get clients');
 
       return res.json({
-        data: clients,
+         ...clients,
         message: 'clients fetched successfully',
         success: true
       });
@@ -156,7 +156,7 @@ export class ClientController {
           | 'KEEP'
           | 'REMOVE'
           | 'UPDATE'
-          | undefined,
+          | undefined,  
       };
 
       const updatedClient = await this.clientLogic.updateClient({

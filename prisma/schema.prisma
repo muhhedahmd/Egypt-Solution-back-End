@@ -38,6 +38,7 @@ enum ImageType {
   BLOG
   TEAM
   HERO
+  TESTIMONIAL
 }
 
 enum SlideshowType {

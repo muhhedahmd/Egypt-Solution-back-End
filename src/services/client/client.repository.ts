@@ -1,33 +1,50 @@
-import slugify from 'slugify';
-import { randomUUID } from 'crypto';
-import { PrismaClientConfig } from '../../config/prisma';
+import slugify from "slugify";
+import { randomUUID } from "crypto";
+import { PrismaClientConfig } from "../../config/prisma";
 import {
   deleteImageById,
   UploadImage,
   AssignImageToDBImage,
-} from '../../lib/helpers';
+} from "../../lib/helpers";
 import {
   CreateClientDTO,
   UpdateClient,
   InterFaceSearchClient,
-} from '../../types/client';
-import { ClientError } from '../../errors/client.error';
+} from "../../types/client";
+import { ClientError } from "../../errors/client.error";
 
 export class ClientRepository {
   constructor(private prisma: PrismaClientConfig) {}
 
   async findMany(skip: number, take: number) {
-    return this.prisma.client.findMany({
-      include: {
-        image: true,
-        logo: true,
-      },
-      skip: skip * take,
-      take: take,
-      orderBy: {
-        order: 'asc',
-      },
-    });
+    try {
+      const clients = this.prisma.client.findMany({
+        include: {
+          image: true,
+          logo: true,
+        },
+        skip: skip * take,
+        take: take,
+        orderBy: {
+          order: "asc",
+        },
+      });
+      return (await clients).map((client) => {
+        const { image, logo, ...rest } = client;
+        return {
+          client: rest,
+          image: image || null,
+          logo: logo || null,
+        };
+      });
+    } catch (error) {
+      console.error(error);
+      throw new ClientError(
+        "Error finding client",
+        400,
+        "CLIENT_FIND_MANY_ERROR"
+      );
+    }
   }
 
   async isValidOrder({ order }: { order: number }) {
@@ -41,7 +58,7 @@ export class ClientRepository {
       };
     } catch (error) {
       console.error(error);
-      throw new Error('Error finding client by order');
+      throw new Error("Error finding client by order");
     }
   }
 
@@ -60,7 +77,7 @@ export class ClientRepository {
       });
     } catch (error) {
       console.error(error);
-      throw new Error('Error finding client by ID');
+      throw new Error("Error finding client by ID");
     }
   }
 
@@ -86,19 +103,11 @@ export class ClientRepository {
       };
     } catch (error) {
       console.error(error);
-      throw new ClientError(
-        'Error finding client',
-        400,
-        'CLIENT_SEARCH_ERROR'
-      );
+      throw new ClientError("Error finding client", 400, "CLIENT_SEARCH_ERROR");
     }
   }
 
-  async SearchClient(
-    searchTerm: string,
-    skip: number,
-    take: number
-  ): Promise<InterFaceSearchClient[]> {
+  async SearchClient(searchTerm: string, skip: number, take: number) {
     try {
       const clients = await this.prisma.client.findMany({
         where: {
@@ -106,31 +115,31 @@ export class ClientRepository {
             {
               name: {
                 contains: searchTerm,
-                mode: 'insensitive',
+                mode: "insensitive",
               },
             },
             {
               description: {
                 contains: searchTerm,
-                mode: 'insensitive',
+                mode: "insensitive",
               },
             },
             {
               richDescription: {
                 contains: searchTerm,
-                mode: 'insensitive',
+                mode: "insensitive",
               },
             },
             {
               industry: {
                 contains: searchTerm,
-                mode: 'insensitive',
+                mode: "insensitive",
               },
             },
             {
               slug: {
                 contains: searchTerm,
-                mode: 'insensitive',
+                mode: "insensitive",
               },
             },
           ],
@@ -142,17 +151,24 @@ export class ClientRepository {
         skip: skip * take,
         take,
         orderBy: {
-          createdAt: 'desc',
+          createdAt: "desc",
         },
       });
 
-      return clients;
+      return clients.map((client) => {
+        const { image, logo, ...rest } = client;
+        return {
+          client: rest,
+          image: image || null,
+          logo: logo || null,
+        };
+      });
     } catch (error) {
       console.error(error);
       throw new ClientError(
-        'Error searching client',
+        "Error searching client",
         400,
-        'CLIENT_SEARCH_ERROR'
+        "CLIENT_SEARCH_ERROR"
       );
     }
   }
@@ -164,7 +180,7 @@ export class ClientRepository {
           const slug = slugify(data.name + randomUUID().substring(0, 8), {
             lower: true,
           });
-          if (!slug) throw new Error('error create slug');
+          if (!slug) throw new Error("error create slug");
 
           let imageId: string | null = null;
           let logoId: string | null = null;
@@ -172,11 +188,11 @@ export class ClientRepository {
           // Upload main image if provided
           if (data.image) {
             const createImage = await UploadImage(data.image, data.name);
-            if (!createImage) throw new Error('error upload image');
+            if (!createImage) throw new Error("error upload image");
 
             const imageToDB = await AssignImageToDBImage(
               {
-                imageType: 'CLIENT',
+                imageType: "CLIENT",
                 blurhash: createImage.blurhash,
                 width: createImage.width,
                 height: createImage.height,
@@ -184,18 +200,21 @@ export class ClientRepository {
               },
               tx
             );
-            if (!imageToDB) throw new Error('error create imageToDB');
+            if (!imageToDB) throw new Error("error create imageToDB");
             imageId = imageToDB.id;
           }
 
           // Upload logo if provided
           if (data.logo) {
-            const createLogo = await UploadImage(data.logo, data.name + '-logo');
-            if (!createLogo) throw new Error('error upload logo');
+            const createLogo = await UploadImage(
+              data.logo,
+              data.name + "-logo"
+            );
+            if (!createLogo) throw new Error("error upload logo");
 
             const logoToDB = await AssignImageToDBImage(
               {
-                imageType: 'CLIENT',
+                imageType: "CLIENT",
                 blurhash: createLogo.blurhash,
                 width: createLogo.width,
                 height: createLogo.height,
@@ -203,7 +222,7 @@ export class ClientRepository {
               },
               tx
             );
-            if (!logoToDB) throw new Error('error create logoToDB');
+            if (!logoToDB) throw new Error("error create logoToDB");
             logoId = logoToDB.id;
           }
 
@@ -232,14 +251,14 @@ export class ClientRepository {
         },
         {
           timeout: 20000,
-          isolationLevel: 'Serializable',
+          isolationLevel: "Serializable",
           maxWait: 5000,
         }
       );
       return transaction;
     } catch (error) {
       console.error(error);
-      throw new Error('Error creating client');
+      throw new Error("Error creating client");
     }
   }
 
@@ -250,19 +269,19 @@ export class ClientRepository {
           let NewImageId: string | null = null;
           let NewLogoId: string | null = null;
 
-          if (!data.clientId) throw new Error('no clientId provided');
+          if (!data.clientId) throw new Error("no clientId provided");
 
           const client = await prismaTx.client.findUnique({
             where: { id: data.clientId },
           });
 
-          if (!client) throw new Error('client not found');
+          if (!client) throw new Error("client not found");
 
           NewImageId = client?.imageId || null;
           NewLogoId = client?.logoId || null;
 
           // Handle image update/removal
-          if (data.imageState === 'REMOVE') {
+          if (data.imageState === "REMOVE") {
             if (client.imageId) {
               await prismaTx.client.update({
                 where: { id: data.clientId },
@@ -273,7 +292,7 @@ export class ClientRepository {
             NewImageId = null;
           }
 
-          if (data.imageState === 'UPDATE') {
+          if (data.imageState === "UPDATE") {
             if (client.imageId) {
               await prismaTx.client.update({
                 where: { id: data.clientId },
@@ -282,18 +301,18 @@ export class ClientRepository {
               await deleteImageById(client.imageId, prismaTx);
             }
 
-            if (!data.image) throw new Error('no image provided');
+            if (!data.image) throw new Error("no image provided");
 
             const createImage = await UploadImage(
               data.image,
-              data.name || 'update'
+              data.name || "update"
             );
 
-            if (!createImage) throw new Error('error upload image');
+            if (!createImage) throw new Error("error upload image");
 
             const imageToDB = await AssignImageToDBImage(
               {
-                imageType: 'CLIENT',
+                imageType: "CLIENT",
                 blurhash: createImage.blurhash,
                 width: createImage.width,
                 height: createImage.height,
@@ -302,12 +321,12 @@ export class ClientRepository {
               prismaTx
             );
 
-            if (!imageToDB) throw new Error('error create imageToDB');
+            if (!imageToDB) throw new Error("error create imageToDB");
             NewImageId = imageToDB.id;
           }
 
           // Handle logo update/removal
-          if (data.logoState === 'REMOVE') {
+          if (data.logoState === "REMOVE") {
             if (client.logoId) {
               await prismaTx.client.update({
                 where: { id: data.clientId },
@@ -318,7 +337,7 @@ export class ClientRepository {
             NewLogoId = null;
           }
 
-          if (data.logoState === 'UPDATE') {
+          if (data.logoState === "UPDATE") {
             if (client.logoId) {
               await prismaTx.client.update({
                 where: { id: data.clientId },
@@ -327,18 +346,18 @@ export class ClientRepository {
               await deleteImageById(client.logoId, prismaTx);
             }
 
-            if (!data.logo) throw new Error('no logo provided');
+            if (!data.logo) throw new Error("no logo provided");
 
             const createLogo = await UploadImage(
               data.logo,
-              (data.name || 'update') + '-logo'
+              (data.name || "update") + "-logo"
             );
 
-            if (!createLogo) throw new Error('error upload logo');
+            if (!createLogo) throw new Error("error upload logo");
 
             const logoToDB = await AssignImageToDBImage(
               {
-                imageType: 'CLIENT',
+                imageType: "CLIENT",
                 blurhash: createLogo.blurhash,
                 width: createLogo.width,
                 height: createLogo.height,
@@ -347,7 +366,7 @@ export class ClientRepository {
               prismaTx
             );
 
-            if (!logoToDB) throw new Error('error create logoToDB');
+            if (!logoToDB) throw new Error("error create logoToDB");
             NewLogoId = logoToDB.id;
           }
 
@@ -390,7 +409,7 @@ export class ClientRepository {
       return transaction;
     } catch (error) {
       console.error(error);
-      throw new Error('Error updating client');
+      throw new Error("Error updating client");
     }
   }
 
@@ -399,7 +418,7 @@ export class ClientRepository {
       const transaction = await this.prisma.$transaction(
         async (prismaTx) => {
           const client = await prismaTx.client.findUnique({ where: { id } });
-          if (!client) throw new Error('client not found');
+          if (!client) throw new Error("client not found");
 
           await prismaTx.client.update({
             where: { id },
@@ -420,7 +439,7 @@ export class ClientRepository {
       return transaction;
     } catch (error) {
       console.error(error);
-      throw new Error('Error deleting client');
+      throw new Error("Error deleting client");
     }
   }
 }

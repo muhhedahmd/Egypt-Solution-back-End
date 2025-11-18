@@ -41,7 +41,7 @@ export class ServicesLogic {
     const remainingItems = totalItems - (skip * take + services.length);
 
     return {
-      data: services as any,
+      data : (services as any),
       pagination: {
         totalItems,
         remainingItems,
@@ -55,8 +55,8 @@ export class ServicesLogic {
 
   async getServiceById(id: string): Promise<any> {
     console.log({
-      id
-    })
+      id,
+    });
     this.validator.validateId(id);
     const service = await this.repository.findById(id);
     if (!service) {
@@ -75,11 +75,11 @@ export class ServicesLogic {
     this.validator.validateSlug(slug);
     const service = await this.repository.findBySlug(slug);
     if (!service) {
-      throw new ServiceError( 
+      throw new ServiceError(
         `service with slug not found ${slug} `,
         404,
         "SERVICE_NOT_FOUND"
-       );
+      );
     }
     return service;
   }

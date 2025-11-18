@@ -29,7 +29,9 @@ export class ClientLogic {
 
   async getAllClients(
     params: PaginationParams
-  ): Promise<PaginatedResponse<IClient>> {
+  ): Promise<PaginatedResponse<
+    Awaited<ReturnType<typeof this.repository.findMany>>[number]
+  >> {
     const skip = params.skip || 0;
     const take = params.take || 10;
 
@@ -41,7 +43,7 @@ export class ClientLogic {
     const remainingItems = totalItems - (skip * take + clients.length);
 
     return {
-      data: clients as any,
+      data: clients ,
       pagination: {
         totalItems,
         remainingItems,
@@ -61,8 +63,8 @@ export class ClientLogic {
     }
     const { image, logo, ...rest } = client;
     return {
-      Image: image,
-      Logo: logo,
+      image: image,
+      logo: logo,
       client: rest,
     };
   }
@@ -110,7 +112,7 @@ export class ClientLogic {
     }
   }
 
-  async Search(q: string) {
+  async Search(q: string)  {
     if (!q)
       throw new ClientError(
         'search query is required',

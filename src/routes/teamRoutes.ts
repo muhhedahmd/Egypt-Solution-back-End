@@ -1,14 +1,15 @@
 import { Router } from "express";
 import { ClientController } from "../controllers/clientController";
 import multer from "multer";
+import { TeamController } from "../controllers/teamController";
 
 // const upload = multer({ storage: multer.memoryStorage() });
 
-export class ClientRoutes {
+export class teamRoutes {
   private router: Router;
-  private controller: ClientController;
+  private controller: TeamController;
 
-  constructor(controller: ClientController) {
+  constructor(controller: TeamController) {
     this.router = Router();
     this.controller = controller;
     this.initializeRoutes();
@@ -19,11 +20,11 @@ export class ClientRoutes {
       Promise.resolve(fn(req, res, next)).catch(next);
     };
 
-    this.router.get("/", asyncHandler(this.controller.getAllClients.bind(this.controller)));
+    this.router.get("/", asyncHandler(this.controller.getAllTeamMembers.bind(this.controller)));
 
     this.router.get(
       "/search",
-      asyncHandler(this.controller.SearchClients.bind(this.controller))
+      asyncHandler(this.controller.SearchTeamMembers.bind(this.controller))
     );
 
     this.router.get(
@@ -33,32 +34,32 @@ export class ClientRoutes {
 
     this.router.get(
       "/:id",
-      asyncHandler(this.controller.getClientById.bind(this.controller))
+      asyncHandler(this.controller.getTeamMemberById.bind(this.controller))
     );
 
     this.router.get(
       "/slug/:slug",
-      asyncHandler(this.controller.getClientBySlug.bind(this.controller))
+      asyncHandler(this.controller.getTeamMemberBySlug.bind(this.controller))
     );
 
     // POST routes
     this.router.post(
       "/",
     //   upload.any(),
-      asyncHandler(this.controller.createClient.bind(this.controller))
+      asyncHandler(this.controller.createTeamMember.bind(this.controller))
     );
 
     // PUT routes
     this.router.put(
       "/:id",
      
-      asyncHandler(this.controller.updateClient.bind(this.controller))
+      asyncHandler(this.controller.updateTeamMember.bind(this.controller))
     );
 
     // DELETE routes
     this.router.delete(
       "/:id",
-      asyncHandler(this.controller.deleteClient.bind(this.controller))
+      asyncHandler(this.controller.deleteTeamMember.bind(this.controller))
     );
   }
 
