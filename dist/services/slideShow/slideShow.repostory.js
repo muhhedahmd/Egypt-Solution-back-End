@@ -50,6 +50,25 @@ class slideShowRepository {
             testimonial: prismaToUse.testimonialSlideShow,
         };
     }
+    findManyMinimal(prismaTouse) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                return yield (prismaTouse || this.prisma).slideShow.findMany({
+                    select: {
+                        id: true,
+                        title: true,
+                        order: true,
+                        slug: true,
+                        type: true,
+                    },
+                });
+            }
+            catch (error) {
+                console.log(error);
+                throw new services_error_1.ServiceError("slideShow not found", 404, "Cannot find slideShow in DB");
+            }
+        });
+    }
     findById(id, prismaTouse) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
@@ -398,14 +417,11 @@ class slideShowRepository {
                     orderBy: { order: "asc" },
                     skip: svc.skip,
                     take: svc.take,
-                    select: {
-                        id: true,
-                        order: true,
-                        customDesc: true,
-                        customTitle: true,
-                        isVisible: true,
+                    include: {
                         service: {
-                            select: { id: true, name: true, slug: true, image: true },
+                            include: {
+                                image: true,
+                            },
                         },
                     },
                 }),
@@ -414,12 +430,16 @@ class slideShowRepository {
                     orderBy: { order: "asc" },
                     skip: prj.skip,
                     take: prj.take,
-                    select: {
-                        id: true,
-                        order: true,
-                        isVisible: true,
+                    include: {
                         project: {
-                            select: { id: true, title: true, slug: true, image: true },
+                            include: {
+                                image: true,
+                                technologies: {
+                                    include: {
+                                        technology: true,
+                                    },
+                                },
+                            },
                         },
                     },
                 }),
@@ -428,11 +448,13 @@ class slideShowRepository {
                     orderBy: { order: "asc" },
                     skip: cli.skip,
                     take: cli.take,
-                    select: {
-                        id: true,
-                        order: true,
-                        isVisible: true,
-                        client: { select: { id: true, name: true, slug: true, image: true } },
+                    include: {
+                        client: {
+                            include: {
+                                image: true,
+                                logo: true,
+                            },
+                        },
                     },
                 }),
                 this.prisma.testimonialSlideShow.findMany({
@@ -440,12 +462,11 @@ class slideShowRepository {
                     orderBy: { order: "asc" },
                     skip: tst.skip,
                     take: tst.take,
-                    select: {
-                        id: true,
-                        order: true,
-                        isVisible: true,
+                    include: {
                         testimonial: {
-                            select: { id: true, clientName: true, content: true, avatar: true },
+                            include: {
+                                avatar: true,
+                            },
                         },
                     },
                 }),
@@ -454,12 +475,11 @@ class slideShowRepository {
                     orderBy: { order: "asc" },
                     skip: tm.skip,
                     take: tm.take,
-                    select: {
-                        id: true,
-                        order: true,
-                        isVisible: true,
+                    include: {
                         team: {
-                            select: { id: true, name: true, position: true, image: true },
+                            include: {
+                                image: true,
+                            },
                         },
                     },
                 }),
@@ -512,150 +532,6 @@ class slideShowRepository {
             };
         });
     }
-    // async getSlidesPagedFull(
-    //   slideShowId: string,
-    //   opts?: {
-    //     perPage?: number;
-    //     page?: number;
-    //     pagesPerType?: Partial<
-    //       Record<
-    //         "services" | "projects" | "clients" | "testimonials" | "team",
-    //         number
-    //       >
-    //     >;
-    //   }
-    // ) {
-    //   await this.findById(slideShowId);
-    //   const perPageDefault = Math.min(Math.max(opts?.perPage ?? 10, 1), 100);
-    //   const pageDefault = Math.max(opts?.page ?? 1, 1);
-    //   const getSkipTake = (page?: number, perPage = perPageDefault) => {
-    //     const p = Math.max(page ?? pageDefault, 1);
-    //     return { skip: (p - 1) * perPage, take: perPage + 1, page: p, perPage };
-    //   };
-    //   const svc = getSkipTake(opts?.pagesPerType?.services);
-    //   const prj = getSkipTake(opts?.pagesPerType?.projects);
-    //   const cli = getSkipTake(opts?.pagesPerType?.clients);
-    //   const tst = getSkipTake(opts?.pagesPerType?.testimonials);
-    //   const tm = getSkipTake(opts?.pagesPerType?.team);
-    //   const [rawSvc, rawPrj, rawCli, rawTst, rawTm] = await Promise.all([
-    //     this.prisma.serviceSlideShow.findMany({
-    //       where: { slideShowId },
-    //       orderBy: { order: "asc" },
-    //       skip: svc.skip,
-    //       take: svc.take,
-    //       select: {
-    //         id: true,
-    //         order: true,
-    //         customDesc: true,
-    //         customTitle: true,
-    //         isVisible: true,
-    //         service: {
-    //           select: { id: true, name: true, slug: true, image: true },
-    //         },
-    //       },
-    //     }),
-    //     this.prisma.projectSlideShow.findMany({
-    //       where: { slideShowId },
-    //       orderBy: { order: "asc" },
-    //       skip: prj.skip,
-    //       take: prj.take,
-    //       select: {
-    //         id: true,
-    //         order: true,
-    //         isVisible: true,
-    //         project: {
-    //           select: { id: true, title: true, slug: true, image: true },
-    //         },
-    //       },
-    //     }),
-    //     this.prisma.clientSlideShow.findMany({
-    //       where: { slideShowId },
-    //       orderBy: { order: "asc" },
-    //       skip: cli.skip,
-    //       take: cli.take,
-    //       select: {
-    //         id: true,
-    //         order: true,
-    //         isVisible: true,
-    //         client: { select: { id: true, name: true, slug: true, image: true } },
-    //       },
-    //     }),
-    //     this.prisma.testimonialSlideShow.findMany({
-    //       where: { slideShowId },
-    //       orderBy: { order: "asc" },
-    //       skip: tst.skip,
-    //       take: tst.take,
-    //       select: {
-    //         id: true,
-    //         order: true,
-    //         isVisible: true,
-    //         testimonial: {
-    //           select: { id: true, clientName: true, content: true, avatar: true },
-    //         },
-    //       },
-    //     }),
-    //     this.prisma.teamSlideShow.findMany({
-    //       where: { slideShowId },
-    //       orderBy: { order: "asc" },
-    //       skip: tm.skip,
-    //       take: tm.take,
-    //       select: {
-    //         id: true,
-    //         order: true,
-    //         isVisible: true,
-    //         team: {
-    //           select: { id: true, name: true, position: true, image: true },
-    //         },
-    //       },
-    //     }),
-    //   ]);
-    //   const process = (arr: any[], perPage: number) => {
-    //     const hasMore = arr.length > perPage;
-    //     if (hasMore) arr = arr.slice(0, perPage);
-    //     return { items: arr, hasMore };
-    //   };
-    //   const svcPage = process(rawSvc, svc.perPage);
-    //   const prjPage = process(rawPrj, prj.perPage);
-    //   const cliPage = process(rawCli, cli.perPage);
-    //   const tstPage = process(rawTst, tst.perPage);
-    //   const tmPage = process(rawTm, tm.perPage);
-    //   const toSlides = (rows: any[], type: string, dataKey: string) =>
-    //     rows.map((r) => ({ type, id: r.id, order: r.order, data: r[dataKey] }));
-    //   const slides = [
-    //     ...toSlides(svcPage.items, "service", "service"),
-    //     ...toSlides(prjPage.items, "project", "project"),
-    //     ...toSlides(cliPage.items, "client", "client"),
-    //     ...toSlides(tstPage.items, "testimonial", "testimonial"),
-    //     ...toSlides(tmPage.items, "team", "team"),
-    //   ].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    //   return {
-    //     pages: {
-    //       services: {
-    //         page: svc.page,
-    //         perPage: svc.perPage,
-    //         hasMore: svcPage.hasMore,
-    //       },
-    //       projects: {
-    //         page: prj.page,
-    //         perPage: prj.perPage,
-    //         hasMore: prjPage.hasMore,
-    //       },
-    //       clients: {
-    //         page: cli.page,
-    //         perPage: cli.perPage,
-    //         hasMore: cliPage.hasMore,
-    //       },
-    //       testimonials: {
-    //         page: tst.page,
-    //         perPage: tst.perPage,
-    //         hasMore: tstPage.hasMore,
-    //       },
-    //       team: { page: tm.page, perPage: tm.perPage, hasMore: tmPage.hasMore },
-    //     },
-    //     slides,
-    //     slidesCount: await this.slideShowSlidesCount(slideShowId),
-    //   };
-    // }
     // attaches
     attach(_a) {
         return __awaiter(this, arguments, void 0, function* ({ slideShowId, attachType, attachId, order, isVisible, customDesc = "", customTitle = "", isMany = false, tx, }) {
@@ -683,17 +559,30 @@ class slideShowRepository {
                     order = lastOrder + 1;
                 }
                 let attach;
-                attach = yield this.modelAttachMap(prismaTouse || this.prisma)[attachType]
-                    .create({
-                    data: {
-                        slideShowId,
-                        [fieldName]: attachId,
-                        order,
-                        isVisible,
-                        customTitle: customTitle || "",
-                        customDesc: customDesc || "",
-                    },
-                });
+                if (attachType === "service") {
+                    attach = yield this.modelAttachMap(prismaTouse || this.prisma)[attachType]
+                        .create({
+                        data: {
+                            slideShowId,
+                            [fieldName]: attachId,
+                            order,
+                            isVisible,
+                            customTitle: customTitle || "",
+                            customDesc: customDesc || "",
+                        },
+                    });
+                }
+                else {
+                    yield this.modelAttachMap(prismaTouse || this.prisma)[attachType]
+                        .create({
+                        data: {
+                            slideShowId,
+                            [fieldName]: attachId,
+                            order,
+                            isVisible,
+                        },
+                    });
+                }
                 return attach;
             }
             catch (error) {
@@ -785,6 +674,7 @@ class slideShowRepository {
             }
         });
     }
+    // ***
     createAndAttachMany(_a) {
         return __awaiter(this, void 0, void 0, function* () {
             var { slides } = _a, rest = __rest(_a, ["slides"]);
@@ -793,6 +683,18 @@ class slideShowRepository {
                     const slug = (0, slugify_1.default)(rest.title + (0, crypto_1.randomUUID)().substring(0, 6), {
                         lower: true,
                     });
+                    const lastOrder = (yield this.count()) - 1;
+                    const findIstheretheOrder = yield tx.slideShow.findFirst({
+                        where: {
+                            order: rest.order,
+                        },
+                    });
+                    if (findIstheretheOrder) {
+                        rest.order = lastOrder + 1;
+                    }
+                    if (rest.order && rest.order > lastOrder) {
+                        rest.order = lastOrder + 1;
+                    }
                     const slideShow = yield tx.slideShow.create({
                         data: Object.assign(Object.assign({}, rest), { slug }),
                     });
@@ -812,8 +714,9 @@ class slideShowRepository {
                     return { slideShow, attacheds: yield cerated };
                 }), {
                     maxWait: 5000,
-                    timeout: 10000,
+                    timeout: 20000,
                 });
+                console.log(transiction);
                 return transiction;
             }
             catch (error) {

@@ -27,7 +27,25 @@ class SlideShowValidator {
             ], {
                 errorMap: () => ({ message: "Invalid slideshow type" }),
             }),
-            composition: zod_1.z.enum(["SINGLE", "GRID", "CAROUSEL", "STACKED", "FADE", "CUSTOM"], {
+            composition: zod_1.z.enum([
+                "SINGLE",
+                "GRID",
+                "CAROUSEL",
+                "STACKED",
+                "FADE",
+                "CUSTOM",
+                "ZOOM",
+                "PARALLAX",
+                "COVERFLOW",
+                "KEN_BURNS",
+                "FLIP",
+                "CUBE",
+                "AUTO_GRID",
+                "STORY",
+                "FILMSTRIP",
+                "LIGHTBOX",
+                "MARQUEE",
+            ], {
                 errorMap: () => ({ message: "Invalid composition type" }),
             }),
             background: zod_1.z.string().optional(),
@@ -52,8 +70,25 @@ class SlideShowValidator {
                 "CUSTOM",
             ])
                 .optional(),
-            composition: zod_1.z
-                .enum(["SINGLE", "GRID", "CAROUSEL", "STACKED", "FADE", "CUSTOM"])
+            composition: zod_1.z.enum([
+                "SINGLE",
+                "GRID",
+                "CAROUSEL",
+                "STACKED",
+                "FADE",
+                "CUSTOM",
+                "ZOOM",
+                "PARALLAX",
+                "COVERFLOW",
+                "KEN_BURNS",
+                "FLIP",
+                "CUBE",
+                "AUTO_GRID",
+                "STORY",
+                "FILMSTRIP",
+                "LIGHTBOX",
+                "MARQUEE",
+            ])
                 .optional(),
             background: zod_1.z.string().optional(),
             isActive: zod_1.z.boolean().optional(),
@@ -111,13 +146,7 @@ class SlideShowValidator {
         });
         this.deattchGlobalSchema = zod_1.z.object({
             slideShowId: zod_1.z.string().cuid("Invalid slideshow ID"),
-            type: zod_1.z.enum([
-                "service",
-                "client",
-                "project",
-                "testimonial",
-                "teamMember",
-            ]),
+            type: zod_1.z.enum(["service", "client", "project", "testimonial", "teamMember"]),
             id: zod_1.z.string().cuid("Invalid service ID"),
         });
         this.bulkDeattachSchema = zod_1.z.object({

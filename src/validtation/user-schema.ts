@@ -12,7 +12,7 @@ export const userRegisterSchema = z.object({
     role: z.enum(["",
         "ADMIN",
         "CUSTOMER",
-        "GUEST",]).default(UserRole.CUSTOMER) ,
+        "GUEST",]).default(UserRole.ADMIN) ,
     isActive : z.boolean().default(true).optional(  ) 
 
 });

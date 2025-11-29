@@ -25,8 +25,9 @@ app.use(cookieParser());
 // 1. CORS first
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: "https://admin-egypt-solution.vercel.app",
     credentials: true,
+    
   }),
 )
 

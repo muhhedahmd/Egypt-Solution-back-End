@@ -26,7 +26,7 @@ const app = (0, express_1.default)();
 app.use((0, cookie_parser_1.default)());
 // 1. CORS first
 app.use((0, cors_1.default)({
-    origin: "http://localhost:3000",
+    origin: "https://admin-egypt-solution.vercel.app",
     credentials: true,
 }));
 // 2. Configure multer properly

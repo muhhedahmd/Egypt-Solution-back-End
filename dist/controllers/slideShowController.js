@@ -47,6 +47,23 @@ class slideShowController {
             }
         });
     }
+    getAllSlideShowsMinmal(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                // const skip = Number(page) - 1;
+                // const take = Number(limit);
+                const slideShows = yield this.logic.getAllSlideShowsMinmal();
+                return res.status(200).json({
+                    success: true,
+                    message: "Slideshows fetched successfully",
+                    data: slideShows,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
     getSlideShowById(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
@@ -119,6 +136,7 @@ class slideShowController {
             }
         });
     }
+    // ***
     CreateAndAttachMany(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {

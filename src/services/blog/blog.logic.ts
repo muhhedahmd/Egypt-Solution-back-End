@@ -257,7 +257,7 @@ export class blogLogic {
   async updateCategory(id: string, data: unknown): Promise<Category> {
     this.validator.validateId(id);
     const validData = this.validator.validateUpdateCategory({
-      ...data,
+      data,
       id,
     });
 

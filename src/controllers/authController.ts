@@ -4,6 +4,8 @@ import { TokenService } from "../services/tokenService";
 import axios from "axios";
 import * as jwt from "jsonwebtoken";
 
+const isProd = process.env.NODE_ENV === "production";
+
 export class AuthController {
   static async register(req: Request, res: Response) {
     try {
@@ -61,6 +63,7 @@ export class AuthController {
     }
   }
   static async Login(req: Request, res: Response) {
+
     try {
       const { email, password } = req.body;
       const user = await userService.login({ email, password });
@@ -83,14 +86,14 @@ export class AuthController {
         .cookie("refreshToken", tokens.refreshToken, {
           httpOnly: true,
           secure: true,
-          sameSite: "lax",
+          sameSite: "none",
           path: "/",
 
           maxAge: tokens.refreshExpiresIn * 1000, 
         })
         .cookie("accessToken", tokens.accessToken, {
-          secure: false,
-          sameSite: "lax",
+          secure: true,
+          sameSite: "none",
           path: "/",
           expires: new Date(Date.now() + tokens.expiresIn),
           maxAge: tokens.expiresIn * 1000, 
@@ -98,7 +101,6 @@ export class AuthController {
         .status(201)
         .json(
           { success: true, user }
-          // refreshToken :tokens?.refreshToken,
         );
     } catch (error) {
       console.log(error);
@@ -132,8 +134,7 @@ export class AuthController {
         return res.status(500).json({ error: "Internal server error" });
       }
 
-      // ✅ SUCCESS CASE - This was missing!
-      if (result?.data?.error) {
+      if (result?.error) {
         return res.status(500).json({
           success: false,
           message: "something went worng",

@@ -16,9 +16,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const client_1 = require("@prisma/client");
 const faker_1 = require("@faker-js/faker");
 const slugify_1 = __importDefault(require("slugify"));
-const crypto_1 = require("crypto");
 const axios_1 = __importDefault(require("axios"));
-const helpers_1 = require("../lib/helpers");
 const prisma = new client_1.PrismaClient();
 // 🔑 Get your FREE API key from: https://www.pexels.com/api/
 const PEXELS_API_KEY = process.env.PEXELS_API_KEY || 'QqHOijkJNcuseFqqxOV8EymJSj0ETWLZInSYybvXLWboILNNtFLgURUq';
@@ -165,23 +163,23 @@ function main() {
         // Clear existing data
         console.log('🧹 Cleaning existing data...');
         // await prisma.blogCategory.deleteMany();
-        yield prisma.projectTechnology.deleteMany();
-        yield prisma.serviceSlideShow.deleteMany();
-        yield prisma.projectSlideShow.deleteMany();
-        yield prisma.clientSlideShow.deleteMany();
-        yield prisma.testimonialSlideShow.deleteMany();
-        yield prisma.teamSlideShow.deleteMany();
-        yield prisma.slideShow.deleteMany();
+        // await prisma.projectTechnology.deleteMany();
+        // await prisma.serviceSlideShow.deleteMany();
+        // await prisma.projectSlideShow.deleteMany();
+        // await prisma.clientSlideShow.deleteMany();
+        // await prisma.testimonialSlideShow.deleteMany();
+        // await prisma.teamSlideShow.deleteMany();
+        // await prisma.slideShow.deleteMany();
         // await prisma.session.deleteMany();
         // await prisma.profile.deleteMany();
         // await prisma.blog.deleteMany();
-        yield prisma.testimonial.deleteMany();
+        // await prisma.testimonial.deleteMany();
         // await prisma.client.deleteMany();
-        yield prisma.teamMember.deleteMany();
+        // await prisma.teamMember.deleteMany();
         // await prisma.project.deleteMany();
         // await prisma.service.deleteMany();
-        // await prisma.technology.deleteMany();
-        // await prisma.category.deleteMany();
+        yield prisma.technology.deleteMany();
+        yield prisma.category.deleteMany();
         // await prisma.companyInfo.deleteMany();
         // await prisma.contact.deleteMany();
         // await prisma.user.deleteMany();
@@ -246,33 +244,25 @@ function main() {
         // ]);
         // console.log('  ✓ Created 3 users');
         // 3. Create Technologies
-        // console.log('\n⚙️ Creating technologies...');
-        // const createdTechs = await Promise.all(
-        //   technologies.map((tech) =>
-        //     prisma.technology.create({
-        //       data: {
-        //         name: tech.name,
-        //         slug: slugify(tech.name, { lower: true }),
-        //         icon: tech.icon,
-        //         category: tech.category,
-        //       },
-        //     })
-        //   )
-        // );
-        // console.log(`  ✓ Created ${createdTechs.length} technologies`);
+        console.log('\n⚙️ Creating technologies...');
+        const createdTechs = yield Promise.all(technologies.map((tech) => prisma.technology.create({
+            data: {
+                name: tech.name,
+                slug: (0, slugify_1.default)(tech.name, { lower: true }),
+                icon: tech.icon,
+                category: tech.category,
+            },
+        })));
+        console.log(`  ✓ Created ${createdTechs.length} technologies`);
         // 4. Create Categories
-        // console.log('\n📚 Creating blog categories...');
-        // const categoryNames = ['Web Development', 'Mobile', 'Design', 'DevOps', 'Tutorial', 'News', 'Case Study', 'Technology'];
-        // const categories = await Promise.all(
-        //   categoryNames.map((name) =>
-        //     prisma.category.create({
-        //       data: {
-        //         name,
-        //         slug: slugify(name, { lower: true }),
-        //       },
-        //     })
-        //   )
-        // );
+        console.log('\n📚 Creating blog categories...');
+        const categoryNames = ['Web Development', 'Mobile', 'Design', 'DevOps', 'Tutorial', 'News', 'Case Study', 'Technology'];
+        const categories = yield Promise.all(categoryNames.map((name) => prisma.category.create({
+            data: {
+                name,
+                slug: (0, slugify_1.default)(name, { lower: true }),
+            },
+        })));
         // console.log(`  ✓ Created ${categories.length} categories`);
         // 5. Create Services (50 items)
         // console.log('\n💼 Creating 50 services with real images...');
@@ -610,6 +600,71 @@ function main() {
         //     console.error(`  ❌ Error creating project ${i + 1}:`, error.message);
         //   }
         // }
+        // 7. Assign technologies & services to existing projects (50 updates)
+        console.log('\n\n🚀 Assigning technologies & services to existing projects...');
+        // const projectSearchQueries = [
+        //   'web application dashboard',
+        //   'mobile app interface',
+        //   'analytics dashboard screen',
+        //   'ecommerce website',
+        //   'portfolio website design',
+        //   'saas platform interface',
+        // ];
+        const createdProjects = [];
+        // Fetch existing projects once
+        const existingProjects = yield prisma.project.findMany({
+            select: { id: true, title: true }, // reduce payload
+        });
+        const existingServices = yield prisma.service.findMany({
+            select: { id: true }, // reduce payload
+        });
+        if (!existingProjects || existingProjects.length === 0) {
+            console.log('❌ No existing projects found to update.');
+        }
+        else {
+            // optional: shuffle a copy to avoid updating same project repeatedly
+            const projectsPool = [...existingProjects];
+            // simple Fisher–Yates shuffle
+            for (let i = projectsPool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [projectsPool[i], projectsPool[j]] = [projectsPool[j], projectsPool[i]];
+            }
+            // We'll update up to 50 projects or number of projects available
+            const updatesCount = Math.min(50, projectsPool.length);
+            for (let i = 0; i < updatesCount; i++) {
+                try {
+                    const targetProject = projectsPool[i]; // pick shuffled unique project
+                    console.log(`\n[${i + 1}/${updatesCount}] Updating project ID: ${targetProject.id} - ${targetProject.title}...`);
+                    // choose random techs and a random service (from previously created arrays)
+                    const projectTechs = faker_1.faker.helpers.arrayElements(createdTechs, faker_1.faker.number.int({ min: 3, max: 7 }));
+                    const randomService = faker_1.faker.helpers.arrayElement(existingServices);
+                    // prepare create array for technologies relation
+                    const techCreates = projectTechs.map(tech => ({
+                        technologyId: tech.id,
+                    }));
+                    // slight delay to avoid hammering external services (if any)
+                    yield delay(200);
+                    const updatedProject = yield prisma.project.update({
+                        where: { id: targetProject.id },
+                        data: {
+                            // Add technologies by creating join records (assumes ProjectTechnology join model)
+                            technologies: {
+                                create: techCreates,
+                            },
+                            // Connect the project with an existing service
+                            services: {
+                                connect: { id: randomService.id },
+                            },
+                        },
+                    });
+                    createdProjects.push(updatedProject);
+                    console.log('  ✅ Project updated successfully');
+                }
+                catch (error) {
+                    console.error(`  ❌ Error updating project ${i + 1}:`, error.message);
+                }
+            }
+        }
         const teamImagePrompts = [
             "Studio portrait of a confident CEO, professional lighting",
             "Headshot of CTO, tech startup environment",
@@ -664,61 +719,59 @@ function main() {
             "QA lead testing complex system"
         ];
         // 8. Create Team Members (50 items)
-        console.log('\n\n👨‍💻 Creating 50 team members with real images...');
-        const positions = ['CEO', 'CTO', 'Lead Developer', 'Senior Developer', 'Frontend Developer', 'Backend Developer', 'UI/UX Designer', 'DevOps Engineer', 'Project Manager', 'QA Engineer'];
-        const createdTeamMembers = [];
-        for (let i = 0; i < 50; i++) {
-            try {
-                const firstName = faker_1.faker.person.firstName();
-                const lastName = faker_1.faker.person.lastName();
-                const fullName = `${firstName} ${lastName}`;
-                console.log(`\n[${i + 1}/50] Creating team member: ${fullName}...`);
-                // <-- DYNAMIC PROMPT (only change)
-                const position = positions[i % positions.length];
-                const mood = faker_1.faker.word.adjective(); // e.g. "confident", "friendly"
-                const shotType = Math.random() > 0.5 ? 'studio portrait' : 'business headshot';
-                const imagePrompt = `${shotType} of ${fullName}, ${position}, ${mood}, high resolution, neutral background, professional lighting`;
-                // <-- end change
-                const imageBuffer = yield getRealImage(teamImagePrompts[i], '600x600');
-                if (!imageBuffer) {
-                    console.log('  ⚠️  Skipping - image unavailable');
-                    continue;
-                }
-                yield delay(1000);
-                const uploadedImage = yield (0, helpers_1.UploadImage)(imageBuffer, fullName);
-                if (!uploadedImage)
-                    return;
-                const dbImage = yield (0, helpers_1.AssignImageToDBImage)({
-                    imageType: 'TEAM',
-                    blurhash: uploadedImage.blurhash,
-                    width: uploadedImage.width,
-                    height: uploadedImage.height,
-                    data: uploadedImage.data,
-                }, prisma);
-                const teamMember = yield prisma.teamMember.create({
-                    data: {
-                        name: fullName,
-                        slug: (0, slugify_1.default)(`${fullName}-${(0, crypto_1.randomUUID)().substring(0, 6)}`, { lower: true }),
-                        position: positions[i % positions.length],
-                        bio: faker_1.faker.lorem.paragraphs(2),
-                        email: faker_1.faker.internet.email({ firstName, lastName }),
-                        phone: faker_1.faker.phone.number(),
-                        imageId: dbImage.id,
-                        linkedin: `https://linkedin.com/in/${(0, slugify_1.default)(fullName, { lower: true })}`,
-                        github: Math.random() > 0.5 ? `https://github.com/${(0, slugify_1.default)(fullName, { lower: true })}` : undefined,
-                        twitter: Math.random() > 0.5 ? `https://twitter.com/${(0, slugify_1.default)(fullName, { lower: true })}` : undefined,
-                        isActive: true,
-                        isFeatured: i < 12,
-                        order: i,
-                    },
-                });
-                createdTeamMembers.push(teamMember);
-                console.log(`  ✅ Team member created successfully`);
-            }
-            catch (error) {
-                console.error(`  ❌ Error creating team member ${i + 1}:`, error.message);
-            }
-        }
+        //   console.log('\n\n👨‍💻 Creating 50 team members with real images...');
+        //   const positions = ['CEO', 'CTO', 'Lead Developer', 'Senior Developer', 'Frontend Developer', 'Backend Developer', 'UI/UX Designer', 'DevOps Engineer', 'Project Manager', 'QA Engineer'];
+        //   const createdTeamMembers = [];
+        // for (let i = 0; i < 50; i++) {
+        //   try {
+        //     const firstName = faker.person.firstName();
+        //     const lastName = faker.person.lastName();
+        //     const fullName = `${firstName} ${lastName}`;
+        //     console.log(`\n[${i + 1}/50] Creating team member: ${fullName}...`);
+        //     // <-- DYNAMIC PROMPT (only change)
+        //     const position = positions[i % positions.length];
+        //     const mood = faker.word.adjective(); // e.g. "confident", "friendly"
+        //     const shotType = Math.random() > 0.5 ? 'studio portrait' : 'business headshot';
+        //     const imagePrompt = `${shotType} of ${fullName}, ${position}, ${mood}, high resolution, neutral background, professional lighting`;
+        //     // <-- end change
+        //     const imageBuffer = await getRealImage(teamImagePrompts[i], '600x600');
+        //     if (!imageBuffer) {
+        //       console.log('  ⚠️  Skipping - image unavailable');
+        //       continue;
+        //     }
+        //     await delay(1000);
+        //     const uploadedImage = await UploadImage(imageBuffer, fullName);
+        //     if(!uploadedImage)  return
+        //     const dbImage = await AssignImageToDBImage({
+        //       imageType: 'TEAM',
+        //       blurhash: uploadedImage.blurhash,
+        //       width: uploadedImage.width,
+        //       height: uploadedImage.height,
+        //       data: uploadedImage.data,
+        //     }, prisma);
+        //     const teamMember = await prisma.teamMember.create({
+        //       data: {
+        //         name: fullName,
+        //         slug: slugify(`${fullName}-${randomUUID().substring(0, 6)}`, { lower: true }),
+        //         position: positions[i % positions.length],
+        //         bio: faker.lorem.paragraphs(2),
+        //         email: faker.internet.email({ firstName, lastName }),
+        //         phone: faker.phone.number(),
+        //         imageId: dbImage.id,
+        //         linkedin: `https://linkedin.com/in/${slugify(fullName, { lower: true })}`,
+        //         github: Math.random() > 0.5 ? `https://github.com/${slugify(fullName, { lower: true })}` : undefined,
+        //         twitter: Math.random() > 0.5 ? `https://twitter.com/${slugify(fullName, { lower: true })}` : undefined,
+        //         isActive: true,
+        //         isFeatured: i < 12,
+        //         order: i,
+        //       },
+        //     });
+        //     createdTeamMembers.push(teamMember);
+        //     console.log(`  ✅ Team member created successfully`);
+        //   } catch (error : any) {
+        //     console.error(`  ❌ Error creating team member ${i + 1}:`, error.message);
+        //   }
+        // }
         const testimonialImagePrompts = [
             "Portrait of happy client, smiling",
             "Professional headshot of satisfied customer",
@@ -773,53 +826,51 @@ function main() {
         ];
         // 9. Create Testimonials (50 items)
         console.log('\n\n⭐ Creating 50 testimonials with real images...');
-        const createdTestimonials = [];
-        for (let i = 0; i < 50; i++) {
-            try {
-                const firstName = faker_1.faker.person.firstName();
-                const lastName = faker_1.faker.person.lastName();
-                const fullName = `${firstName} ${lastName}`;
-                console.log(`\n[${i + 1}/50] Creating testimonial from: ${fullName}...`);
-                // ⬅️⬅️ Dynamic image prompt (only new line)
-                const mood = faker_1.faker.word.adjective(); // friendly, confident, etc
-                const shotType = Math.random() > 0.5 ? "studio headshot" : "professional portrait";
-                // const imagePrompt = `${shotType} of ${fullName}, ${mood}, clean background, high quality`;
-                const imageBuffer = yield getRealImage(testimonialImagePrompts[i], '400x400');
-                if (!imageBuffer) {
-                    console.log('  ⚠️  Skipping - image unavailable');
-                    continue;
-                }
-                yield delay(1000);
-                const uploadedImage = yield (0, helpers_1.UploadImage)(imageBuffer, fullName);
-                if (!uploadedImage)
-                    return;
-                const dbImage = yield (0, helpers_1.AssignImageToDBImage)({
-                    imageType: 'TESTIMONIAL',
-                    blurhash: uploadedImage.blurhash,
-                    width: uploadedImage.width,
-                    height: uploadedImage.height,
-                    data: uploadedImage.data,
-                }, prisma);
-                const testimonial = yield prisma.testimonial.create({
-                    data: {
-                        clientName: fullName,
-                        clientPosition: faker_1.faker.person.jobTitle(),
-                        clientCompany: faker_1.faker.company.name(),
-                        content: faker_1.faker.lorem.paragraph({ min: 3, max: 6 }),
-                        rating: faker_1.faker.number.int({ min: 4, max: 5 }),
-                        avatarId: dbImage.id,
-                        isActive: true,
-                        isFeatured: i < 15,
-                        order: i,
-                    },
-                });
-                createdTestimonials.push(testimonial);
-                console.log(`  ✅ Testimonial created successfully`);
-            }
-            catch (error) {
-                console.error(`  ❌ Error creating testimonial ${i + 1}:`, error.message);
-            }
-        }
+        // const createdTestimonials = [];
+        // for (let i = 0; i < 50; i++) {
+        //   try {
+        //     const firstName = faker.person.firstName();
+        //     const lastName = faker.person.lastName();
+        //     const fullName = `${firstName} ${lastName}`;
+        //     console.log(`\n[${i + 1}/50] Creating testimonial from: ${fullName}...`);
+        //     // ⬅️⬅️ Dynamic image prompt (only new line)
+        //     const mood = faker.word.adjective(); // friendly, confident, etc
+        //     const shotType = Math.random() > 0.5 ? "studio headshot" : "professional portrait";
+        //     // const imagePrompt = `${shotType} of ${fullName}, ${mood}, clean background, high quality`;
+        //     const imageBuffer = await getRealImage(testimonialImagePrompts[i ], '400x400');
+        //     if (!imageBuffer) {
+        //       console.log('  ⚠️  Skipping - image unavailable');
+        //       continue;
+        //     }
+        //     await delay(1000);
+        //     const uploadedImage = await UploadImage(imageBuffer, fullName);
+        //     if(!uploadedImage) return;
+        //     const dbImage = await AssignImageToDBImage({
+        //       imageType: 'TESTIMONIAL',
+        //       blurhash: uploadedImage.blurhash,
+        //       width: uploadedImage.width,
+        //       height: uploadedImage.height,
+        //       data: uploadedImage.data,
+        //     }, prisma);
+        //     const testimonial = await prisma.testimonial.create({
+        //       data: {
+        //         clientName: fullName,
+        //         clientPosition: faker.person.jobTitle(),
+        //         clientCompany: faker.company.name(),
+        //         content: faker.lorem.paragraph({ min: 3, max: 6 }),
+        //         rating: faker.number.int({ min: 4, max: 5 }),
+        //         avatarId: dbImage.id,
+        //         isActive: true,
+        //         isFeatured: i < 15,
+        //         order: i,
+        //       },
+        //     });
+        //     createdTestimonials.push(testimonial);
+        //     console.log(`  ✅ Testimonial created successfully`);
+        //   } catch (error : any) {
+        //     console.error(`  ❌ Error creating testimonial ${i + 1}:`, error.message);
+        //   }
+        // }
         // 10. Create Blogs (120 items)
         // console.log('\n\n📝 Creating 120 blog posts with real images...');
         // const blogSearchQueries = [
@@ -994,21 +1045,21 @@ function main() {
         // }
         // 12. Create Contact Messages
         console.log('\n\n📧 Creating 30 contact messages...');
-        for (let i = 0; i < 30; i++) {
-            yield prisma.contact.create({
-                data: {
-                    name: faker_1.faker.person.fullName(),
-                    email: faker_1.faker.internet.email(),
-                    phone: faker_1.faker.phone.number(),
-                    company: Math.random() > 0.3 ? faker_1.faker.company.name() : undefined,
-                    subject: faker_1.faker.lorem.sentence(5),
-                    message: faker_1.faker.lorem.paragraphs(3),
-                    status: faker_1.faker.helpers.arrayElement([client_1.ContactStatus.NEW, client_1.ContactStatus.READ, client_1.ContactStatus.IN_PROGRESS, client_1.ContactStatus.RESOLVED]),
-                    ipAddress: faker_1.faker.internet.ip(),
-                    userAgent: faker_1.faker.internet.userAgent(),
-                },
-            });
-        }
+        // for (let i = 0; i < 30; i++) {
+        //   await prisma.contact.create({
+        //     data: {
+        //       name: faker.person.fullName(),
+        //       email: faker.internet.email(),
+        //       phone: faker.phone.number(),
+        //       company: Math.random() > 0.3 ? faker.company.name() : undefined,
+        //       subject: faker.lorem.sentence(5),
+        //       message: faker.lorem.paragraphs(3),
+        //       status: faker.helpers.arrayElement([ContactStatus.NEW, ContactStatus.READ, ContactStatus.IN_PROGRESS, ContactStatus.RESOLVED]),
+        //       ipAddress: faker.internet.ip(),
+        //       userAgent: faker.internet.userAgent(),
+        //     },
+        //   });
+        // }
         console.log('  ✓ Created 30 contact messages');
         console.log('\n\n✅ ==========================================');
         console.log('🎉 Database seeding completed successfully!');

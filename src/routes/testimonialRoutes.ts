@@ -17,40 +17,40 @@ export class TestimonialRoutes {
     // GET routes
     this.router.get(
       '/',
-      this.controller.getAllTestimonials.bind(this.controller)
+      this.controller.getAllTestimonials.bind(this.controller)as any
     );
 
     this.router.get(
       '/search',
-      this.controller.SearchTestimonials.bind(this.controller)
+      this.controller.SearchTestimonials.bind(this.controller)as any
     );
 
     this.router.get(
       '/check-order',
-      this.controller.isValidOrder.bind(this.controller)
+      this.controller.isValidOrder.bind(this.controller) as any
     );
 
     this.router.get(
       '/:id',
-      this.controller.getTestimonialById.bind(this.controller)
+      this.controller.getTestimonialById.bind(this.controller) as any
     );
 
     // POST routes
     this.router.post(
       '/',
-      this.controller.createTestimonial.bind(this.controller)
+      this.controller.createTestimonial.bind(this.controller) as any
     );
 
     // PUT routes
     this.router.put(
       '/:id',
-      this.controller.updateTestimonial.bind(this.controller)
+      this.controller.updateTestimonial.bind(this.controller) as any
     );
 
     // DELETE routes
     this.router.delete(
       '/:id',
-      this.controller.deleteTestimonial.bind(this.controller)
+      this.controller.deleteTestimonial.bind(this.controller) as any
     );
   }
 

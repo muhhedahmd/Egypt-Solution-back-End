@@ -55,6 +55,12 @@ class slideShowLogic {
             };
         });
     }
+    getAllSlideShowsMinmal() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const slideShows = yield this.repository.findManyMinimal();
+            return slideShows;
+        });
+    }
     create(data) {
         return __awaiter(this, void 0, void 0, function* () {
             const dataCreate = this.validator.validateCreate(data);
@@ -109,6 +115,10 @@ class slideShowLogic {
             if (!valid)
                 throw new services_error_1.ServiceError("Invalid data for create and attach many", 400, "SLIDESHOW_CREATE_ATTACH_MANY_ERROR");
             const { slides } = valid, rest = __rest(valid, ["slides"]);
+            // console.log( {
+            //   slides,
+            //   ...rest
+            // })
             const createdAndAttached = yield this.repository.createAndAttachMany(Object.assign({ slides: slides.map((slide) => ({
                     id: slide.attachId,
                     type: slide.attachType,

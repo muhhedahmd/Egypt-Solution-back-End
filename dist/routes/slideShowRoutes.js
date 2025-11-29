@@ -14,6 +14,8 @@ class slideShowRoutes {
             Promise.resolve(fn(req, res, next)).catch(next);
         };
         this.router.get("/", asyncHandler(this.controller.getAllSlideShows.bind(this.controller)));
+        this.router.get("/all-minimal", asyncHandler(this.controller.getAllSlideShows.bind(this.controller)));
+        // ***
         this.router.post("/create-attach-many", asyncHandler(auth_1.requireAuthv2), asyncHandler(this.controller.CreateAndAttachMany.bind(this.controller)));
         this.router.post("/", asyncHandler(auth_1.requireAuthv2), asyncHandler(this.controller.createSlideShow.bind(this.controller)));
         this.router.post("/attach-many", asyncHandler(auth_1.requireAuthv2), asyncHandler(this.controller.attachMany.bind(this.controller)));

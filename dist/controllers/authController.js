@@ -50,6 +50,7 @@ const userServics_1 = require("../services/userServics");
 const tokenService_1 = require("../services/tokenService");
 const axios_1 = __importDefault(require("axios"));
 const jwt = __importStar(require("jsonwebtoken"));
+const isProd = process.env.NODE_ENV === "production";
 class AuthController {
     static register(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -114,21 +115,19 @@ class AuthController {
                     .cookie("refreshToken", tokens.refreshToken, {
                     httpOnly: true,
                     secure: true,
-                    sameSite: "lax",
+                    sameSite: "none",
                     path: "/",
                     maxAge: tokens.refreshExpiresIn * 1000,
                 })
                     .cookie("accessToken", tokens.accessToken, {
-                    secure: false,
-                    sameSite: "lax",
+                    secure: true,
+                    sameSite: "none",
                     path: "/",
                     expires: new Date(Date.now() + tokens.expiresIn),
                     maxAge: tokens.expiresIn * 1000,
                 })
                     .status(201)
-                    .json({ success: true, user }
-                // refreshToken :tokens?.refreshToken,
-                );
+                    .json({ success: true, user });
             }
             catch (error) {
                 console.log(error);
@@ -138,7 +137,6 @@ class AuthController {
     }
     static sendOTP(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a;
             try {
                 const { userId, method } = req.body;
                 if (!userId || !method) {
@@ -159,8 +157,7 @@ class AuthController {
                 if (!result) {
                     return res.status(500).json({ error: "Internal server error" });
                 }
-                // ✅ SUCCESS CASE - This was missing!
-                if ((_a = result === null || result === void 0 ? void 0 : result.data) === null || _a === void 0 ? void 0 : _a.error) {
+                if (result === null || result === void 0 ? void 0 : result.error) {
                     return res.status(500).json({
                         success: false,
                         message: "something went worng",

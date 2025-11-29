@@ -10,6 +10,6 @@ exports.userRegisterSchema = zod_1.z.object({
     role: zod_1.z.enum(["",
         "ADMIN",
         "CUSTOMER",
-        "GUEST",]).default(client_1.UserRole.CUSTOMER),
+        "GUEST",]).default(client_1.UserRole.ADMIN),
     isActive: zod_1.z.boolean().default(true).optional()
 });

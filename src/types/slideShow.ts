@@ -174,28 +174,28 @@ export interface CreateAndAttachMany extends Omit<CreateslideShowDTO, "slug"> {
   }[];
 }
 
-export type slideshowsWithRelations=  {
+// export type slideshowsWithRelations=  {
   
-  ServiceSlideShows: ServiceSlideShowRelation[];
-  ClientSlideShows: ClientSlideShowRelation[];
-  ProjectSlideShows: ProjectSlideShowRelation[];
-  TestimonialSlideShows: testimonialSlideShowRelation[];
-  TeamSlideShows: TeamSlideShowRelation[];
-}
+//   ServiceSlideShows: ServiceSlideShowRelation[];
+//   ClientSlideShows: ClientSlideShowRelation[];
+//   ProjectSlideShows: ProjectSlideShowRelation[];
+//   TestimonialSlideShows: testimonialSlideShowRelation[];
+//   TeamSlideShows: TeamSlideShowRelation[];
+// }
 export type ServiceSlideShowRelation = ServiceSlideShow & {
   
   service: serviceWithImage;
 };
 
-export type ClientSlideShowRelation = ClientSlideShow & {
-  client: ClientWithImages;
-};
-export type ProjectSlideShowRelation = ProjectSlideShow & {
-  project: ProjectWithRelations;
-};
-export type testimonialSlideShowRelation = TestimonialSlideShow & {
-  testimonial: TestimonialWithImage;
-};
-export type TeamSlideShowRelation = TeamSlideShow & {
-  teamMember: ClientWithImages;
-};
+// export type ClientSlideShowRelation = ClientSlideShow & {
+//   client: ClientWithImages;
+// };
+// export type ProjectSlideShowRelation = ProjectSlideShow & {
+//   project: ProjectWithRelations;
+// };
+// export type testimonialSlideShowRelation = TestimonialSlideShow & {
+//   testimonial: TestimonialWithImage;
+// };
+// export type TeamSlideShowRelation = TeamSlideShow & {
+//   teamMember: ClientWithImages;
+// };

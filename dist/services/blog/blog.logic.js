@@ -225,7 +225,10 @@ class blogLogic {
     updateCategory(id, data) {
         return __awaiter(this, void 0, void 0, function* () {
             this.validator.validateId(id);
-            const validData = this.validator.validateUpdateCategory(Object.assign(Object.assign({}, data), { id }));
+            const validData = this.validator.validateUpdateCategory({
+                data,
+                id,
+            });
             const category = yield this.repository.updateCategory(id, validData);
             return category;
         });

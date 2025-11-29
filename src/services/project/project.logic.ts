@@ -304,7 +304,7 @@ export class projectLogic {
 
   
     return {
-     data: projects,
+     data: projects as any,
 
       pagination: {
         totalItems,

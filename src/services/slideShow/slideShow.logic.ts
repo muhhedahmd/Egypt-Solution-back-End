@@ -71,10 +71,11 @@ export class slideShowLogic {
     return deleteSlideShow;
   }
 
-  async findById(id: string): Promise<SlideShow> {
+  async findById(id: string): Promise<SlideShow | null> {
     const validId = this.validator.validateId(id);
     const findSlideShow = await this.repository.findById(validId);
-    return findSlideShow;
+
+    return findSlideShow ;
   }
   async attach(data: unknown): Promise<AttachmentTypes> {
     const valid = this.validator.validateAttachGlobal(data);
