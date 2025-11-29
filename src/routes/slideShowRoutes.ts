@@ -17,6 +17,11 @@ export class slideShowRoutes {
       "/",
       asyncHandler(this.controller.getAllSlideShows.bind(this.controller))
     );
+    this.router.get(
+      "/all-minimal",
+      asyncHandler(this.controller.getAllSlideShows.bind(this.controller))
+    );
+    // ***
     this.router.post(
       "/create-attach-many",
       asyncHandler(requireAuthv2),

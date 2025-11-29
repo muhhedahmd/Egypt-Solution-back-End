@@ -38,6 +38,13 @@ export class slideShowLogic {
       },
     };
   }
+  async getAllSlideShowsMinmal(
+
+  ): Promise<Partial<SlideShow>[] | undefined> {
+    const slideShows = await this.repository.findManyMinimal();
+    return slideShows
+
+  }
   async create(data: unknown): Promise<SlideShow> {
     const dataCreate = this.validator.validateCreate(data);
     const slug = slugify(dataCreate.title + randomUUID().substring(0, 6), {
@@ -92,6 +99,11 @@ export class slideShowLogic {
       );
 
     const { slides, ...rest } = valid;
+
+    // console.log( {
+    //   slides,
+    //   ...rest
+    // })
     const createdAndAttached = await this.repository.createAndAttachMany({
       slides: slides.map((slide) => ({
         id: slide.attachId,

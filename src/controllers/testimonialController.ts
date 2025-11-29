@@ -22,7 +22,7 @@ export class TestimonialController {
       if (!testimonials) throw new TestimonialNotFoundError('error get testimonials');
 
       return res.json({
-        data: testimonials,
+        ...testimonials,
         message: 'testimonials fetched successfully',
       });
     } catch (error) {

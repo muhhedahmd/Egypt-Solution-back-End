@@ -38,7 +38,7 @@ export class TeamController {
       const teamMember = await this.teamLogic.getTeamMemberById(id);
 
       return res.json({
-        data: teamMember,
+        ...teamMember,
         message: 'team member fetched successfully',
       });
     } catch (error) {

@@ -4,12 +4,11 @@ import {
   CreateslideShowDTO,
   PaginationDTO,
   UpdateslideShowDTO,
-  deattachManyDTO
+  deattachManyDTO,
 } from "../types/slideShow";
 import { SlideshowType } from "@prisma/client";
 export class SlideShowValidator {
   private createSchema = z.object({
-
     title: z
       .string()
       .min(3, "Title must be at least 3 characters")
@@ -35,7 +34,26 @@ export class SlideShowValidator {
       }
     ),
     composition: z.enum(
-      ["SINGLE", "GRID", "CAROUSEL", "STACKED", "FADE", "CUSTOM"],
+      [
+        "SINGLE",
+        "GRID",
+        "CAROUSEL",
+        "STACKED",
+        "FADE",
+        "CUSTOM",
+        "ZOOM",
+
+        "PARALLAX",
+        "COVERFLOW",
+        "KEN_BURNS",
+        "FLIP",
+        "CUBE",
+        "AUTO_GRID",
+        "STORY",
+        "FILMSTRIP",
+        "LIGHTBOX",
+        "MARQUEE",
+      ],
       {
         errorMap: () => ({ message: "Invalid composition type" }),
       }
@@ -46,7 +64,6 @@ export class SlideShowValidator {
     interval: z.number().min(1000).max(30000).default(5000),
     order: z.number().int().min(0).default(0),
   });
-  
 
   private updateSchema = z.object({
     slideShowId: z.string().cuid("Invalid slideshow ID format"),
@@ -64,8 +81,27 @@ export class SlideShowValidator {
         "CUSTOM",
       ])
       .optional(),
-    composition: z
-      .enum(["SINGLE", "GRID", "CAROUSEL", "STACKED", "FADE", "CUSTOM"])
+    composition: z.enum(
+      [
+        "SINGLE",
+        "GRID",
+        "CAROUSEL",
+        "STACKED",
+        "FADE",
+        "CUSTOM",
+        "ZOOM",
+
+        "PARALLAX",
+        "COVERFLOW",
+        "KEN_BURNS",
+        "FLIP",
+        "CUBE",
+        "AUTO_GRID",
+        "STORY",
+        "FILMSTRIP",
+        "LIGHTBOX",
+        "MARQUEE",
+      ])
       .optional(),
     background: z.string().optional(),
     isActive: z.boolean().optional(),
@@ -105,7 +141,6 @@ export class SlideShowValidator {
     type: z.enum(["service", "client", "project", "testimonial", "teamMember"]),
   });
 
-
   private bulkAttachSchema = z.object({
     slideShowId: z.string().cuid("Invalid slideshow ID"),
     items: z
@@ -136,27 +171,19 @@ export class SlideShowValidator {
 
   private deattchGlobalSchema = z.object({
     slideShowId: z.string().cuid("Invalid slideshow ID"),
-    type: z.enum([
-      "service",
-      "client",
-      "project",
-      "testimonial",
-      "teamMember",
-    ]),
+    type: z.enum(["service", "client", "project", "testimonial", "teamMember"]),
     id: z.string().cuid("Invalid service ID"),
   });
   private bulkDeattachSchema = z.object({
     slideShowId: z.string().cuid("Invalid slideshow ID"),
     items: z
-      .array(
-        this.deattchGlobalSchema.omit({ slideShowId : true})
-      )
+      .array(this.deattchGlobalSchema.omit({ slideShowId: true }))
       .min(1, "At least one item is required"),
   });
 
   private validateCreateAndAttachManySchema = this.createSchema.extend({
-    slides : this.attachGlobalSchema.omit({ slideShowId : true }).array(),
-  })
+    slides: this.attachGlobalSchema.omit({ slideShowId: true }).array(),
+  });
   private reorderSchema = z.object({
     slideShowId: z.string().cuid("Invalid slideshow ID"),
     items: z
@@ -171,13 +198,13 @@ export class SlideShowValidator {
 
   private paginationSchema = z.object({
     skip: z.preprocess(
-            (val) => Number(val),
-            z.number().int().min(0).default(0)
-          ),
+      (val) => Number(val),
+      z.number().int().min(0).default(0)
+    ),
     take: z.preprocess(
-            (val) => Number(val),
-            z.number().int().min(0).default(0)
-          ),
+      (val) => Number(val),
+      z.number().int().min(0).default(0)
+    ),
   });
 
   validateType(data: unknown): SlideshowType {
@@ -202,7 +229,9 @@ export class SlideShowValidator {
       );
     }
   }
-  validateModelNaming(data: unknown): "service" | "client" | "project" | "testimonial" | "teamMember" {
+  validateModelNaming(
+    data: unknown
+  ): "service" | "client" | "project" | "testimonial" | "teamMember" {
     try {
       const r = this.ModelTypeSchema.parse(data);
       return r.type;
@@ -354,8 +383,8 @@ export class SlideShowValidator {
       );
     }
   }
-  
-  validateBulkDeattach(data: unknown) : deattachManyDTO {
+
+  validateBulkDeattach(data: unknown): deattachManyDTO {
     try {
       return this.bulkDeattachSchema.parse(data);
     } catch (error) {
@@ -376,12 +405,11 @@ export class SlideShowValidator {
       );
     }
   }
-  validCreateAndAttachManySchema(data: unknown){
+  validCreateAndAttachManySchema(data: unknown) {
     try {
       const parsed = this.validateCreateAndAttachManySchema.parse(data);
       return parsed;
-
-    }catch (error) {
+    } catch (error) {
       if (error instanceof z.ZodError) {
         const messages = error.errors
           .map((e) => `${e.path.join(".")}: ${e.message}`)

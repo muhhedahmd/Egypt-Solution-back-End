@@ -7,6 +7,7 @@ export class slideShowController {
   constructor(private logic: slideShowLogic) {}
 
   async createSlideShow(req: Request, res: Response, next: NextFunction) {
+
     try {
       const body = req.body;
       const newSlideShow = await this.logic.create({
@@ -44,6 +45,22 @@ export class slideShowController {
         success: true,
         message: "Slideshows fetched successfully",
         ...slideShows,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+  async getAllSlideShowsMinmal(req: Request, res: Response, next: NextFunction) {
+    try {
+      // const skip = Number(page) - 1;
+      // const take = Number(limit);
+
+      const slideShows = await this.logic.getAllSlideShowsMinmal();
+
+      return res.status(200).json({
+        success: true,
+        message: "Slideshows fetched successfully",
+        data : slideShows,
       });
     } catch (error) {
       next(error);
@@ -125,10 +142,12 @@ export class slideShowController {
       next(error);
     }
   }
+  // ***
   async CreateAndAttachMany(req: Request, res: Response, next: NextFunction) {
     try {
       const body = req.body;
       const created = await this.logic.createAndAttachMany(body);
+      
       return res.status(200).json({
         success: true,
         message: "Slideshow created and attached successfully",
