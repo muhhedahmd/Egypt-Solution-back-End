@@ -15,16 +15,6 @@ export class projectController {
           ? req?.files[0]?.buffer
           : null;
 
-      console.log({
-        ...body,
-        image,
-        isFeatured: body.isFeatured === "true" ? true : false,
-        order: Number(body.order) || 0,
-        status: body.status || "COMPLETED",
-        startDate: body.startDate ? new Date(body.startDate) : undefined,
-        endDate: body.endDate ? new Date(body.endDate) : undefined,
-      });
-
       const newProject = await this.logic.create({
         ...body,
         image: image,

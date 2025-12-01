@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { ClientController } from "../controllers/clientController";
-import multer from "multer";
 
 // const upload = multer({ storage: multer.memoryStorage() });
 
@@ -15,6 +14,7 @@ export class ClientRoutes {
   }
 
   private initializeRoutes() {
+    
     const asyncHandler = (fn: any) => (req: any, res: any, next: any) => {
       Promise.resolve(fn(req, res, next)).catch(next);
     };

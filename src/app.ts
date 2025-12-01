@@ -18,6 +18,7 @@ import {  blogModules } from "./services/blog/blog.modules"
 import { ClientModule } from "./services/client/client.module"
 import { TeamModule } from "./services/team/team.module"
 import { TestimonialModule } from "./services/testtimonials/testimonial.module"
+import { contactModule as contactMod } from "./services/contact/contact.module"
 
 const app = express()
 app.use(cookieParser());
@@ -25,9 +26,9 @@ app.use(cookieParser());
 // 1. CORS first
 app.use(
   cors({
-    origin: "https://admin-egypt-solution.vercel.app",
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true,
-    
+
   }),
 )
 
@@ -74,8 +75,12 @@ app.use('/api/clients', clientModule.getRoutes());
 const teamModule = new TeamModule(prisma);
 app.use('/api/team', teamModule.getRoutes());
 
-const testimonialModule = new TestimonialModule(prisma);
-app.use('/api/testimonials', testimonialModule.getRoutes());
+  const testimonialModule = new TestimonialModule(prisma);
+  app.use('/api/testimonials', testimonialModule.getRoutes());
+
+  const contactModule = new contactMod(prisma);
+  app.use('/api/contacts', contactModule.getRoutes());
+  
 
 app.use(errorHandler as any);
 

@@ -63,7 +63,6 @@ export class AuthController {
     }
   }
   static async Login(req: Request, res: Response) {
-
     try {
       const { email, password } = req.body;
       const user = await userService.login({ email, password });
@@ -89,19 +88,17 @@ export class AuthController {
           sameSite: "none",
           path: "/",
 
-          maxAge: tokens.refreshExpiresIn * 1000, 
+          maxAge: tokens.refreshExpiresIn * 1000,
         })
         .cookie("accessToken", tokens.accessToken, {
+          httpOnly: true, // ADD THIS
           secure: true,
           sameSite: "none",
           path: "/",
-          expires: new Date(Date.now() + tokens.expiresIn),
-          maxAge: tokens.expiresIn * 1000, 
+          maxAge: tokens.expiresIn * 1000,
         })
         .status(201)
-        .json(
-          { success: true, user }
-        );
+        .json({ success: true, user });
     } catch (error) {
       console.log(error);
       return res.status(500).json({ error: "Internal server error" });
@@ -177,7 +174,6 @@ export class AuthController {
           maxAge: 30 * 24 * 60 * 60 * 1000,
         })
         .cookie("accessToken", accessToken, {
-          
           secure: false,
           sameSite: "lax",
           path: "/",

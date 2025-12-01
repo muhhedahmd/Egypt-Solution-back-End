@@ -52,23 +52,21 @@ enum SlideshowType {
 }
 
 enum CompositionType {
+  SINGLE
+  GRID
+  CAROUSEL
+  STACKED
+  FADE
+  CUSTOM
 
-  SINGLE       
-  GRID       
-  CAROUSEL      
-  STACKED      
-  FADE        
-  CUSTOM     
-
-
-  ZOOM         
-  PARALLAX     
-  COVERFLOW     
-  KEN_BURNS      
-  FLIP         
-  CUBE      
-  AUTO_GRID    
-  STORY         
+  ZOOM
+  PARALLAX
+  COVERFLOW
+  KEN_BURNS
+  FLIP
+  CUBE
+  AUTO_GRID
+  STORY
   FILMSTRIP
   LIGHTBOX
   MARQUEE
@@ -115,7 +113,7 @@ model User {
 
   profile  Profile?
   sessions Session[]
-  blogs Blog[]
+  blogs    Blog[]
 
   @@map("users")
 }
@@ -156,8 +154,6 @@ model Profile {
 
   @@map("profiles")
 }
-
-
 
 // ============================================================================
 // COMPANY INFO
@@ -215,11 +211,12 @@ model Service {
   slideShows ServiceSlideShow[]
   projects   Project[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  contacts  Contact[]
 
   @@index([slug])
-  @@index([isActive] )
+  @@index([isActive])
   @@map("services")
 }
 
@@ -410,11 +407,11 @@ model Category {
   blogs     BlogCategory[]
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
+
   @@map("categories")
 }
 
 model BlogCategory {
-
   blogId     String
   categoryId String
 
@@ -428,7 +425,6 @@ model BlogCategory {
 // SLIDESHOW SYSTEM
 // ============================================================================
 model SlideShow {
-  
   id          String          @id @default(cuid())
   title       String
   slug        String          @unique
@@ -546,33 +542,70 @@ model TeamSlideShow {
 // CONTACT & INQUIRIES
 // ============================================================================
 
-enum contactType {
-  
+enum ContactPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
 
-
+enum ContactCategory {
+  GENERAL_INQUIRY
+  SUPPORT
+  SALES
+  PARTNERSHIP
+  FEEDBACK
+  COMPLAINT
+  SERVICE_INQUIRY
+  OTHER
 }
 
 model Contact {
-  id          String        @id @default(cuid())
-  name        String
-  email       String
-  phone       String?
-  company     String?
-  subject     String?
-  message     String        @db.Text
-  status      ContactStatus @default(NEW)
-  ipAddress   String?
-  userAgent   String?
-  respondedAt DateTime?
-  notes       String?       @db.Text
-  resolved  Boolean @default(false)
-  type      contactType 
+  id String @id @default(cuid())
 
+  name    String
+  email   String
+  phone   String?
+  company String?
+
+  category ContactCategory @default(GENERAL_INQUIRY)
+  subject  String
+  message  String          @db.Text
+
+  serviceId String?
+  service   Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  budget    String?
+  timeline  String?
+
+  status   ContactStatus   @default(NEW)
+  priority ContactPriority @default(MEDIUM)
+
+  ipAddress String?
+  userAgent String?
+  source    String?
+  referrer  String?
+
+  respondedAt DateTime?
+  respondedBy String?
+  notes       String?   @db.Text
+  response    String?   @db.Text
+  resolved    Boolean   @default(false)
+
+  // Engagement
+  readAt    DateTime?
+  viewCount Int       @default(0)
+
+  // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([status])
+  @@index([priority])
+  @@index([category])
+  @@index([serviceId])
+  @@index([email])
   @@index([createdAt])
+  @@index([resolved])
   @@map("contacts")
 }
 
@@ -581,19 +614,19 @@ model Contact {
 // ============================================================================
 
 model Image {
-  id       String    @id @default(cuid())
-  filename String
-  url      String
-  alt      String?
-  size     Int? // bytes
-  width    Int?
-  height   Int?
-  blurHash String?
-  fileHash String
-  key      String
-  imageType ImageType  
-  type  String
-  customId String?
+  id        String    @id @default(cuid())
+  filename  String
+  url       String
+  alt       String?
+  size      Int? // bytes
+  width     Int?
+  height    Int?
+  blurHash  String?
+  fileHash  String
+  key       String
+  imageType ImageType
+  type      String
+  customId  String?
 
   profileAvatars Profile[]     @relation("ProfileAvatar")
   services       Service[]     @relation("ServiceImage")
