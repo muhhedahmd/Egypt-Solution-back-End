@@ -120,10 +120,10 @@ class AuthController {
                     maxAge: tokens.refreshExpiresIn * 1000,
                 })
                     .cookie("accessToken", tokens.accessToken, {
+                    httpOnly: true, // ADD THIS
                     secure: true,
                     sameSite: "none",
                     path: "/",
-                    expires: new Date(Date.now() + tokens.expiresIn),
                     maxAge: tokens.expiresIn * 1000,
                 })
                     .status(201)

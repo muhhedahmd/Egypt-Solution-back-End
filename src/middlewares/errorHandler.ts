@@ -3,6 +3,7 @@ import { ServiceError } from "../errors/services.error";
 import { ClientError } from "../errors/client.error";
 import { TeamError } from "../errors/team.error";
 import { TestimonialError } from "../errors/testimonal.error";
+import { CompanyInfoError } from "../errors/schema/companyInfo";
 
 export function errorHandler(
   err: any,
@@ -29,7 +30,7 @@ export function errorHandler(
     });
     
   }
-  if((err instanceof TeamError) || (err instanceof TestimonialError)){
+  if((err instanceof TeamError) || (err instanceof TestimonialError)  || (err instanceof CompanyInfoError)){
     return res.status(err.statusCode || 500).json({
       success: false,
       message: err.message,
@@ -38,15 +39,7 @@ export function errorHandler(
     });
     
   }
-  if(err instanceof TeamError){
-    return res.status(err.statusCode || 500).json({
-      success: false,
-      message: err.message,
-      code: err.code,
-      name: err.name,
-    });
-    
-  }
+ 
   if (err) {
     return res.status(err.statusCode || 500).json({
       success: false,

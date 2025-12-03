@@ -39,6 +39,7 @@ enum ImageType {
   TEAM
   HERO
   TESTIMONIAL
+  COMPANY_LOGO
 }
 
 enum SlideshowType {
@@ -170,6 +171,7 @@ model CompanyInfo {
   city        String?
   country     String?
   postalCode  String?
+  fotterText  String?
 
   // Social Media
   facebook  String?
@@ -178,6 +180,7 @@ model CompanyInfo {
   instagram String?
   github    String?
   youtube   String?
+  website   String?
 
   // SEO
   metaTitle       String?
@@ -186,8 +189,57 @@ model CompanyInfo {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  logo      Image?   @relation("CompanyInfoImage", fields: [logoId], references: [id])
+  logoId    String?
 
   @@map("company_info")
+}
+
+enum TextAlign {
+  LEFT
+  CENTER
+  RIGHT
+}
+
+enum ButtonVariant {
+  PRIMARY
+  SECONDARY
+  GHOST
+  LINK
+}
+
+// ============================================================================
+// HERO SECTION
+// ============================================================================
+
+model Hero {
+  id                String  @id @default(cuid())
+  name              String?
+  title             String
+  subtitle          String?
+  description       String?
+  backgroundImageId String?
+  backgroundImage   Image?  @relation("HeroBackgroundImage", fields: [backgroundImageId], references: [id])
+
+  // Call-to-action
+  ctaText    String?
+  ctaUrl     String?
+  ctaVariant ButtonVariant? @default(PRIMARY)
+
+  // Layout / style
+  alignment      TextAlign?  @default(CENTER)
+  variant        HeroVariant @default(CENTERED)
+  styleOverrides Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum HeroVariant {
+  CENTERED
+  SPLIT
+  IMAGE_BACKGROUND
+  MINIMAL
 }
 
 // ============================================================================
@@ -636,9 +688,12 @@ model Image {
   testimonials   Testimonial[] @relation("TestimonialAvatar")
   teamMembers    TeamMember[]  @relation("TeamImage")
   blogs          Blog[]        @relation("BlogImage")
+  companyInfos   CompanyInfo[] @relation("CompanyInfoImage")
+  
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  heroes    Hero[] @relation("HeroBackgroundImage")
 
   @@index([type])
   @@map("images")

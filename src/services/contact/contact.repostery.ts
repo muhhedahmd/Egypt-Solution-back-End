@@ -4,14 +4,16 @@ import {
   ContactCreationError,
   ContactDeletionError,
   ContactError,
+  ContactUpdateError,
 } from "../../errors/contact.error";
 import { PaginatedResponse } from "../../types/services";
 import { FilterParams, FilterType } from "../../types/contact";
+import { Resend } from "resend";
+
 
 export class ContactRepostery {
   // private prisma: PrismaClientConfig
-   buildWhereClause(
-
+  buildWhereClause(
     type: FilterType,
     filterValues: Partial<FilterParams>
   ): Prisma.ContactWhereInput {
@@ -58,19 +60,25 @@ export class ContactRepostery {
         },
       }),
 
-      category: filterValues.category ? () => ({
-        category: filterValues.category,
-      }) : () => ({}),
+      category: filterValues.category
+        ? () => ({
+            category: filterValues.category,
+          })
+        : () => ({}),
 
-      status: filterValues.status ? () => ({
-        status: {
-          equals: filterValues.status,
-        },
-      }) : () => ({}),
+      status: filterValues.status
+        ? () => ({
+            status: {
+              equals: filterValues.status,
+            },
+          })
+        : () => ({}),
 
-      priority: filterValues.priority ? () => ({
-        priority: filterValues.priority,
-      }) : () => ({}),
+      priority: filterValues.priority
+        ? () => ({
+            priority: filterValues.priority,
+          })
+        : () => ({}),
 
       budget: () => ({
         budget: {
@@ -112,7 +120,9 @@ export class ContactRepostery {
     return buildFilter();
   }
 
-  constructor(private prisma: PrismaClientConfig) {}
+  constructor(private prisma: PrismaClientConfig) {
+    
+  }
 
   async count() {
     try {
@@ -170,7 +180,12 @@ export class ContactRepostery {
       const total = await this.prisma.contact.count();
       const resolved = await this.prisma.contact.count({
         where: {
-          resolved: true,
+          OR: [
+            { status: "RESOLVED" },
+            {
+              resolved: true,
+            },
+          ],
         },
       });
       const urgent = await this.prisma.contact.count({
@@ -185,10 +200,10 @@ export class ContactRepostery {
         resolved,
         pending,
         urgent,
-        resolvedPercentage: total ? (resolved / total) * 100 : 0,
-        pendingPercentage: total ? (pending / total) * 100 : 0,
-        urgentPercentage: total ? (urgent / total) * 100 : 0,
-        resolutionRate: pending ? resolved / pending : 0,
+        resolvedPercentage: total ? ((resolved / total) * 100).toFixed(2) : 0,
+        pendingPercentage: total ? ((pending / total) * 100).toFixed(2) : 0,
+        urgentPercentage: total ? ((urgent / total) * 100).toFixed(2) : 0,
+        resolutionRate: pending ? ((resolved / pending) * 100).toFixed(2) : 0,
       };
     } catch (error) {
       console.log(error);
@@ -420,6 +435,57 @@ export class ContactRepostery {
     });
   }
 
+  async replayEmail(id?: string, response?: string, respondedBy?: string , subject?: string , message?: string) {
+    try {
+      if(!response) throw new ContactError("Response content is required for replaying email");
+      if(!id) throw new ContactError("Contact ID is required for replaying email");
+
+      const resend = new Resend(process.env.RESEND_API_KEY || "");
+
+      const FormalEmail = await this.prisma.companyInfo.findFirst();
+      if (!FormalEmail || !FormalEmail.email) {
+        throw new ContactError("Formal email not configured");
+      }
+      const contact = await this.prisma.contact.findUnique({ where: { id } });
+      if (!contact) throw new Error("Contact not found");
+
+
+      const { data, error } = await resend.emails.send({
+        from: `Your Company <${FormalEmail?.email}>`, 
+        to: contact.email,
+        subject: `Re: ${contact.subject}`,
+        html: `
+        <h2>Re: ${contact.subject}</h2>
+        <p>Dear ${contact.name},</p>
+        <p>${response.replace(/\n/g, "<br>")}</p>
+        <p>Best regards,<br>${respondedBy || "Support Team"}</p>
+        <hr>
+        <p><strong>Original Message:</strong></p>
+        <p>${contact.message.replace(/\n/g, "<br>")}</p>
+      `,
+      });
+
+      if (error) throw new ContactError("Error replaying email to contact")
+
+      await this.prisma.contact.update({
+        where: { id },
+        data: {
+          response,
+          respondedBy,
+          respondedAt: new Date(),
+          status: "RESOLVED",
+        },
+      });
+
+      return { success: true, data };
+    } catch (error) {
+      console.log(error);
+      throw new ContactError("Error replaying email to contact");
+    }
+  }
+
+
+
   async update(
     id: string,
     data: Partial<Omit<Contact, "id" | "createdAt" | "updatedAt">>
@@ -429,7 +495,7 @@ export class ContactRepostery {
       return contact;
     } catch (error) {
       console.log(error);
-      throw new ContactCreationError("Error updating contact");
+      throw new ContactUpdateError("Error updating contact");
     }
   }
   async delete(id: string) {
@@ -466,3 +532,4 @@ export class ContactRepostery {
     });
   }
 }
+

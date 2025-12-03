@@ -6,40 +6,40 @@ class ContactError extends Error {
         super(message);
         this.statusCode = statusCode;
         this.code = code;
-        this.name = 'ContactError';
+        this.name = "ContactError";
     }
 }
 exports.ContactError = ContactError;
 class ContactNotFoundError extends ContactError {
     constructor(id) {
-        super(`Contact with ID ${id} not found`, 404, 'Contact_NOT_FOUND');
-        this.name = 'ContactNotFoundError';
+        super(`Contact with ID ${id} not found`, 404, "CONTACT_NOT_FOUND");
+        this.name = "ContactNotFoundError";
     }
 }
 exports.ContactNotFoundError = ContactNotFoundError;
 class ContactValidationError extends ContactError {
-    constructor(message, code = 'VALIDATION_ERROR', name = 'ContactValidationError') {
+    constructor(message, code = "VALIDATION_ERROR", name = "ContactValidationError") {
         super(message, 400, code);
         this.name = name;
     }
 }
 exports.ContactValidationError = ContactValidationError;
 class ContactCreationError extends ContactError {
-    constructor(message, code = 'Contact_CREATION_ERROR', name = 'ContactCreationError') {
+    constructor(message, code = "CONTACT_CREATION_ERROR", name = "ContactCreationError") {
         super(message, 500, code);
         this.name = name;
     }
 }
 exports.ContactCreationError = ContactCreationError;
 class ContactUpdateError extends ContactError {
-    constructor(message, code = 'Contact_UPDATE_ERROR', name = 'ContactUpdateError') {
+    constructor(message, code = "CONTACT_UPDATE_ERROR", name = "ContactUpdateError") {
         super(message, 500, code);
         this.name = name;
     }
 }
 exports.ContactUpdateError = ContactUpdateError;
 class ContactDeletionError extends ContactError {
-    constructor(message, code = 'Contact_DELETION_ERROR', name = 'ContactDeletionError') {
+    constructor(message, code = "CONTACT_DELETION_ERROR", name = "ContactDeletionError") {
         super(message, 500, code);
         this.name = name;
     }

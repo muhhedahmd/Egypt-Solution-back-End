@@ -41,7 +41,7 @@ export class ContactLogic {
 
     const [totalItems, contacts] = await Promise.all([
       await this.ContactRepostery.count(),
-      await this.ContactRepostery.findMany(0, 10),
+      await this.ContactRepostery.findMany(skip, take),
     ]);
     if (!contacts) throw new Error("Error finding contacts");
 
@@ -226,5 +226,21 @@ export class ContactLogic {
       if (error instanceof ContactError) throw error
       throw new ContactError('Error fetching contact')
     }
+  }
+  async update( id: string, data: unknown) {
+    const validatedData = this.ContactValidator.updateContactValidation(data);
+    const updatedContact = await this.ContactRepostery.update(id, validatedData);
+    return updatedContact;
+  }
+  async replay({
+    id, response, subject, message
+  } : {
+    id?: string;
+    response?: string;
+    subject?: string;
+    message?: string;
+  }) {
+    const replay = this.ContactRepostery.replayEmail(id, response, subject, message);
+    return replay
   }
 }

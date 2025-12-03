@@ -22,11 +22,13 @@ const blog_modules_1 = require("./services/blog/blog.modules");
 const client_module_1 = require("./services/client/client.module");
 const team_module_1 = require("./services/team/team.module");
 const testimonial_module_1 = require("./services/testtimonials/testimonial.module");
+const contact_module_1 = require("./services/contact/contact.module");
+const settingsModule_1 = require("./services/companyInfo/settingsModule");
 const app = (0, express_1.default)();
 app.use((0, cookie_parser_1.default)());
 // 1. CORS first
 app.use((0, cors_1.default)({
-    origin: "https://admin-egypt-solution.vercel.app",
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true,
 }));
 // 2. Configure multer properly
@@ -48,19 +50,23 @@ app.use("/api/auth", authRoutes_1.default);
 app.use("/api", profileRoute_1.default);
 // Mount modules
 const servicesModule = new service_module_1.ServicesModule(prisma_1.default);
-app.use('/api/services', servicesModule.getRoutes());
+app.use("/api/services", servicesModule.getRoutes());
 const slideShowModule = new slidwshow_modules_1.slideShowModules(prisma_1.default);
-app.use('/api/slide-show', slideShowModule.getRoutes());
+app.use("/api/slide-show", slideShowModule.getRoutes());
 const projectModule = new project_modules_1.projectModules(prisma_1.default);
-app.use('/api/projects', projectModule.getRoutes());
+app.use("/api/projects", projectModule.getRoutes());
 const blogModule = new blog_modules_1.blogModules(prisma_1.default);
-app.use('/api/blogs', blogModule.getRoutes());
+app.use("/api/blogs", blogModule.getRoutes());
 const clientModule = new client_module_1.ClientModule(prisma_1.default);
-app.use('/api/clients', clientModule.getRoutes());
+app.use("/api/clients", clientModule.getRoutes());
 const teamModule = new team_module_1.TeamModule(prisma_1.default);
-app.use('/api/team', teamModule.getRoutes());
+app.use("/api/team", teamModule.getRoutes());
 const testimonialModule = new testimonial_module_1.TestimonialModule(prisma_1.default);
-app.use('/api/testimonials', testimonialModule.getRoutes());
+app.use("/api/testimonials", testimonialModule.getRoutes());
+const contactModule = new contact_module_1.contactModule(prisma_1.default);
+app.use("/api/contacts", contactModule.getRoutes());
+const CompanyInfoModule = new settingsModule_1.CompanyInfoModule(prisma_1.default);
+app.use("/api/company-info", CompanyInfoModule.getRoutes());
 app.use(errorHandler_1.errorHandler);
 // 7. Error handling middleware1
 app.use((err, req, res, next) => {

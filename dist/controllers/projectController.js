@@ -33,7 +33,6 @@ class projectController {
                 const image = (Array === null || Array === void 0 ? void 0 : Array.isArray(req.files)) && ((_a = req === null || req === void 0 ? void 0 : req.files) === null || _a === void 0 ? void 0 : _a.length) > 0
                     ? (_b = req === null || req === void 0 ? void 0 : req.files[0]) === null || _b === void 0 ? void 0 : _b.buffer
                     : null;
-                console.log(Object.assign(Object.assign({}, body), { image, isFeatured: body.isFeatured === "true" ? true : false, order: Number(body.order) || 0, status: body.status || "COMPLETED", startDate: body.startDate ? new Date(body.startDate) : undefined, endDate: body.endDate ? new Date(body.endDate) : undefined }));
                 const newProject = yield this.logic.create(Object.assign(Object.assign({}, body), { image: image, isFeatured: body.isFeatured === "true" ? true : false, order: Number(body.order) || 0, status: body.status || "COMPLETED", startDate: body.startDate ? new Date(body.startDate) : undefined, endDate: body.endDate ? new Date(body.endDate) : undefined }));
                 return res.status(201).json({
                     success: true,

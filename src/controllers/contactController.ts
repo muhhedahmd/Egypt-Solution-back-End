@@ -28,6 +28,7 @@ export class ContactController {
   }
 
   async getPagnittedContacts(req: Request, res: Response, next: NextFunction) {
+
     try {
       const { skip, take } = req.query;
       const contacts = await this.logic.getPagnittedMany({
@@ -58,6 +59,7 @@ export class ContactController {
   }
 
   async searchContacts(req: Request, res: Response, next: NextFunction) {
+
     try {
       const { skip, take, q } = req.query;
       if (typeof q !== "string") {
@@ -90,14 +92,17 @@ export class ContactController {
   }
 
   async multiFilter(req: Request, res: Response, next: NextFunction) {
+    
     try {
-      const { skip = 0, take = 10, ...filters } = req.query
-
-        const filtersTyped: Partial<Record<string, any>> = Object.entries(filters)
+      const { skip = 0, take = 10 } = req.query
+      const { ...filters} = req.body
+    
+      const filtersTyped: Partial<Record<string, any>> = Object.entries(filters)
         .reduce((acc: Record<string, any>, [key , value ] ) => {
         acc[key as string] = value;
         return acc;
       }, {});
+
       const result = await this.logic.multiFilter(
         filtersTyped,
         Number(skip),
@@ -115,6 +120,7 @@ export class ContactController {
   }
 
   //   async delete(req: Request, res: Response, next: NextFunction) {
+
   //   try {
   //     const { id } = req.params
   //     await this.logic.delete(id)
@@ -128,6 +134,34 @@ export class ContactController {
   //     }
   // }
 
+  async update(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const body = req.body;
+      const updatedContact = await this.logic.update(id, body);
+      return res.status(200).json({
+        success: true,
+        message: "Contact updated successfully",
+        data: updatedContact,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+  async replay(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const { response  , subject, message} = req.body;
+      const replay = await this.logic.replay({id, response, subject, message});
+      return res.status(200).json({
+        success: true,
+        message: "Contact replayed successfully",
+        data: replay,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 
 
 }
