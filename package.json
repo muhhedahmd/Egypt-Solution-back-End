@@ -4,11 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "prisma generate && tsc",
+   "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "prebuild": "echo prebuild",
+    "build": "tsc",
     "start": "node dist/server.js",
+    "postinstall": "npx prisma generate",
+    "migrate:deploy": "npx prisma migrate deploy",
     "seed": "ts-node src/seeds/seed.ts",
-    "seed:dev": "tsx src/seeds/seed.ts"
+    "lint": "eslint . --ext .ts,.tsx"
   },
   "keywords": [],
   "author": "",
@@ -53,6 +56,6 @@
     "@types/nodemailer": "^7.0.4",
     "prisma": "^6.10.1",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.3"
   }
 }
