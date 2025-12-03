@@ -5,6 +5,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  output   = "./generated/client"
 }
 
 datasource db {
@@ -689,11 +690,10 @@ model Image {
   teamMembers    TeamMember[]  @relation("TeamImage")
   blogs          Blog[]        @relation("BlogImage")
   companyInfos   CompanyInfo[] @relation("CompanyInfoImage")
-  
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  heroes    Hero[] @relation("HeroBackgroundImage")
+  heroes    Hero[]   @relation("HeroBackgroundImage")
 
   @@index([type])
   @@map("images")

@@ -1,0 +1,729 @@
+// ============================================================================
+// SOFTWARE COMPANY WEBSITE SCHEMA
+// Features: Portfolio, Services, Team, Blog, Contact, Analytics
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum UserRole {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum ImageType {
+  PROFILE
+  SERVICE
+  PROJECT
+  SLIDESHOW
+  CLIENT
+  BLOG
+  TEAM
+  HERO
+  TESTIMONIAL
+  COMPANY_LOGO
+}
+
+enum SlideshowType {
+  SERVICES
+  PROJECTS
+  TESTIMONIALS
+  TEAM
+  CLIENTS
+  HERO
+  CUSTOM
+}
+
+enum CompositionType {
+  SINGLE
+  GRID
+  CAROUSEL
+  STACKED
+  FADE
+  CUSTOM
+
+  ZOOM
+  PARALLAX
+  COVERFLOW
+  KEN_BURNS
+  FLIP
+  CUBE
+  AUTO_GRID
+  STORY
+  FILMSTRIP
+  LIGHTBOX
+  MARQUEE
+}
+
+enum ProjectStatus {
+  PLANNING
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
+}
+
+enum ContactStatus {
+  NEW
+  READ
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum BlogStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+// ============================================================================
+// USER MANAGEMENT
+// ============================================================================
+model User {
+  id                      String   @id @default(cuid())
+  name                    String
+  email                   String   @unique
+  password                String
+  gender                  Gender   @default(MALE)
+  role                    UserRole @default(ADMIN)
+  isActive                Boolean  @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  is2FA                   Boolean  @default(false)
+  isVerifiedForEachDevice Boolean  @default(false)
+  emailConfirmed          Boolean  @default(false)
+  googleId                String?
+
+  profile  Profile?
+  sessions Session[]
+  blogs    Blog[]
+
+  @@map("users")
+}
+
+model Session {
+  id                    String   @id @default(cuid())
+  userId                String
+  token                 String   @unique
+  userAgent             String?
+  ipAddress             String?
+  refreshToken          String?
+  refreshTokenExpiresAt DateTime
+  isActive              Boolean  @default(true)
+  deviceVerification    Boolean  @default(false)
+  twoFactorVerification Boolean  @default(false)
+  expiresAt             DateTime
+  createdAt             DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Profile {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  phone             String?
+  dateOfBirth       DateTime?
+  bio               String?
+  avatarId          String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  isProfileComplete Boolean   @default(false)
+  // Relations
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  avatar            Image?    @relation("ProfileAvatar", fields: [avatarId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+// ============================================================================
+// COMPANY INFO
+// ============================================================================
+
+model CompanyInfo {
+  id          String  @id @default(cuid())
+  name        String
+  tagline     String?
+  description String?
+  email       String
+  phone       String?
+  address     String?
+  city        String?
+  country     String?
+  postalCode  String?
+  fotterText  String?
+
+  // Social Media
+  facebook  String?
+  twitter   String?
+  linkedin  String?
+  instagram String?
+  github    String?
+  youtube   String?
+  website   String?
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+  metaKeywords    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  logo      Image?   @relation("CompanyInfoImage", fields: [logoId], references: [id])
+  logoId    String?
+
+  @@map("company_info")
+}
+
+enum TextAlign {
+  LEFT
+  CENTER
+  RIGHT
+}
+
+enum ButtonVariant {
+  PRIMARY
+  SECONDARY
+  GHOST
+  LINK
+}
+
+// ============================================================================
+// HERO SECTION
+// ============================================================================
+
+model Hero {
+  id                String  @id @default(cuid())
+  name              String?
+  title             String
+  subtitle          String?
+  description       String?
+  backgroundImageId String?
+  backgroundImage   Image?  @relation("HeroBackgroundImage", fields: [backgroundImageId], references: [id])
+
+  // Call-to-action
+  ctaText    String?
+  ctaUrl     String?
+  ctaVariant ButtonVariant? @default(PRIMARY)
+
+  // Layout / style
+  alignment      TextAlign?  @default(CENTER)
+  variant        HeroVariant @default(CENTERED)
+  styleOverrides Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum HeroVariant {
+  CENTERED
+  SPLIT
+  IMAGE_BACKGROUND
+  MINIMAL
+}
+
+// ============================================================================
+// SERVICES
+// ============================================================================
+
+model Service {
+  id              String  @id @default(cuid())
+  name            String
+  slug            String  @unique
+  description     String?
+  richDescription String? @db.Text
+  icon            String? // Icon name or URL
+  imageId         String?
+  price           String? // e.g., "Starting from $5000"
+  isActive        Boolean @default(true)
+  isFeatured      Boolean @default(false)
+  order           Int     @default(0)
+
+  image      Image?             @relation("ServiceImage", fields: [imageId], references: [id])
+  slideShows ServiceSlideShow[]
+  projects   Project[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  contacts  Contact[]
+
+  @@index([slug])
+  @@index([isActive])
+  @@map("services")
+}
+
+// ============================================================================
+// PROJECTS/PORTFOLIO
+// ============================================================================
+
+model Project {
+  id              String        @id @default(cuid())
+  title           String
+  slug            String        @unique
+  description     String?
+  richDescription String?       @db.Text
+  clientName      String?
+  clientCompany   String?
+  projectUrl      String?
+  githubUrl       String?
+  status          ProjectStatus @default(COMPLETED)
+  startDate       DateTime?
+  endDate         DateTime?
+  imageId         String?
+  isFeatured      Boolean       @default(false)
+  order           Int           @default(0)
+
+  image        Image?              @relation("ProjectImage", fields: [imageId], references: [id])
+  technologies ProjectTechnology[]
+  services     Service[]
+  slideShows   ProjectSlideShow[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([isFeatured])
+  @@map("projects")
+}
+
+model Technology {
+  id       String  @id @default(cuid())
+  name     String  @unique
+  slug     String  @unique
+  icon     String? // Icon name or URL
+  category String? // e.g., "Frontend", "Backend", "Database"
+
+  projects  ProjectTechnology[]
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@map("technologies")
+}
+
+model ProjectTechnology {
+  projectId    String
+  technologyId String
+
+  project    Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  technology Technology @relation(fields: [technologyId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, technologyId])
+}
+
+// ============================================================================
+// TEAM
+// ============================================================================
+
+model TeamMember {
+  id       String  @id @default(cuid())
+  name     String
+  slug     String  @unique
+  position String
+  bio      String? @db.Text
+  email    String?
+  phone    String?
+  imageId  String?
+
+  // Social
+  linkedin String?
+  github   String?
+  twitter  String?
+
+  isActive   Boolean @default(true)
+  isFeatured Boolean @default(false)
+  order      Int     @default(0)
+
+  image      Image?          @relation("TeamImage", fields: [imageId], references: [id])
+  slideShows TeamSlideShow[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@map("team_members")
+}
+
+// ============================================================================
+// CLIENTS
+// ============================================================================
+
+model Client {
+  id              String  @id @default(cuid())
+  name            String
+  slug            String  @unique
+  description     String?
+  richDescription String? @db.Text
+  website         String?
+  industry        String?
+  imageId         String?
+  logoId          String?
+  isActive        Boolean @default(true)
+  isFeatured      Boolean @default(false)
+  order           Int     @default(0)
+
+  image      Image?            @relation("ClientImage", fields: [imageId], references: [id])
+  logo       Image?            @relation("ClientLogo", fields: [logoId], references: [id])
+  slideShows ClientSlideShow[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@map("clients")
+}
+
+// ============================================================================
+// TESTIMONIALS
+// ============================================================================
+
+model Testimonial {
+  id             String  @id @default(cuid())
+  clientName     String
+  clientPosition String?
+  clientCompany  String?
+  content        String  @db.Text
+  rating         Int     @default(5)
+  avatarId       String?
+  isActive       Boolean @default(true)
+  isFeatured     Boolean @default(false)
+  order          Int     @default(0)
+
+  avatar     Image?                 @relation("TestimonialAvatar", fields: [avatarId], references: [id])
+  slideShows TestimonialSlideShow[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("testimonials")
+}
+
+// ============================================================================
+// BLOG
+// ============================================================================
+
+model Blog {
+  id              String     @id @default(cuid())
+  title           String
+  slug            String     @unique
+  excerpt         String?
+  content         String     @db.Text
+  imageId         String?
+  authorId        String
+  status          BlogStatus @default(DRAFT)
+  publishedAt     DateTime?
+  isFeatured      Boolean    @default(false)
+  views           Int        @default(0)
+  readingTime     Int? // in minutes
+  metaTitle       String?
+  metaDescription String?
+  metaKeywords    String?
+
+  image      Image?         @relation("BlogImage", fields: [imageId], references: [id])
+  author     User           @relation(fields: [authorId], references: [id])
+  categories BlogCategory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([status])
+  @@index([publishedAt])
+  @@map("blogs")
+}
+
+model Category {
+  id   String @id @default(cuid())
+  name String @unique
+  slug String @unique
+
+  blogs     BlogCategory[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@map("categories")
+}
+
+model BlogCategory {
+  blogId     String
+  categoryId String
+
+  blog     Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([blogId, categoryId])
+}
+
+// ============================================================================
+// SLIDESHOW SYSTEM
+// ============================================================================
+model SlideShow {
+  id          String          @id @default(cuid())
+  title       String
+  slug        String          @unique
+  description String?
+  type        SlideshowType
+  composition CompositionType
+  background  String? // CSS color or gradient
+  isActive    Boolean         @default(true)
+  autoPlay    Boolean         @default(false)
+  interval    Int             @default(5000) // milliseconds
+  order       Int             @default(0)
+
+  services     ServiceSlideShow[]
+  projects     ProjectSlideShow[]
+  clients      ClientSlideShow[]
+  testimonials TestimonialSlideShow[]
+  team         TeamSlideShow[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([type])
+  @@map("slideshows")
+}
+
+model ServiceSlideShow {
+  id          String  @id @default(cuid())
+  serviceId   String
+  slideShowId String
+  order       Int     @default(0)
+  isVisible   Boolean @default(true)
+  customTitle String?
+  customDesc  String?
+
+  service   Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  slideShow SlideShow @relation(fields: [slideShowId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([serviceId, slideShowId])
+  @@index([slideShowId, order])
+}
+
+model ProjectSlideShow {
+  id          String  @id @default(cuid())
+  projectId   String
+  slideShowId String
+  order       Int     @default(0)
+  isVisible   Boolean @default(true)
+
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  slideShow SlideShow @relation(fields: [slideShowId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, slideShowId])
+  @@index([slideShowId, order])
+}
+
+model ClientSlideShow {
+  id          String  @id @default(cuid())
+  clientId    String
+  slideShowId String
+  order       Int     @default(0)
+  isVisible   Boolean @default(true)
+
+  client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  slideShow SlideShow @relation(fields: [slideShowId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clientId, slideShowId])
+  @@index([slideShowId, order])
+}
+
+model TestimonialSlideShow {
+  id            String  @id @default(cuid())
+  testimonialId String
+  slideShowId   String
+  order         Int     @default(0)
+  isVisible     Boolean @default(true)
+
+  testimonial Testimonial @relation(fields: [testimonialId], references: [id], onDelete: Cascade)
+  slideShow   SlideShow   @relation(fields: [slideShowId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([testimonialId, slideShowId])
+  @@index([slideShowId, order])
+}
+
+model TeamSlideShow {
+  id          String  @id @default(cuid())
+  teamId      String
+  slideShowId String
+  order       Int     @default(0)
+  isVisible   Boolean @default(true)
+
+  team      TeamMember @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  slideShow SlideShow  @relation(fields: [slideShowId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teamId, slideShowId])
+  @@index([slideShowId, order])
+}
+
+// ============================================================================
+// CONTACT & INQUIRIES
+// ============================================================================
+
+enum ContactPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ContactCategory {
+  GENERAL_INQUIRY
+  SUPPORT
+  SALES
+  PARTNERSHIP
+  FEEDBACK
+  COMPLAINT
+  SERVICE_INQUIRY
+  OTHER
+}
+
+model Contact {
+  id String @id @default(cuid())
+
+  name    String
+  email   String
+  phone   String?
+  company String?
+
+  category ContactCategory @default(GENERAL_INQUIRY)
+  subject  String
+  message  String          @db.Text
+
+  serviceId String?
+  service   Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  budget    String?
+  timeline  String?
+
+  status   ContactStatus   @default(NEW)
+  priority ContactPriority @default(MEDIUM)
+
+  ipAddress String?
+  userAgent String?
+  source    String?
+  referrer  String?
+
+  respondedAt DateTime?
+  respondedBy String?
+  notes       String?   @db.Text
+  response    String?   @db.Text
+  resolved    Boolean   @default(false)
+
+  // Engagement
+  readAt    DateTime?
+  viewCount Int       @default(0)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([priority])
+  @@index([category])
+  @@index([serviceId])
+  @@index([email])
+  @@index([createdAt])
+  @@index([resolved])
+  @@map("contacts")
+}
+
+// ============================================================================
+// MEDIA MANAGEMENT
+// ============================================================================
+
+model Image {
+  id        String    @id @default(cuid())
+  filename  String
+  url       String
+  alt       String?
+  size      Int? // bytes
+  width     Int?
+  height    Int?
+  blurHash  String?
+  fileHash  String
+  key       String
+  imageType ImageType
+  type      String
+  customId  String?
+
+  profileAvatars Profile[]     @relation("ProfileAvatar")
+  services       Service[]     @relation("ServiceImage")
+  projects       Project[]     @relation("ProjectImage")
+  clients        Client[]      @relation("ClientImage")
+  clientLogos    Client[]      @relation("ClientLogo")
+  testimonials   Testimonial[] @relation("TestimonialAvatar")
+  teamMembers    TeamMember[]  @relation("TeamImage")
+  blogs          Blog[]        @relation("BlogImage")
+  companyInfos   CompanyInfo[] @relation("CompanyInfoImage")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  heroes    Hero[]   @relation("HeroBackgroundImage")
+
+  @@index([type])
+  @@map("images")
+}
+
+// ============================================================================
+// ANALYTICS
+// ============================================================================
+
+model Analytics {
+  id        String   @id @default(cuid())
+  date      DateTime @unique @db.Date
+  visitors  Int      @default(0)
+  pageViews Int      @default(0)
+  contacts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([date])
+  @@map("analytics")
+}
+
+model PageView {
+  id        String   @id @default(cuid())
+  path      String
+  referrer  String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([path])
+  @@index([createdAt])
+  @@map("page_views")
+}
