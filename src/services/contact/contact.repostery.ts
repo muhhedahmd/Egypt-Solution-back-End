@@ -435,7 +435,7 @@ export class ContactRepostery {
     });
   }
 
-  async replayEmail(id?: string, response?: string, respondedBy?: string , subject?: string , message?: string) {
+  async replayEmail(id?: string, response?: string, respondedBy?: string ) {
     try {
       if(!response) throw new ContactError("Response content is required for replaying email");
       if(!id) throw new ContactError("Contact ID is required for replaying email");
@@ -451,7 +451,7 @@ export class ContactRepostery {
 
 
       const { data, error } = await resend.emails.send({
-        from: `Your Company <${FormalEmail?.email}>`, 
+        from: `Your Company <${'asshxx1234567@gmail.com'}>`, 
         to: contact.email,
         subject: `Re: ${contact.subject}`,
         html: `
@@ -465,7 +465,7 @@ export class ContactRepostery {
       `,
       });
 
-      if (error) throw new ContactError("Error replaying email to contact")
+      if (error) throw new ContactError("Error replaying email to contact"  , undefined , error.message);
 
       await this.prisma.contact.update({
         where: { id },

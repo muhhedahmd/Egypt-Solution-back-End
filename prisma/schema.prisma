@@ -5,7 +5,7 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "./generated/client"
+  // output   = "./generated/client"
 }
 
 datasource db {
@@ -214,26 +214,53 @@ enum ButtonVariant {
 // ============================================================================
 
 model Hero {
+  
   id                String  @id @default(cuid())
-  name              String?
+  name              String  @default("Main Hero")
   title             String
   subtitle          String?
-  description       String?
+  description       String? @db.Text
+  
+  // Background
   backgroundImageId String?
   backgroundImage   Image?  @relation("HeroBackgroundImage", fields: [backgroundImageId], references: [id])
-
-  // Call-to-action
-  ctaText    String?
-  ctaUrl     String?
-  ctaVariant ButtonVariant? @default(PRIMARY)
-
+  backgroundColor   String? @default("#f5f5f5")
+ //
+  backgroundVideo   String? // Video URL
+  overlayColor      String? // For image/video overlay
+  overlayOpacity    Float?  @default(0.5)
+  
+  // Primary CTA
+  ctaText           String? @default("Get Started")
+  ctaUrl            String? @default("/contact")
+  ctaVariant        ButtonVariant? @default(PRIMARY)
+  
+  // Secondary CTA
+  secondaryCtaText    String?
+  secondaryCtaUrl     String?
+  secondaryCtaVariant ButtonVariant? @default(GHOST)
+  
   // Layout / style
-  alignment      TextAlign?  @default(CENTER)
-  variant        HeroVariant @default(CENTERED)
-  styleOverrides Json?
-
+  alignment         TextAlign?  @default(CENTER)
+  variant           HeroVariant @default(CENTERED)
+  minHeight         Int?        @default(600) // pixels
+  
+  // Content styling
+  titleSize         String? @default("4xl") // Tailwind size class
+  titleColor        String? @default("#000000")
+  subtitleColor     String? @default("#666666")
+  descriptionColor  String? @default("#888888")
+  
+  // Additional features
+  showScrollIndicator Boolean @default(false)
+  customCSS          String? @db.Text
+  styleOverrides     Json?
+  
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  @@map("heroes")
 }
 
 enum HeroVariant {
@@ -243,6 +270,110 @@ enum HeroVariant {
   MINIMAL
 }
 
+
+
+// ============================================================================
+// HEADER
+// ============================================================================
+
+model Header {
+  id                   String  @id @default(cuid())
+  logo                 String?
+  siteName             String
+  tagline              String?
+  showSearch           Boolean @default(false)
+  showLanguageSelector Boolean @default(false)
+  isSticky             Boolean @default(false)
+  backgroundColor      String?
+  textColor            String?
+  height               Int?    @default(80)
+  isActive             Boolean @default(true)
+
+  navItems  HeaderNavItem[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@map("headers")
+}
+
+model HeaderNavItem {
+  id           String  @id @default(cuid())
+  headerId     String
+  label        String
+  url          String
+  order        Int     @default(0)
+  isExternal   Boolean @default(false)
+  openInNewTab Boolean @default(false)
+  parentId     String?
+  isActive     Boolean @default(true)
+  icon         String?
+
+  header   Header           @relation(fields: [headerId], references: [id], onDelete: Cascade)
+  parent   HeaderNavItem?   @relation("NavItemChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children HeaderNavItem[]  @relation("NavItemChildren")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([headerId, order])
+  @@index([parentId])
+  @@map("header_nav_items")
+}
+
+// ============================================================================
+// FOOTER
+// ============================================================================
+
+model Footer {
+  id              String  @id @default(cuid())
+  copyrightText   String
+  showSocialLinks Boolean @default(true)
+  showNewsletter  Boolean @default(false)
+  backgroundColor String?
+  textColor       String?
+  isActive        Boolean @default(true)
+
+  columns   FooterColumn[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@map("footers")
+}
+
+model FooterColumn {
+  id       String  @id @default(cuid())
+  footerId String
+  title    String
+  order    Int     @default(0)
+  isActive Boolean @default(true)
+
+  footer    Footer       @relation(fields: [footerId], references: [id], onDelete: Cascade)
+  links     FooterLink[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([footerId, order])
+  @@map("footer_columns")
+}
+
+model FooterLink {
+  id           String  @id @default(cuid())
+  columnId     String
+  label        String
+  url          String
+  order        Int     @default(0)
+  isExternal   Boolean @default(false)
+  openInNewTab Boolean @default(false)
+  isActive     Boolean @default(true)
+  icon         String?
+
+  column    FooterColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([columnId, order])
+  @@map("footer_links")
+}
 // ============================================================================
 // SERVICES
 // ============================================================================

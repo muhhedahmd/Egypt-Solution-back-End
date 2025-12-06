@@ -20,6 +20,7 @@ import { TeamModule } from "./services/team/team.module";
 import { TestimonialModule } from "./services/testtimonials/testimonial.module";
 import { contactModule as contactMod } from "./services/contact/contact.module";
 import { CompanyInfoModule as companyInfo } from "./services/companyInfo/settingsModule";
+import { HeroModule as HeroMod } from "./services/hero/hero.modules";
 
 const app = express();
 app.use(cookieParser());
@@ -81,6 +82,8 @@ app.use("/api/contacts", contactModule.getRoutes());
 
 const CompanyInfoModule = new companyInfo(prisma);
 app.use("/api/company-info", CompanyInfoModule.getRoutes());
+const HeroModule = new HeroMod(prisma);
+app.use("/api/hero", HeroModule.getRoutes());
 
 app.use(errorHandler as any);
 

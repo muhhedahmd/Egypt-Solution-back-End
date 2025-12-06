@@ -152,7 +152,7 @@ export class ContactController {
     try {
       const { id } = req.params;
       const { response  , subject, message} = req.body;
-      const replay = await this.logic.replay({id, response, subject, message});
+      const replay = await this.logic.replay({id, response, });
       return res.status(200).json({
         success: true,
         message: "Contact replayed successfully",

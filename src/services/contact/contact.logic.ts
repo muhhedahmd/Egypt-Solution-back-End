@@ -240,7 +240,7 @@ export class ContactLogic {
     subject?: string;
     message?: string;
   }) {
-    const replay = this.ContactRepostery.replayEmail(id, response, subject, message);
+    const replay = this.ContactRepostery.replayEmail(id, response, );
     return replay
   }
 }
