@@ -214,6 +214,7 @@ enum ButtonVariant {
 // ============================================================================
 
 model Hero {
+
   
   id                String  @id @default(cuid())
   name              String  @default("Main Hero")
@@ -268,6 +269,7 @@ enum HeroVariant {
   SPLIT
   IMAGE_BACKGROUND
   MINIMAL
+  FULL_SCREEN
 }
 
 
