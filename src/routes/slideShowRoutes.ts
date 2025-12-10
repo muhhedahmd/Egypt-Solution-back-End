@@ -12,7 +12,11 @@ export class slideShowRoutes {
     const asyncHandler = (fn: any) => (req: any, res: any, next: any) => {
       Promise.resolve(fn(req, res, next)).catch(next);
     };
-
+    
+    this.router.post(
+        "/get-paginated-slides/:id",
+        asyncHandler(this.controller.getPaginatedSlides.bind(this.controller))
+    );
     this.router.get(
       "/",
       asyncHandler(this.controller.getAllSlideShows.bind(this.controller))
@@ -21,11 +25,24 @@ export class slideShowRoutes {
       "/all-minimal",
       asyncHandler(this.controller.getAllSlideShows.bind(this.controller))
     );
+    // *** & ####
+
+    this.router.post(
+  "/bulk-operations/:id",
+  asyncHandler(requireAuthv2),
+  asyncHandler(this.controller.bulkSlideOperations.bind(this.controller))
+);
     // ***
     this.router.post(
       "/create-attach-many",
       asyncHandler(requireAuthv2),
       asyncHandler(this.controller.CreateAndAttachMany.bind(this.controller))
+    );
+    // ***
+    this.router.post(
+      "/update-attach-many",
+      asyncHandler(requireAuthv2),
+      asyncHandler(this.controller.UpdateAndAttachMany.bind(this.controller))
     );
     
     this.router.post(
@@ -57,14 +74,16 @@ export class slideShowRoutes {
       asyncHandler(requireAuthv2),
       asyncHandler(this.controller.deAttachMany.bind(this.controller))
     );
+     this.router.put(
+      "/reorder-bulk",
+      asyncHandler(requireAuthv2),
+      asyncHandler(this.controller.reorderBulkSlideShow.bind(this.controller))
+    );
      this.router.get(
       "/:id",
       asyncHandler(this.controller.getSlideShowById.bind(this.controller))
     );
-    this.router.post(
-        "/get-paginated-slides/:id",
-        asyncHandler(this.controller.getPaginatedSlides.bind(this.controller))
-    );
+
     this.router.delete(
         "/:id",
         asyncHandler(requireAuthv2),
@@ -75,6 +94,9 @@ export class slideShowRoutes {
       asyncHandler(requireAuthv2),
       asyncHandler(this.controller.updateSlideShow.bind(this.controller))
     );
+
+    // reorderBulkSlideShow 
+   
   }
   getRoutes(): Router {
     return this.router;

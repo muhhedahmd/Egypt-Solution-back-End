@@ -24,7 +24,6 @@ export class CompanyInfoRepostery {
     }
   }
   async createSettings({
-
     logo,
     data,
   }: {
@@ -64,14 +63,13 @@ export class CompanyInfoRepostery {
         });
         return newSettings;
       });
-        return transaction;
+      return transaction;
     } catch (error) {
       console.log(error);
       throw new CompanyInfoCreationError("Error creating settings");
     }
   }
   async getSettings() {
-
     try {
       const settings = await this.prisma.companyInfo.findFirst({
         include: {
@@ -134,6 +132,73 @@ export class CompanyInfoRepostery {
       return updatedSettings;
     } catch (error) {
       throw new CompanyInfoError("Error updating settings");
+    }
+  }
+
+  async getMimalStats() {
+    try {
+      const totalServices = await this.prisma.service.count({
+        where: { isActive: true },
+      });
+
+      const progressProjects = await this.prisma.project.count({
+        where: { status: "IN_PROGRESS" },
+      });
+      const CompletedProjects = await this.prisma.project.count({
+        where: { status: "COMPLETED" },
+      });
+
+      const totalTeamMembers = await this.prisma.teamMember.count();
+
+      const newContactsThisMonth = await this.prisma.contact.count({
+        where: {
+          createdAt: {
+            gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1), // first day of month
+          },
+        },
+      });
+      
+
+
+      const testimonialCount = await this.prisma.testimonial.count({});
+
+      return {
+        
+        stats: [
+          {
+            label: "Total Services",
+            value: totalServices,
+            // change: "+2 this month",
+          },
+          {
+            label: "project in progress",
+            value: progressProjects,
+            // change: "+5 this month",
+          },
+          {
+            label: "Completed Projects",
+            value: CompletedProjects,
+            // change: "+5 this month",/
+          },
+          {
+            label: "Team Members",
+            value: totalTeamMembers,
+            // change: "New",
+          },
+          {
+            label: "New Contacts",
+            value: newContactsThisMonth,
+            // change: "+12.5% from last month",
+          },
+          {
+            label: "Testimonials",
+            value: testimonialCount,
+            // change: "Approved",
+          },
+        ],
+      };
+    } catch (error) {
+      throw new CompanyInfoError("Error fetching mimal stats");
     }
   }
 }

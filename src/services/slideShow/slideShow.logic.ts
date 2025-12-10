@@ -38,12 +38,9 @@ export class slideShowLogic {
       },
     };
   }
-  async getAllSlideShowsMinmal(
-
-  ): Promise<Partial<SlideShow>[] | undefined> {
+  async getAllSlideShowsMinmal(): Promise<Partial<SlideShow>[] | undefined> {
     const slideShows = await this.repository.findManyMinimal();
-    return slideShows
-
+    return slideShows;
   }
   async create(data: unknown): Promise<SlideShow> {
     const dataCreate = this.validator.validateCreate(data);
@@ -75,7 +72,7 @@ export class slideShowLogic {
     const validId = this.validator.validateId(id);
     const findSlideShow = await this.repository.findById(validId);
 
-    return findSlideShow ;
+    return findSlideShow;
   }
   async attach(data: unknown): Promise<AttachmentTypes> {
     const valid = this.validator.validateAttachGlobal(data);
@@ -89,6 +86,7 @@ export class slideShowLogic {
   }
   // ***
   async createAndAttachMany(
+    
     data: unknown
   ): Promise<{ slideShow: SlideShow; attacheds: AttachmentTypes[] }> {
     const valid = this.validator.validCreateAndAttachManySchema(data);
@@ -100,11 +98,11 @@ export class slideShowLogic {
       );
 
     const { slides, ...rest } = valid;
+    console.log({
+      slides,
+      rest,
+    });
 
-    // console.log( {
-    //   slides,
-    //   ...rest
-    // })
     const createdAndAttached = await this.repository.createAndAttachMany({
       slides: slides.map((slide) => ({
         id: slide.attachId,
@@ -118,6 +116,64 @@ export class slideShowLogic {
     });
     return createdAndAttached;
   }
+  //*** */
+  async bulkSlideOperations(data: unknown) {
+
+  // Validate the data structure
+  console.log(data)
+  const valid = this.validator.validateBulkSlideOperations(data);
+  
+  if (!valid) {
+    throw new ServiceError(
+      "Invalid data for bulk slide operations",
+      400,
+      "INVALID_BULK_OPERATIONS_DATA"
+    );
+  }
+
+  const result = await this.repository.bulkSlideOperations(valid);
+  
+  return {
+    success: true,
+    message: "Bulk operations completed successfully",
+    data: {
+      slideShow: result.slideShow,
+      summary: {
+        created: result.created.length,
+        updated: result.updated.length,
+        deleted: result.deleted.length,
+        reordered: result.reordered.length,
+      },
+      details: result,
+    },
+  };
+}
+  
+
+  
+  async updateAndAttachMany(
+    data: unknown
+  ) {
+    console.log(data)
+    const valid = this.validator.validUpdateAndAttachManySchema(data);
+    if (!valid)
+      throw new ServiceError(
+        "Invalid data for update and attach many",
+        400,
+        "SLIDESHOW_UPDATE_ATTACH_MANY_ERROR"
+      );
+
+    const { slides, delete: delArr, update, ...rest } = valid;
+    const updatedAndAttached = await this.repository.updateAndAttachMany({
+      ...rest,
+      slides,
+       delete : delArr ,
+      update,
+    });
+    return updatedAndAttached
+    
+  }
+
   // ***
   async getSlidesInSlideShow({
     id,
@@ -135,6 +191,8 @@ export class slideShowLogic {
     >;
     perPage: number;
   }) {
+
+  
     const validId = this.validator.validateId(id);
     const slides = await this.repository.getSlidesPaged(validId, {
       page,
@@ -211,7 +269,6 @@ export class slideShowLogic {
     }
   }
   async getSlideshowsByType({
-
     skip,
     take,
     type,
@@ -316,4 +373,15 @@ export class slideShowLogic {
       );
     }
   }
+  async reorderBulkSlideShow(data: unknown) {
+    const valid = this.validator.validateBulkReorder(data);
+    const updatedService = await this.repository.reorderBulkSlideShow({
+      slideShowOrder: valid,
+    });
+    return updatedService;
+  }
+   //***  */
+   
+
+
 }

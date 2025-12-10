@@ -7,7 +7,6 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const app_1 = __importDefault(require("./app"));
 dotenv_1.default.config();
 const PORT = process.env.PORT || 5000;
-// app.use("/api", authRoutes)
 app_1.default.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });

@@ -146,6 +146,7 @@ export class slideShowController {
   async CreateAndAttachMany(req: Request, res: Response, next: NextFunction) {
     try {
       const body = req.body;
+      console.log(body)
       const created = await this.logic.createAndAttachMany(body);
       
       return res.status(200).json({
@@ -157,6 +158,44 @@ export class slideShowController {
       next(error);
     }
   }
+
+  // *** #
+
+  async bulkSlideOperations(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params; // slideShowId from URL
+    const body = req.body;
+  
+
+    const result = await this.logic.bulkSlideOperations({
+      slideShowId: id,
+      ...body,
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+   
+  async UpdateAndAttachMany(req: Request, res: Response, next: NextFunction) {
+    try {
+      const body = req.body;
+      const { id  } = req.params;
+      if(!id) throw new ServiceError("id is required" , 400 , "ID_NOT_FOUND");
+      console.log({...body , id })
+      const updated = await this.logic.updateAndAttachMany({...body , id });
+      return res.status(200).json({
+        success: true,
+        message: "Slideshow updated and attached successfully",
+        data: updated,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getPaginatedSlides(req: Request, res: Response, next: NextFunction) {
     try {
       const  {
@@ -165,7 +204,6 @@ export class slideShowController {
         pagesPerType
       } = req.body ;
       const { id } = req.params;
-      
       const data = await this.logic.getSlidesInSlideShow({
         id,
         page: Number(page) || 1,
@@ -294,6 +332,20 @@ export class slideShowController {
       return res.status(200).json({
         success: true,
         message: "Slideshow deattached successfully",
+        data: updated,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+  async reorderBulkSlideShow(req: Request, res: Response, next: NextFunction) {
+    try {
+      const body = req.body;
+      const updated = await this.logic.reorderBulkSlideShow(body);
+      console.log(updated)
+      return res.status(200).json({
+        success: true,
+        message: "Slideshow reordered successfully",
         data: updated,
       });
     } catch (error) {

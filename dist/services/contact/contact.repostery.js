@@ -381,7 +381,7 @@ class ContactRepostery {
             });
         });
     }
-    replayEmail(id, response, respondedBy, subject, message) {
+    replayEmail(id, response, respondedBy) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 if (!response)
@@ -397,7 +397,7 @@ class ContactRepostery {
                 if (!contact)
                     throw new Error("Contact not found");
                 const { data, error } = yield resend.emails.send({
-                    from: `Your Company <${FormalEmail === null || FormalEmail === void 0 ? void 0 : FormalEmail.email}>`,
+                    from: `Your Company <${'asshxx1234567@gmail.com'}>`,
                     to: contact.email,
                     subject: `Re: ${contact.subject}`,
                     html: `
@@ -411,7 +411,7 @@ class ContactRepostery {
       `,
                 });
                 if (error)
-                    throw new contact_error_1.ContactError("Error replaying email to contact");
+                    throw new contact_error_1.ContactError("Error replaying email to contact", undefined, error.message);
                 yield this.prisma.contact.update({
                     where: { id },
                     data: {

@@ -58,4 +58,16 @@ export class CompanyInfoLogic {
       throw new CompanyInfoError("Failed to update company settings");
     }
   }
+
+  async getMimalStats() {
+    try {
+      const stats = await this.settingsRepo.getMimalStats();
+      return stats;
+    } catch (error) {
+      if (error instanceof CompanyInfoError) throw error;
+      throw new CompanyInfoError("Failed to fetch company settings");
+    }
+  }
+
 }
+

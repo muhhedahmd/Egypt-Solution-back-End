@@ -211,7 +211,7 @@ class ContactLogic {
     }
     replay(_a) {
         return __awaiter(this, arguments, void 0, function* ({ id, response, subject, message }) {
-            const replay = this.ContactRepostery.replayEmail(id, response, subject, message);
+            const replay = this.ContactRepostery.replayEmail(id, response);
             return replay;
         });
     }

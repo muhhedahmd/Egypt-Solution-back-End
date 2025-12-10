@@ -9,6 +9,8 @@ import {
   deattachDTO,
   AttachmentWithSlideShowRelationsModels,
   CreateAndAttachMany,
+  UpdateAndAttachMany,
+  BulkSlideOperationsDTO,
 } from "../../types/slideShow";
 import { randomUUID } from "crypto";
 import {
@@ -24,6 +26,7 @@ import {
 import { txInstance } from "../../lib/helpers";
 import { promise } from "zod";
 import { includes } from "zod/v4";
+import { serialize } from "v8";
 
 export class slideShowRepository {
   constructor(
@@ -51,7 +54,7 @@ export class slideShowRepository {
 
   async findManyMinimal(prismaTouse?: txInstance) {
     try {
-      return await (prismaTouse || this.prisma).slideShow.findMany({
+      const findMany = await (prismaTouse || this.prisma).slideShow.findMany({
         select: {
           id: true,
           title: true,
@@ -59,6 +62,18 @@ export class slideShowRepository {
           slug: true,
           type: true,
         },
+        orderBy: {
+          order: "asc",
+        },
+      });
+      return findMany.map((slideShow) => {
+        return {
+          id: slideShow.id,
+          title: slideShow.title,
+          order: slideShow.order,
+          slug: slideShow.slug,
+          type: slideShow.type,
+        };
       });
     } catch (error) {
       console.log(error);
@@ -291,7 +306,10 @@ export class slideShowRepository {
           data.order !== undefined && data.order != find.order;
         if (isOrderChanged)
           await this.reorderUpdate({
-            slideShowUpdate: find,
+            slideShowUpdate: {
+              id: find.id,
+              order: find.order,
+            },
             orderBeforeUpdate: find.order,
           });
 
@@ -382,7 +400,7 @@ export class slideShowRepository {
     slideShowUpdate,
     orderBeforeUpdate,
   }: {
-    slideShowUpdate: SlideShow;
+    slideShowUpdate: { id: string; order: number };
     orderBeforeUpdate: number;
   }) {
     try {
@@ -393,6 +411,7 @@ export class slideShowRepository {
           order,
         },
       });
+
       if (findOrder) {
         return this.prisma.slideShow.update({
           where: {
@@ -403,14 +422,53 @@ export class slideShowRepository {
           },
         });
       }
-
-      console.log({
-        findOrder,
-      });
     } catch (error) {
       console.error(error);
       throw new ServiceError(
         "error updating a slideshow Reorder",
+        400,
+        "SLIDESHOW_UPDATE_ERROR"
+      );
+    }
+  }
+
+  async reorderBulkSlideShow({
+    slideShowOrder,
+  }: {
+    slideShowOrder: {
+      id: string;
+      order: number;
+    }[];
+  }) {
+    try {
+      if (!slideShowOrder.length) {
+        return [];
+      }
+
+      const result = await this.prisma.$transaction(async (tx) => {
+        const promises = slideShowOrder.map(async (item) => {
+          return tx.slideShow.update({
+            where: {
+              id: item.id,
+            },
+            data: {
+              order: item.order,
+            },
+            select: {
+              id: true,
+              order: true,
+            },
+          });
+        });
+
+        return await Promise.all(promises);
+      });
+
+      return result;
+    } catch (error) {
+      console.error(error);
+      throw new ServiceError(
+        "Error updating slideshow reorder",
         400,
         "SLIDESHOW_UPDATE_ERROR"
       );
@@ -463,10 +521,10 @@ export class slideShowRepository {
       >;
     }
   ) {
+    console.log("test");
     await this.findById(slideShowId);
     const perPageDefault = Math.min(Math.max(opts?.perPage ?? 10, 1), 100);
     const pageDefault = Math.max(opts?.page ?? 1, 1);
-
     const getSkipTake = (page?: number, perPage = perPageDefault) => {
       const p = Math.max(page ?? pageDefault, 1);
       return { skip: (p - 1) * perPage, take: perPage + 1, page: p, perPage };
@@ -483,6 +541,7 @@ export class slideShowRepository {
         orderBy: { order: "asc" },
         skip: svc.skip,
         take: svc.take,
+
         include: {
           service: {
             include: {
@@ -500,11 +559,7 @@ export class slideShowRepository {
           project: {
             include: {
               image: true,
-              technologies: {
-                include: {
-                  technology: true,
-                },
-              },
+            
             },
           },
         },
@@ -566,7 +621,32 @@ export class slideShowRepository {
     const tmPage = process(rawTm, tm.perPage);
 
     const toSlides = (rows: any[], type: string, dataKey: string) =>
-      rows.map((r) => ({ type, id: r.id, order: r.order, data: r[dataKey] }));
+      rows.map((r) => {
+        // r = pivot row (e.g. clientSlideShow), r[dataKey] = actual client/project object
+        const entity = r[dataKey] ?? null;
+
+        const order =
+          typeof r.order === "number" && r.order !== 0
+            ? r.order
+            : entity?.order ?? 1000;
+
+        const isVisible =
+          typeof r.isVisible === "boolean"
+            ? r.isVisible
+            : entity?.isActive ?? true;
+
+        return {
+          type,
+          // slide id should be pivot id (the slideshow item id), data.id is resource id
+          id: r.id,
+          order,
+          isVisible,
+          data: entity,
+          // copy any custom fields from pivot if exist
+          customDesc: r.customDesc ?? null,
+          customTitle: r.customTitle ?? null,
+        };
+      });
 
     const slides = [
       ...toSlides(svcPage.items, "service", "service"),
@@ -607,7 +687,6 @@ export class slideShowRepository {
 
   // attaches
   async attach({
-    
     slideShowId,
     attachType,
     attachId,
@@ -617,6 +696,7 @@ export class slideShowRepository {
     customTitle = "",
     isMany = false,
     tx,
+    skipOrder,
   }: {
     slideShowId: string;
     attachType: "service" | "client" | "project" | "testimonial" | "teamMember";
@@ -627,6 +707,7 @@ export class slideShowRepository {
     customTitle?: string;
     customDesc?: string;
     tx?: txInstance;
+    skipOrder?: boolean;
   }): Promise<AttachmentTypes> {
     try {
       const prismaTouse = tx || this.prisma;
@@ -638,6 +719,7 @@ export class slideShowRepository {
         where: { id: attachId },
       });
 
+      console.log(findAttach);
       if (!findAttach) {
         throw new ServiceError(
           "Attach entity not found id: " + attachId,
@@ -650,25 +732,27 @@ export class slideShowRepository {
         attachType === "teamMember" ? "team" : attachType
       }Id` as any;
 
-      const lastOrder =
-        (await (
+      if (!skipOrder) {
+        const lastOrder =
+          (await (
+            this.modelAttachMap(prismaTouse || this.prisma)[attachType] as any
+          ).count()) - 1;
+        const findIstheretheOrder = await (
           this.modelAttachMap(prismaTouse || this.prisma)[attachType] as any
-        ).count()) - 1;
-      const findIstheretheOrder = await (
-        this.modelAttachMap(prismaTouse || this.prisma)[attachType] as any
-      ).findFirst({
-        where: {
-          order: order,
-        },
-      });
+        ).findFirst({
+          where: {
+            order: order,
+          },
+        });
 
-      if (findIstheretheOrder) {
-        order = lastOrder + 1;
-      }
-      if (order && order > lastOrder) {
-        order = lastOrder + 1;
-      }
+        if (findIstheretheOrder) {
+          order = lastOrder + 1;
+        }
+        if (order && order > lastOrder) {
 
+          order = lastOrder + 1;
+        }
+      }
       let attach;
 
       if (attachType === "service") {
@@ -698,7 +782,10 @@ export class slideShowRepository {
           },
         });
       }
-      return attach as
+      return {
+        ...attach ,
+        _id : attach?.fieldName
+      } as
         | TestimonialSlideShow
         | TeamSlideShow
         | ClientSlideShow
@@ -780,6 +867,7 @@ export class slideShowRepository {
         attachType,
         prismaTouse
       );
+      console.log(findTheAttachedTable);
 
       if (!findTheAttachedTable) {
         throw new ServiceError(
@@ -804,6 +892,63 @@ export class slideShowRepository {
             slideShowId,
             [fieldName]: attachId,
           },
+
+          // [fieldName]: attachId, slideShowId
+        },
+      });
+
+      return attach as AttachmentWithSlideShowRelationsModels;
+    } catch (error) {
+      console.error(error);
+      throw new ServiceError(
+        "error attaching to slideshow",
+        400,
+        "SLIDESHOW_ATTACH_ERROR"
+      );
+    }
+  }
+
+  async DeatchWithJoinTableId({
+    slideShowId,
+    type: attachType,
+    id: attachId,
+    isMany = false,
+    tx,
+  }: deattachDTO & {
+    tx?: txInstance;
+    isMany?: boolean;
+  }): Promise<AttachmentWithSlideShowRelationsModels> {
+    try {
+      const prismaTouse = tx || this.prisma;
+      if (!isMany) await this.findById(slideShowId, prismaTouse);
+
+      // const findTheAttachedTable = await this.findAttachTable(
+      //   attachId,
+      //   attachType,
+      //   prismaTouse
+      // );
+      // console.log( findTheAttachedTable)
+
+      // if (!findTheAttachedTable) {
+      //   throw new ServiceError(
+      //     "Attach entity not found id: " + attachId,
+      //     404,
+      //     "id not found in DB"
+      //   );
+      // }
+
+      // const fieldName = `${
+      //   attachType === "teamMember" ? "team" : attachType
+      // }Id` as any;
+
+      let attach;
+
+      attach = await (
+        this.modelAttachMap(prismaTouse || this.prisma)[attachType]
+          .delete as any
+      )({
+        where: {
+          id: attachId,
 
           // [fieldName]: attachId, slideShowId
         },
@@ -881,7 +1026,7 @@ export class slideShowRepository {
                 slideShowId: slideShow.id,
                 attachType: att.type,
                 attachId: att.id,
-                order: att.order,
+                order: att.order || 1,
                 isVisible: att.isVisible,
                 isMany: true,
                 customTitle: att.customTitle || "",
@@ -906,6 +1051,182 @@ export class slideShowRepository {
         "error creating and attaching to slideshow",
         400,
         "SLIDESHOW_CREATE_ATTACH_ERROR_MANY"
+      );
+    }
+  }
+
+  //***
+  async updateAndAttachMany({
+    slides: newSlides,
+    delete: deleteArr,
+    update,
+    ...rest
+  }: UpdateAndAttachMany) {
+    try {
+      const transaction = this.prisma.$transaction(async (tx) => {
+        // TODO: Implement update and attach logic
+        const find = await this.findById(rest.id, tx);
+        if (!find) {
+          throw new ServiceError(
+            "slideShow not found id: " + rest.id,
+            404,
+            "id not found in DB"
+          );
+        }
+
+        const updateSlideShow = await tx.slideShow.update({
+          where: {
+            id: rest.id,
+          },
+          data: {
+            ...rest,
+          },
+        });
+
+        let cerated;
+        if (newSlides) {
+          cerated = Promise.all(
+            newSlides.map((att) => {
+              return this.attach({
+                slideShowId: find.id,
+                attachType: att.type,
+                attachId: att.id,
+                order: att.order || 1,
+                isVisible: att.isVisible,
+                isMany: true,
+                customTitle: att.customTitle || "",
+                customDesc: att.customDesc || "",
+                tx,
+              });
+            })
+          );
+        }
+        let deleted;
+        if (deleteArr) {
+          deleted = Promise.all(
+            deleteArr.map((id) => {
+              return this.Deattach({
+                slideShowId: find.id,
+                type: id.type,
+                id: id.id,
+                isMany: true,
+                tx,
+              });
+            })
+          );
+        }
+
+        let updated;
+        if (update) {
+          updated = Promise.all(
+            update.map((up) => {
+              return this.updateAttach({
+                attachType: up.type,
+                attachId: up.id,
+                order: up.order,
+                isVisible: up.isVisible,
+                customTitle: up.customTitle || "",
+                customDesc: up.customDesc || "",
+                tx,
+              });
+            })
+          );
+        }
+
+        return {
+          slideShow: updateSlideShow,
+          attacheds: await cerated,
+          deleted: await deleted,
+          updated: await updated,
+        };
+      });
+      return transaction;
+    } catch (error) {
+      console.error(error);
+      throw new ServiceError(
+        "error updating and attaching to slideshow",
+        400,
+        "SLIDESHOW_UPDATE_ATTACH_ERROR_MANY"
+      );
+    }
+  }
+
+  async updateAttach({
+    attachType,
+    attachId,
+    order,
+    isVisible,
+    customDesc = "",
+    customTitle = "",
+    tx,
+  }: {
+    attachType: "service" | "client" | "project" | "testimonial" | "teamMember";
+    attachId: string;
+    order: number;
+    isVisible: boolean;
+    customTitle?: string;
+    customDesc?: string;
+    tx?: txInstance;
+  }): Promise<AttachmentTypes> {
+    try {
+      const prismaTouse = tx || this.prisma;
+
+      // Check if attachment exists by attachId (the junction table record ID)
+      const existingAttachment = await (
+        this.modelAttachMap(prismaTouse)[attachType] as any
+      ).findUnique({
+        where: {
+          id: attachId,
+        },
+      });
+
+      if (!existingAttachment) {
+        throw new ServiceError(
+          `Attachment not found with id: ${attachId}`,
+          404,
+          "ATTACHMENT_NOT_FOUND"
+        );
+      }
+
+      // Build update data
+      const updateData: any = {
+        order,
+        isVisible,
+      };
+
+      // Only services support custom title and description
+      if (attachType === "service") {
+        updateData.customTitle = customTitle || "";
+        updateData.customDesc = customDesc || "";
+      }
+
+      // Update the attachment
+      const attach = await (
+        this.modelAttachMap(prismaTouse)[attachType].update as any
+      )({
+        where: {
+          id: attachId,
+        },
+        data: updateData,
+      });
+
+      return attach as
+        | TestimonialSlideShow
+        | TeamSlideShow
+        | ClientSlideShow
+        | ProjectSlideShow
+        | ServiceSlideShow;
+    } catch (error) {
+      console.error("Error in updateAttach:", error);
+
+      if (error instanceof ServiceError) {
+        throw error;
+      }
+
+      throw new ServiceError(
+        "Error updating attachment in slideshow",
+        400,
+        "SLIDESHOW_UPDATE_ATTACH_ERROR"
       );
     }
   }
@@ -1040,6 +1361,155 @@ export class slideShowRepository {
         "error getting attacheds to slideshow",
         400,
         "SLIDESHOW_ATTACH_ERROR_MANY"
+      );
+    }
+  }
+  // ***
+  async bulkSlideOperations({
+
+    slideShowId,
+    newSlides = [],
+    updateSlides = [],
+    deletedSlides = [],
+    updatedOrder = [],
+  }: BulkSlideOperationsDTO) {
+    try {
+      const transaction = await this.prisma.$transaction(
+        async (tx) => {
+          // Verify slideshow exists
+          const slideShow = await this.findById(slideShowId, tx);
+          if (!slideShow) {
+            throw new ServiceError(
+              `Slideshow not found with id: ${slideShowId}`,
+              404,
+              "SLIDESHOW_NOT_FOUND"
+            );
+          }
+
+          // 1. DELETE SLIDES
+          const deleted = await Promise.all(
+            deletedSlides.map((item) => {
+              return this.DeatchWithJoinTableId({
+                tx,
+                type: item.type === "team" ? "teamMember" : item.type,
+                id: item.id,
+                isMany: true,
+                slideShowId: slideShowId,
+              });
+            })
+          );
+
+          // 2. CREATE NEW SLIDES
+          const created = await Promise.all(
+            newSlides.map((slide) => {
+
+              return  this.attach({
+                  slideShowId,
+                  attachType: slide.type ==="team" ? "teamMember" : slide.type,
+                  attachId: slide.id, // Resource ID
+                  order: slide.order,
+                  isVisible: slide.isVisible,
+                  customTitle: slide.customTitle || "",
+                  customDesc: slide.customDescription || "",
+                  isMany: true,
+                  tx,
+                  skipOrder: true,
+                });
+             
+            })
+          );
+
+          // 3. UPDATE SLIDES (metadata only, not order)
+          const updated = await Promise.all(
+            updateSlides.map(async (slide) => {
+              const updateData: any = {};
+
+              console.log({
+                slide
+              } , "customDescription")
+
+              if (slide.isVisible !== undefined) {
+                updateData.isVisible = slide.isVisible;
+              }
+
+              // Only services support custom title and description
+              if (slide.type === "service") {
+                if (slide.customTitle !== undefined) {
+                  updateData.customTitle = slide.customTitle;
+                }
+                if (slide.customDescription !== undefined) {
+
+                  updateData.customDesc = slide.customDescription;
+                }
+              }
+
+              return await (
+                this.modelAttachMap(tx)[
+                  slide.type === "team" ? "teamMember" : (slide.type as any)
+                ].update as any
+              )({
+                where: {
+                  id: slide.id,
+                },
+                data: updateData,
+              });
+
+              // return await (this.modelAttachMap(tx)[slide.type].update as any)({
+              //   where: { id: slide.id },
+              //   data: updateData,
+              // });
+            })
+          );
+
+          // 4. UPDATE ORDER (separate from metadata updates)
+          const reordered = await Promise.all(
+            updatedOrder.map(async (slide) => {
+              return await (
+                this.modelAttachMap(tx)[
+                  slide.type === "team" ? "teamMember" : (slide.type as any)
+                ].update as any
+              )({
+                where: {
+                  id: slide.id,
+                },
+                data: {
+                  order: slide.order,
+                },
+              });
+
+              // return await (this.modelAttachMap(tx)[slide.type].update as any)({
+              //   where: { id: slide.id },
+              //   data: { order: slide.order },
+              // });
+            })
+          );
+
+          return {
+            slideShow,
+            created,
+            updated,
+            deleted,
+            reordered: reordered,
+          };
+        },
+        {
+          timeout: 120000,
+          maxWait: 120000,
+        }
+      );
+
+      return transaction;
+    } catch (error) {
+      console.error("Bulk slide operations error:", error);
+
+      if (error instanceof ServiceError) {
+        throw error;
+      }
+
+      throw new ServiceError(
+        "Error performing bulk slide operations",
+        400,
+        "BULK_SLIDE_OPERATIONS_ERROR"
       );
     }
   }

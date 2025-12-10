@@ -70,4 +70,17 @@ export class companyInfoController {
       next(error);
     }
   }
+
+  async getMimalStats(req: Request, res: Response, next: NextFunction) {
+    try {
+      const stats = await this.logic.getMimalStats();
+      return res.status(200).json({
+        success: true,
+        message: "Stats fetched successfully",
+        data: stats,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

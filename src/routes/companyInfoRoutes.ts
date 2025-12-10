@@ -25,6 +25,7 @@ export class companyInfoRoutes {
     };
 
     this.router.get("/", asyncHandler(requireAuthv2),  asyncHandler(this.controller.getSettings.bind(this.controller)));
+    this.router.get("/achivements", asyncHandler(requireAuthv2),  asyncHandler(this.controller.getMimalStats.bind(this.controller)));
     this.router.post("/", asyncHandler(requireAuthv2),  asyncHandler(this.controller.createSettings.bind(this.controller)));
     this.router.put("/:id", asyncHandler(requireAuthv2) ,  asyncHandler(this.controller.updateSettings.bind(this.controller)));
 

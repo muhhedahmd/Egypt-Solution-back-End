@@ -24,6 +24,7 @@ const team_module_1 = require("./services/team/team.module");
 const testimonial_module_1 = require("./services/testtimonials/testimonial.module");
 const contact_module_1 = require("./services/contact/contact.module");
 const settingsModule_1 = require("./services/companyInfo/settingsModule");
+const hero_modules_1 = require("./services/hero/hero.modules");
 const app = (0, express_1.default)();
 app.use((0, cookie_parser_1.default)());
 // 1. CORS first
@@ -67,6 +68,8 @@ const contactModule = new contact_module_1.contactModule(prisma_1.default);
 app.use("/api/contacts", contactModule.getRoutes());
 const CompanyInfoModule = new settingsModule_1.CompanyInfoModule(prisma_1.default);
 app.use("/api/company-info", CompanyInfoModule.getRoutes());
+const HeroModule = new hero_modules_1.HeroModule(prisma_1.default);
+app.use("/api/hero", HeroModule.getRoutes());
 app.use(errorHandler_1.errorHandler);
 // 7. Error handling middleware1
 app.use((err, req, res, next) => {

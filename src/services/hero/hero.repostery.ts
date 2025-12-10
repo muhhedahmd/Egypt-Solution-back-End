@@ -1,13 +1,11 @@
-
-import { PrismaClientConfig } from '../../config/prisma';
-import { HeroError } from '../../errors/hero.error';
+import { PrismaClientConfig } from "../../config/prisma";
+import { HeroError } from "../../errors/hero.error";
 import {
   deleteImageById,
   UploadImage,
   AssignImageToDBImage,
-} from '../../lib/helpers';
-import { CreateHeroDTO, UpdateHeroDTO } from '../../types/hero';
-
+} from "../../lib/helpers";
+import { CreateHeroDTO, UpdateHeroDTO } from "../../types/hero";
 
 export class HeroRepository {
   constructor(private prisma: PrismaClientConfig) {}
@@ -21,7 +19,7 @@ export class HeroRepository {
         skip: skip * take,
         take: take,
         orderBy: {
-          createdAt: 'desc',
+          createdAt: "desc",
         },
       });
 
@@ -34,7 +32,7 @@ export class HeroRepository {
       });
     } catch (error) {
       console.error(error);
-      throw new HeroError('Error finding heroes', 400, 'HERO_FIND_MANY_ERROR');
+      throw new HeroError("Error finding heroes", 400, "HERO_FIND_MANY_ERROR");
     }
   }
 
@@ -52,7 +50,7 @@ export class HeroRepository {
       });
     } catch (error) {
       console.error(error);
-      throw new Error('Error finding hero by ID');
+      throw new Error("Error finding hero by ID");
     }
   }
 
@@ -64,7 +62,7 @@ export class HeroRepository {
           backgroundImage: true,
         },
         orderBy: {
-          updatedAt: 'desc',
+          updatedAt: "desc",
         },
       });
 
@@ -77,7 +75,11 @@ export class HeroRepository {
       };
     } catch (error) {
       console.error(error);
-      throw new HeroError('Error finding active hero', 400, 'HERO_SEARCH_ERROR');
+      throw new HeroError(
+        "Error finding active hero",
+        400,
+        "HERO_SEARCH_ERROR"
+      );
     }
   }
 
@@ -89,25 +91,25 @@ export class HeroRepository {
             {
               name: {
                 contains: searchTerm,
-                mode: 'insensitive',
+                mode: "insensitive",
               },
             },
             {
               title: {
                 contains: searchTerm,
-                mode: 'insensitive',
+                mode: "insensitive",
               },
             },
             {
               subtitle: {
                 contains: searchTerm,
-                mode: 'insensitive',
+                mode: "insensitive",
               },
             },
             {
               description: {
                 contains: searchTerm,
-                mode: 'insensitive',
+                mode: "insensitive",
               },
             },
           ],
@@ -118,7 +120,7 @@ export class HeroRepository {
         skip: skip * take,
         take,
         orderBy: {
-          createdAt: 'desc',
+          createdAt: "desc",
         },
       });
 
@@ -131,7 +133,7 @@ export class HeroRepository {
       });
     } catch (error) {
       console.error(error);
-      throw new HeroError('Error searching hero', 400, 'HERO_SEARCH_ERROR');
+      throw new HeroError("Error searching hero", 400, "HERO_SEARCH_ERROR");
     }
   }
 
@@ -145,13 +147,13 @@ export class HeroRepository {
           if (data.backgroundImage) {
             const createImage = await UploadImage(
               data.backgroundImage,
-              data.name || 'hero-background'
+              data.name || "hero-background"
             );
-            if (!createImage) throw new Error('error upload image');
+            if (!createImage) throw new Error("error upload image");
 
             const imageToDB = await AssignImageToDBImage(
               {
-                imageType: 'HERO',
+                imageType: "HERO",
                 blurhash: createImage.blurhash,
                 width: createImage.width,
                 height: createImage.height,
@@ -159,13 +161,31 @@ export class HeroRepository {
               },
               tx
             );
-            if (!imageToDB) throw new Error('error create imageToDB');
+            if (!imageToDB) throw new Error("error create imageToDB");
             imageId = imageToDB.id;
+          }
+
+          if (data.isActive) {
+            const currentActiveHero = await tx.hero.findFirst({
+              where: {
+                isActive: true,
+              },
+            });
+            if (currentActiveHero) {
+              await tx.hero.update({
+                where: {
+                  id: currentActiveHero.id,
+                },
+                data: {
+                  isActive: false,
+                },
+              });
+            }
           }
 
           const hero = await tx.hero.create({
             data: {
-              name: data.name || 'Main Hero',
+              name: data.name || "Main Hero",
               title: data.title,
               subtitle: data.subtitle,
               description: data.description,
@@ -181,7 +201,7 @@ export class HeroRepository {
               secondaryCtaUrl: data.secondaryCtaUrl,
               secondaryCtaVariant: data.secondaryCtaVariant,
               alignment: data.alignment,
-              variant: data.variant || 'CENTERED',
+              variant: data.variant || "CENTERED",
               minHeight: data.minHeight,
               titleSize: data.titleSize,
               titleColor: data.titleColor,
@@ -202,14 +222,14 @@ export class HeroRepository {
         },
         {
           timeout: 20000,
-          isolationLevel: 'Serializable',
+          isolationLevel: "Serializable",
           maxWait: 5000,
         }
       );
       return transaction;
     } catch (error) {
       console.error(error);
-      throw new Error('Error creating hero');
+      throw new Error("Error creating hero");
     }
   }
 
@@ -219,18 +239,18 @@ export class HeroRepository {
         async (prismaTx) => {
           let newImageId: string | null = null;
 
-          if (!data.heroId) throw new Error('no heroId provided');
+          if (!data.heroId) throw new Error("no heroId provided");
 
           const hero = await prismaTx.hero.findUnique({
             where: { id: data.heroId },
           });
 
-          if (!hero) throw new Error('hero not found');
+          if (!hero) throw new Error("hero not found");
 
           newImageId = hero?.backgroundImageId || null;
 
           // Handle image update/removal
-          if (data.imageState === 'REMOVE') {
+          if (data.imageState === "REMOVE") {
             if (hero.backgroundImageId) {
               await prismaTx.hero.update({
                 where: { id: data.heroId },
@@ -241,7 +261,7 @@ export class HeroRepository {
             newImageId = null;
           }
 
-          if (data.imageState === 'UPDATE') {
+          if (data.imageState === "UPDATE") {
             if (hero.backgroundImageId) {
               await prismaTx.hero.update({
                 where: { id: data.heroId },
@@ -250,18 +270,18 @@ export class HeroRepository {
               await deleteImageById(hero.backgroundImageId, prismaTx);
             }
 
-            if (!data.backgroundImage) throw new Error('no image provided');
+            if (!data.backgroundImage) throw new Error("no image provided");
 
             const createImage = await UploadImage(
               data.backgroundImage,
-              data.name || 'hero-update'
+              data.name || "hero-update"
             );
 
-            if (!createImage) throw new Error('error upload image');
+            if (!createImage) throw new Error("error upload image");
 
             const imageToDB = await AssignImageToDBImage(
               {
-                imageType: 'HERO',
+                imageType: "HERO",
                 blurhash: createImage.blurhash,
                 width: createImage.width,
                 height: createImage.height,
@@ -270,11 +290,30 @@ export class HeroRepository {
               prismaTx
             );
 
-            if (!imageToDB) throw new Error('error create imageToDB');
+            if (!imageToDB) throw new Error("error create imageToDB");
             newImageId = imageToDB.id;
           }
 
           // Update the hero with new data
+
+          if (data.isActive) {
+            const currentActiveHero = await prismaTx.hero.findFirst({
+              where: {
+                isActive: true,
+              },
+            });
+            if (currentActiveHero) {
+              await prismaTx.hero.update({
+                where: {
+                  id: currentActiveHero.id,
+                },
+                data: {
+                  isActive: false,
+                },
+              });
+            }
+          }
+
           const updatedHero = await prismaTx.hero.update({
             where: { id: data.heroId },
             data: {
@@ -322,7 +361,7 @@ export class HeroRepository {
       return transaction;
     } catch (error) {
       console.error(error);
-      throw new Error('Error updating hero');
+      throw new Error("Error updating hero");
     }
   }
 
@@ -331,7 +370,7 @@ export class HeroRepository {
       const transaction = await this.prisma.$transaction(
         async (prismaTx) => {
           const hero = await prismaTx.hero.findUnique({ where: { id } });
-          if (!hero) throw new Error('hero not found');
+          if (!hero) throw new Error("hero not found");
 
           await prismaTx.hero.update({
             where: { id },
@@ -352,7 +391,7 @@ export class HeroRepository {
       return transaction;
     } catch (error) {
       console.error(error);
-      throw new Error('Error deleting hero');
+      throw new Error("Error deleting hero");
     }
   }
 }

@@ -609,7 +609,7 @@ model BlogCategory {
 // SLIDESHOW SYSTEM
 // ============================================================================
 model SlideShow {
-  id          String          @id @default(cuid())
+  id          String          @id @default(cuid( ))
   title       String
   slug        String          @unique
   description String?

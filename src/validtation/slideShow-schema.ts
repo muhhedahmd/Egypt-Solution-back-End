@@ -1,8 +1,10 @@
 import { z } from "zod";
-import { ServiceValidationError } from "../errors/services.error";
+import { ServiceError, ServiceValidationError } from "../errors/services.error";
 import {
+  BulkSlideOperationsDTO,
   CreateslideShowDTO,
   PaginationDTO,
+  UpdateAndAttachMany,
   UpdateslideShowDTO,
   deattachManyDTO,
 } from "../types/slideShow";
@@ -81,8 +83,8 @@ export class SlideShowValidator {
         "CUSTOM",
       ])
       .optional(),
-    composition: z.enum(
-      [
+    composition: z
+      .enum([
         "SINGLE",
         "GRID",
         "CAROUSEL",
@@ -477,6 +479,258 @@ export class SlideShowValidator {
       );
     }
   }
+
+  private bulkReorderSchema = z.array(
+    z.object({
+      id: z.string().cuid("Invalid slide Show ID"),
+      order: z.number().int().min(0, "Reading time must be positive"),
+    })
+  );
+
+  validateBulkReorder(data: unknown) {
+    try {
+      return this.bulkReorderSchema.parse(data);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const messages = error.errors
+          .map((e) => `${e.path.join(".")}: ${e.message}`)
+          .join(", ");
+        throw new ServiceValidationError(
+          `Validation failed: ${messages}`,
+          undefined,
+          "SlideShowValidationError"
+        );
+      }
+      throw new ServiceValidationError(
+        "Invalid bulk reorder data",
+        undefined,
+        "SlideShowValidationError"
+      );
+    }
+  }
+
+  private validateUpdateAndAttachManySchema = z.object({
+    id: z.string().cuid("Invalid slideshow ID format"),
+
+    // Optional slideshow update fields
+    title: z.string().min(3).max(100).optional(),
+    description: z.string().min(10).max(500).optional(),
+    type: z
+      .enum([
+        "SERVICES",
+        "PROJECTS",
+        "TESTIMONIALS",
+        "TEAM",
+        "CLIENTS",
+        "HERO",
+        "CUSTOM",
+      ])
+      .optional(),
+    composition: z
+      .enum([
+        "SINGLE",
+        "GRID",
+        "CAROUSEL",
+        "STACKED",
+        "FADE",
+        "CUSTOM",
+        "ZOOM",
+        "PARALLAX",
+        "COVERFLOW",
+        "KEN_BURNS",
+        "FLIP",
+        "CUBE",
+        "AUTO_GRID",
+        "STORY",
+        "FILMSTRIP",
+        "LIGHTBOX",
+        "MARQUEE",
+      ])
+      .optional(),
+    background: z.string().optional(),
+    isActive: z.boolean().optional(),
+    autoPlay: z.boolean().optional(),
+    interval: z.number().min(1000).max(30000).optional(),
+    order: z.number().int().min(0).optional(),
+
+    // New slides to attach
+    newSlides: z
+      .array(
+        z.object({
+          type: z.enum([
+            "service",
+            "client",
+            "project",
+            "testimonial",
+            "teamMember",
+          ]),
+          id: z.string().cuid("Invalid item ID"),
+          order: z.number().int().min(0),
+          isVisible: z.boolean(),
+          customTitle: z.string().max(200).optional(),
+          customDesc: z.string().max(500).optional(),
+        })
+      )
+      .optional(),
+
+    // Slides to delete (by attachment ID)
+    deleted: z
+      .array(
+        z.object({
+          id: z.string().cuid("Invalid attachment ID"),
+          type: z.enum([
+            "service",
+            "client",
+            "project",
+            "testimonial",
+            "teamMember",
+          ]),
+        })
+      )
+      .optional(),
+
+    // Slides to update (by attachment ID)
+    updated: z
+      .array(
+        z.object({
+          id: z.string().cuid("Invalid attachment ID"),
+          type: z.enum([
+            "service",
+            "client",
+            "project",
+            "testimonial",
+            "teamMember",
+          ]),
+          order: z.number().int().min(0),
+          isVisible: z.boolean(),
+          customTitle: z.string().max(200).optional(),
+          customDesc: z.string().max(500).optional(),
+        })
+      )
+      .optional(),
+  });
+
+  // ============================================================================
+  // VALIDATOR METHOD (Add this to SlideShowValidator class)
+  // ============================================================================
+
+  validUpdateAndAttachManySchema(data: unknown): UpdateAndAttachMany {
+    try {
+      const parsed = this.validateUpdateAndAttachManySchema.parse(data);
+      return parsed;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const messages = error.errors
+          .map((e) => `${e.path.join(".")}: ${e.message}`)
+          .join(", ");
+        throw new ServiceValidationError(
+          `Validation failed: ${messages}`,
+          undefined,
+          "SlideShowValidationError"
+        );
+      }
+      throw new ServiceValidationError(
+        "Invalid update and attach data",
+        undefined,
+        "SlideShowValidationError"
+      );
+    }
+  }
+  validateBulkSlideOperations(data: unknown): BulkSlideOperationsDTO {
+    try {
+      const schema = z.object({
+
+        slideShowId: z.string().cuid("Invalid slideshow ID"),
+        newSlides: z
+          .array(
+            z.object({
+              id: z.string().cuid("Invalid resource ID"),
+              type: z.enum([
+                "service",
+                "client",
+                "project",
+                "testimonial",
+                "team",
+              ]),
+              isVisible: z.boolean(),
+              customTitle: z.string().optional(),
+              customDescription: z.string().optional(),
+              order: z.number().int().min(0),
+            })
+          )
+          .optional()
+          .default([]),
+        updateSlides: z
+          .array(
+            z.object({
+              id: z.string().cuid("Invalid junction table ID"),
+              type: z.enum([
+                "service",
+                "client",
+                "project",
+                "testimonial",
+                "team",
+              ]),
+              isVisible: z.boolean().optional(),
+              customTitle: z.string().optional(),
+              customDescription: z.string().optional(),
+            })
+          )
+          .optional()
+          .default([]),
+        deletedSlides: z
+          .array(
+            z.object({
+              id: z.string().cuid("Invalid junction table ID"),
+              type: z.enum([
+                "service",
+                "client",
+                "project",
+                "testimonial",
+                "team",
+              ]),
+            })
+          )
+          .optional()
+          .default([]),
+        updatedOrder: z
+          .array(
+            z.object({
+              id: z.string().cuid("Invalid junction table ID"),
+              type: z.enum([
+                "service",
+                "client",
+                "project",
+                "testimonial",
+                "team",
+              ]),
+              order: z.number().int().min(0),
+            })
+          )
+          .optional()
+          .default([]),
+      });
+
+      const result = schema.parse(data);
+      return result
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const messages = error.errors
+          .map((e) => `${e.path.join(".")}: ${e.message}`)
+          .join(", ");
+        throw new ServiceValidationError(
+          `Validation failed: ${messages}`,
+          undefined,
+          "SlideShowValidationError"
+        );
+      }
+      throw new ServiceValidationError(
+        "Invalid update and attach data",
+        undefined,
+        "SlideShowValidationError"
+      );
+    }
+  }
 }
 
 // private attachServiceSchema = z.object({
@@ -486,7 +740,6 @@ export class SlideShowValidator {
 //   isVisible: z.boolean().default(true),
 //   customTitle: z.string().max(200).optional(),
 //   customDesc: z.string().max(500).optional(),
-// });
 
 // private attachProjectSchema = z.object({
 //   slideShowId: z.string().cuid("Invalid slideshow ID"),

@@ -163,6 +163,7 @@ export type modelMap = {
 };
 
 
+// ***
 export interface CreateAndAttachMany extends Omit<CreateslideShowDTO, "slug"> {
   slides: {
     type: "service" | "project" | "teamMember" | "client" | "testimonial";
@@ -173,6 +174,33 @@ export interface CreateAndAttachMany extends Omit<CreateslideShowDTO, "slug"> {
     customDesc?: string | undefined;
   }[];
 }
+// ***
+export interface UpdateAndAttachMany extends Omit<UpdateslideShowDTO, "slideShowId"> {
+  id: string;
+  slides?: {
+    type: "service" | "project" | "teamMember" | "client" | "testimonial";
+    id: string;
+    order: number;
+    isVisible: boolean;
+    customTitle?: string;
+    customDesc?: string;
+  }[];
+  delete?: {
+    id: string;
+    type: "service" | "project" | "teamMember" | "client" | "testimonial";
+  }[];
+  update?: {
+    id: string;
+    type: "service" | "project" | "teamMember" | "client" | "testimonial";
+    order: number;
+    isVisible: boolean;
+    customTitle?: string;
+    customDesc?: string;
+  }[];
+}
+
+
+
 
 // export type slideshowsWithRelations=  {
   
@@ -199,3 +227,32 @@ export type ServiceSlideShowRelation = ServiceSlideShow & {
 // export type TeamSlideShowRelation = TeamSlideShow & {
 //   teamMember: ClientWithImages;
 // };
+
+
+export interface BulkSlideOperationsDTO {
+  slideShowId: string;
+  newSlides?: Array<{
+    id: string; // This is the resource ID (service/client/project/etc)
+    type: "service" | "client" | "project" | "testimonial" | "team";
+    isVisible: boolean;
+    customTitle?: string;
+    customDesc?: string;
+    order: number;
+  }>;
+  updateSlides?: Array<{
+    id: string; // This is the junction table ID
+    type: "service" | "client" | "project" | "testimonial" | "team";
+    isVisible?: boolean;
+    customTitle?: string;
+    customDesc?: string;
+  }>;
+  deletedSlides?: Array<{
+    id: string; // This is the junction table ID
+    type: "service" | "client" | "project" | "testimonial" | "team";
+  }>;
+  updatedOrder?: Array<{
+    id: string; // This is the junction table ID
+    type: "service" | "client" | "project" | "testimonial" | "team";
+    order: number;
+  }>;
+}
