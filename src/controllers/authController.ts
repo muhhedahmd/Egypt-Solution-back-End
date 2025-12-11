@@ -33,25 +33,30 @@ export class AuthController {
         return res.status(500).json({ error: "Internal server error" });
 
       return res
-        .cookie("refreshToken", tokens.refreshToken, {
-          httpOnly: true,
-          secure: true,
-          sameSite: "lax",
-          path: "/",
-
-          maxAge: 30 * 24 * 60 * 60 * 1000,
-        })
-        .cookie("accessToken", tokens.accessToken, {
-          secure: false,
-          sameSite: "lax",
-          path: "/",
-          maxAge: 30 * 24 * 60 * 60 * 1000, //
-        })
+        .cookie(
+          isProd ? "__Secure-refreshToken" : "refreshToken",
+          tokens.refreshToken,
+          {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: isProd ? "none" : "lax",
+            path: "/",
+            maxAge: 30 * 24 * 60 * 60 * 1000,
+          }
+        )
+        .cookie(
+          isProd ? "__Secure-accessToken" : "accessToken",
+          tokens.accessToken,
+          {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: isProd ? "none" : "lax",
+            path: "/",
+            maxAge: 30 * 24 * 60 * 60 * 1000,
+          }
+        )
         .status(201)
-        .json(
-          { success: true, user: userCreated }
-          // refreshToken :tokens?.refreshToken,
-        );
+        .json({ success: true, user: userCreated });
     } catch (error: any) {
       return res
         .status(500)
@@ -62,6 +67,7 @@ export class AuthController {
         );
     }
   }
+
   static async Login(req: Request, res: Response) {
     try {
       const { email, password } = req.body;
@@ -71,7 +77,6 @@ export class AuthController {
       if (typeof user === "string")
         return res.status(500).json({ error: user });
 
-      // get the session if not cretaed
       const tokens = await TokenService.generateTokenPair(
         user.id,
         req.headers["user-agent"] || "",
@@ -82,21 +87,28 @@ export class AuthController {
         return res.status(500).json({ error: "Internal server error" });
 
       return res
-        .cookie("refreshToken", tokens.refreshToken, {
-          httpOnly: true,
-          secure: true,
-          sameSite: "none",
-          path: "/",
-
-          maxAge: tokens.refreshExpiresIn * 1000,
-        })
-        .cookie("accessToken", tokens.accessToken, {
-          httpOnly: true, // ADD THIS
-          secure: true,
-          sameSite: "none",
-          path: "/",
-          maxAge: tokens.expiresIn * 1000,
-        })
+        .cookie(
+          isProd ? "__Secure-refreshToken" : "refreshToken",
+          tokens.refreshToken,
+          {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: isProd ? "none" : "lax",
+            path: "/",
+            maxAge: tokens.refreshExpiresIn * 1000,
+          }
+        )
+        .cookie(
+          isProd ? "__Secure-accessToken" : "accessToken",
+          tokens.accessToken,
+          {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: isProd ? "none" : "lax",
+            path: "/",
+            maxAge: tokens.expiresIn * 1000,
+          }
+        )
         .status(201)
         .json({ success: true, user });
     } catch (error) {
@@ -104,6 +116,7 @@ export class AuthController {
       return res.status(500).json({ error: "Internal server error" });
     }
   }
+
   static async sendOTP(req: Request, res: Response) {
     try {
       const { userId, method } = req.body;
@@ -121,12 +134,10 @@ export class AuthController {
 
       console.log("Service result:", result);
 
-      // Handle string error responses
       if (typeof result === "string") {
         return res.status(400).json({ error: result });
       }
 
-      // Handle null responses
       if (!result) {
         return res.status(500).json({ error: "Internal server error" });
       }
@@ -149,6 +160,7 @@ export class AuthController {
       return res.status(500).json({ error: "Internal server error" });
     }
   }
+
   static async refreshToken(req: Request, res: Response) {
     try {
       const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
@@ -165,20 +177,28 @@ export class AuthController {
       }
 
       return res
-        .cookie("refreshToken", refreshToken, {
-          httpOnly: true,
-          secure: true,
-          sameSite: "lax",
-          path: "/",
-
-          maxAge: 30 * 24 * 60 * 60 * 1000,
-        })
-        .cookie("accessToken", accessToken, {
-          secure: false,
-          sameSite: "lax",
-          path: "/",
-          maxAge: 15 * 60 * 1000, //
-        })
+        .cookie(
+          isProd ? "__Secure-refreshToken" : "refreshToken",
+          refreshToken,
+          {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: isProd ? "none" : "lax",
+            path: "/",
+            maxAge: 30 * 24 * 60 * 60 * 1000,
+          }
+        )
+        .cookie(
+          isProd ? "__Secure-accessToken" : "accessToken",
+          accessToken,
+          {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: isProd ? "none" : "lax",
+            path: "/",
+            maxAge: 15 * 60 * 1000,
+          }
+        )
         .status(200)
         .json(user);
     } catch (error) {
@@ -196,7 +216,6 @@ export class AuthController {
     }
 
     try {
-      // 1. تبادل الكود مقابل access_token + id_token
       const tokenRes = await axios.post("https://oauth2.googleapis.com/token", {
         code,
         client_id: process.env.GOOGLE_CLIENT_ID,
@@ -214,9 +233,8 @@ export class AuthController {
       }
 
       console.log({ access_token });
-      // 2. فك الـ id_token للحصول على معلومات المستخدم
-      const decoded: any = jwt.decode(id_token);
 
+      const decoded: any = jwt.decode(id_token);
       const { email, name, picture, sub: googleId } = decoded;
 
       if (!email) {
@@ -225,7 +243,6 @@ export class AuthController {
           .json({ error: "Missing email in Google response" });
       }
 
-      // 3. ابحث أو أنشئ المستخدم في قاعدة البيانات
       const user = await userService.findOrCreateFromGoogle({
         email,
         name,
@@ -238,7 +255,7 @@ export class AuthController {
         res.redirect(`${process.env.FRONTEND_URL}/auth/error`);
         return;
       }
-      // 4. إنشاء access/refresh tokens من عندك (نظام التوثيق الخاص بك)
+
       const tokens = await TokenService.generateTokenPair(
         user.id,
         req.headers["user-agent"] || "unknown",
@@ -251,23 +268,30 @@ export class AuthController {
         return;
       }
 
-      // 5. حفظ refreshToken في كوكي HttpOnly
-      res.cookie("refreshToken", tokens.refreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "lax",
-        path: "/",
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-      });
+      res.cookie(
+        isProd ? "__Secure-refreshToken" : "refreshToken",
+        tokens.refreshToken,
+        {
+          httpOnly: true,
+          secure: isProd,
+          sameSite: isProd ? "none" : "lax",
+          path: "/",
+          maxAge: 30 * 24 * 60 * 60 * 1000,
+        }
+      );
 
-      res.cookie("accessToken", tokens.accessToken, {
-        secure: false,
-        sameSite: "lax",
-        path: "/",
-        maxAge: 15 * 60 * 1000, //
-      });
+      res.cookie(
+        isProd ? "__Secure-accessToken" : "accessToken",
+        tokens.accessToken,
+        {
+          httpOnly: true,
+          secure: isProd,
+          sameSite: isProd ? "none" : "lax",
+          path: "/",
+          maxAge: 15 * 60 * 1000,
+        }
+      );
 
-      // 6. إعادة التوجيه للفرونت اند مع accessToken
       res.redirect(
         `${process.env.FRONTEND_URL}/auth/success-google?token=${tokens.accessToken}`
       );
@@ -276,6 +300,7 @@ export class AuthController {
       res.redirect(`${process.env.FRONTEND_URL}/auth/error`);
     }
   }
+
   static async successGoogle(req: Request, res: Response) {
     try {
       console.log(req.user?.id);
@@ -312,12 +337,6 @@ export class AuthController {
         phone: formData?.phone,
       });
 
-      // console.log({
-      //     response ,
-      //     message: "success"
-      // })
-      // if(response.role)
-      // res.redirect(`${process.env.FRONTEND_URL}/`);
       res.status(200).json({
         response,
         message: "success",
@@ -350,26 +369,36 @@ export class AuthController {
         false
       );
 
-      res.cookie("refreshToken", tokens?.refreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "lax",
-        path: "/",
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-      });
+      res.cookie(
+        isProd ? "__Secure-refreshToken" : "refreshToken",
+        tokens?.refreshToken,
+        {
+          httpOnly: true,
+          secure: isProd,
+          sameSite: isProd ? "none" : "lax",
+          path: "/",
+          maxAge: 30 * 24 * 60 * 60 * 1000,
+        }
+      );
 
-      res.cookie("accessToken", tokens?.accessToken, {
-        secure: false,
-        sameSite: "lax",
-        path: "/",
-        maxAge: 15 * 60 * 1000, //
-      });
+      res.cookie(
+        isProd ? "__Secure-accessToken" : "accessToken",
+        tokens?.accessToken,
+        {
+          httpOnly: true,
+          secure: isProd,
+          sameSite: isProd ? "none" : "lax",
+          path: "/",
+          maxAge: 15 * 60 * 1000,
+        }
+      );
       return res.status(201).json(user);
     } catch (error) {
       console.log(error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }
+
   static async verifyOTP(req: Request, res: Response) {
     try {
       const { userId, Method, otp } = req.body;
