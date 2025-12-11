@@ -6,7 +6,6 @@ import * as jwt from "jsonwebtoken";
 
 const isProd = process.env.NODE_ENV === "production";
 
-
 export class AuthController {
   static async register(req: Request, res: Response) {
     try {
@@ -35,7 +34,7 @@ export class AuthController {
 
       return res
         .cookie(
-          isProd ? "__secure-refreshToken" : "refreshToken",
+          isProd ? "__Secure-refreshToken" : "refreshToken",
           tokens.refreshToken,
           {
             httpOnly: true,
@@ -46,7 +45,7 @@ export class AuthController {
           }
         )
         .cookie(
-          isProd ? "__secure-accessToken" : "accessToken",
+          isProd ? "__Secure-accessToken" : "accessToken",
           tokens.accessToken,
           {
             httpOnly: true,
@@ -89,7 +88,7 @@ export class AuthController {
 
       return res
         .cookie(
-          isProd ? "__secure-refreshToken" : "refreshToken",
+          isProd ? "__Secure-refreshToken" : "refreshToken",
           tokens.refreshToken,
           {
             httpOnly: true,
@@ -100,7 +99,7 @@ export class AuthController {
           }
         )
         .cookie(
-          isProd ? "__secure-accessToken" : "accessToken",
+          isProd ? "__Secure-accessToken" : "accessToken",
           tokens.accessToken,
           {
             httpOnly: true,
@@ -164,7 +163,10 @@ export class AuthController {
 
   static async refreshToken(req: Request, res: Response) {
     try {
-      const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
+      // Read cookie based on environment
+      const cookieName = isProd ? "__Secure-refreshToken" : "refreshToken";
+      const refreshToken = req.cookies[cookieName] || req.body.refreshToken;
+      
       console.log("Refresh token:", refreshToken);
       if (!refreshToken) {
         return res.status(400).json({ error: "Refresh token is required" });
@@ -179,7 +181,7 @@ export class AuthController {
 
       return res
         .cookie(
-          isProd ? "__secure-refreshToken" : "refreshToken",
+          isProd ? "__Secure-refreshToken" : "refreshToken",
           refreshToken,
           {
             httpOnly: true,
@@ -190,7 +192,7 @@ export class AuthController {
           }
         )
         .cookie(
-          isProd ? "__secure-accessToken" : "accessToken",
+          isProd ? "__Secure-accessToken" : "accessToken",
           accessToken,
           {
             httpOnly: true,
@@ -270,7 +272,7 @@ export class AuthController {
       }
 
       res.cookie(
-        isProd ? "__secure-refreshToken" : "refreshToken",
+        isProd ? "__Secure-refreshToken" : "refreshToken",
         tokens.refreshToken,
         {
           httpOnly: true,
@@ -282,7 +284,7 @@ export class AuthController {
       );
 
       res.cookie(
-        isProd ? "__secure-accessToken" : "accessToken",
+        isProd ? "__Secure-accessToken" : "accessToken",
         tokens.accessToken,
         {
           httpOnly: true,
@@ -371,7 +373,7 @@ export class AuthController {
       );
 
       res.cookie(
-        isProd ? "__secure-refreshToken" : "refreshToken",
+        isProd ? "__Secure-refreshToken" : "refreshToken",
         tokens?.refreshToken,
         {
           httpOnly: true,
@@ -383,7 +385,7 @@ export class AuthController {
       );
 
       res.cookie(
-        isProd ? "__secure-accessToken" : "accessToken",
+        isProd ? "__Secure-accessToken" : "accessToken",
         tokens?.accessToken,
         {
           httpOnly: true,
