@@ -15,6 +15,7 @@ const upload = multer({
     fields: 100, // Allow many fields
     parts: 1000, // Allow many parts
   },
+  
   fileFilter: (req, file, cb) => {
     console.log("🔍 Multer processing file:", {
       fieldname: file.fieldname,
