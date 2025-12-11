@@ -71,14 +71,14 @@ class AuthController {
                 if (!tokens)
                     return res.status(500).json({ error: "Internal server error" });
                 return res
-                    .cookie(isProd ? "__secure-refreshToken" : "refreshToken", tokens.refreshToken, {
+                    .cookie(isProd ? "__Secure-refreshToken" : "refreshToken", tokens.refreshToken, {
                     httpOnly: true,
                     secure: isProd,
                     sameSite: isProd ? "none" : "lax",
                     path: "/",
                     maxAge: 30 * 24 * 60 * 60 * 1000,
                 })
-                    .cookie(isProd ? "__secure-accessToken" : "accessToken", tokens.accessToken, {
+                    .cookie(isProd ? "__Secure-accessToken" : "accessToken", tokens.accessToken, {
                     httpOnly: true,
                     secure: isProd,
                     sameSite: isProd ? "none" : "lax",
@@ -110,14 +110,14 @@ class AuthController {
                 if (!tokens)
                     return res.status(500).json({ error: "Internal server error" });
                 return res
-                    .cookie(isProd ? "__secure-refreshToken" : "refreshToken", tokens.refreshToken, {
+                    .cookie(isProd ? "__Secure-refreshToken" : "refreshToken", tokens.refreshToken, {
                     httpOnly: true,
                     secure: isProd,
                     sameSite: isProd ? "none" : "lax",
                     path: "/",
                     maxAge: tokens.refreshExpiresIn * 1000,
                 })
-                    .cookie(isProd ? "__secure-accessToken" : "accessToken", tokens.accessToken, {
+                    .cookie(isProd ? "__Secure-accessToken" : "accessToken", tokens.accessToken, {
                     httpOnly: true,
                     secure: isProd,
                     sameSite: isProd ? "none" : "lax",
@@ -175,7 +175,9 @@ class AuthController {
     static refreshToken(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
+                // Read cookie based on environment
+                const cookieName = isProd ? "__Secure-refreshToken" : "refreshToken";
+                const refreshToken = req.cookies[cookieName] || req.body.refreshToken;
                 console.log("Refresh token:", refreshToken);
                 if (!refreshToken) {
                     return res.status(400).json({ error: "Refresh token is required" });
@@ -185,14 +187,14 @@ class AuthController {
                     return res.status(401).json({ error: error });
                 }
                 return res
-                    .cookie(isProd ? "__secure-refreshToken" : "refreshToken", refreshToken, {
+                    .cookie(isProd ? "__Secure-refreshToken" : "refreshToken", refreshToken, {
                     httpOnly: true,
                     secure: isProd,
                     sameSite: isProd ? "none" : "lax",
                     path: "/",
                     maxAge: 30 * 24 * 60 * 60 * 1000,
                 })
-                    .cookie(isProd ? "__secure-accessToken" : "accessToken", accessToken, {
+                    .cookie(isProd ? "__Secure-accessToken" : "accessToken", accessToken, {
                     httpOnly: true,
                     secure: isProd,
                     sameSite: isProd ? "none" : "lax",
@@ -253,14 +255,14 @@ class AuthController {
                     res.redirect(`${process.env.FRONTEND_URL}/auth/error`);
                     return;
                 }
-                res.cookie(isProd ? "__secure-refreshToken" : "refreshToken", tokens.refreshToken, {
+                res.cookie(isProd ? "__Secure-refreshToken" : "refreshToken", tokens.refreshToken, {
                     httpOnly: true,
                     secure: isProd,
                     sameSite: isProd ? "none" : "lax",
                     path: "/",
                     maxAge: 30 * 24 * 60 * 60 * 1000,
                 });
-                res.cookie(isProd ? "__secure-accessToken" : "accessToken", tokens.accessToken, {
+                res.cookie(isProd ? "__Secure-accessToken" : "accessToken", tokens.accessToken, {
                     httpOnly: true,
                     secure: isProd,
                     sameSite: isProd ? "none" : "lax",
@@ -338,14 +340,14 @@ class AuthController {
                 if (!user)
                     return res.status(500).json({ error: "Internal server error" });
                 const tokens = yield tokenService_1.TokenService.generateTokenPair(user.id, req.headers["user-agent"] || "", req.ip || req.socket.remoteAddress || "", false);
-                res.cookie(isProd ? "__secure-refreshToken" : "refreshToken", tokens === null || tokens === void 0 ? void 0 : tokens.refreshToken, {
+                res.cookie(isProd ? "__Secure-refreshToken" : "refreshToken", tokens === null || tokens === void 0 ? void 0 : tokens.refreshToken, {
                     httpOnly: true,
                     secure: isProd,
                     sameSite: isProd ? "none" : "lax",
                     path: "/",
                     maxAge: 30 * 24 * 60 * 60 * 1000,
                 });
-                res.cookie(isProd ? "__secure-accessToken" : "accessToken", tokens === null || tokens === void 0 ? void 0 : tokens.accessToken, {
+                res.cookie(isProd ? "__Secure-accessToken" : "accessToken", tokens === null || tokens === void 0 ? void 0 : tokens.accessToken, {
                     httpOnly: true,
                     secure: isProd,
                     sameSite: isProd ? "none" : "lax",
