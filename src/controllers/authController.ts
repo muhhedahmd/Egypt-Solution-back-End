@@ -93,7 +93,7 @@ export class AuthController {
           {
             httpOnly: true,
             secure: isProd,
-            domain: ".vercel.app",
+            domain: "admin-egypt-solution.vercel.app",
             sameSite: isProd ? "none" : "lax",
             path: "/",
             maxAge: tokens.refreshExpiresIn * 1000,
@@ -104,7 +104,7 @@ export class AuthController {
           tokens.accessToken,
           {
             httpOnly: true,
-            domain: ".vercel.app",
+            domain: "admin-egypt-solution.vercel.app",
             secure: isProd,
             sameSite: isProd ? "none" : "lax",
             path: "/",
@@ -187,7 +187,7 @@ export class AuthController {
           refreshToken,
           {
             httpOnly: true,
-            domain: ".vercel.app",
+            domain: "admin-egypt-solution.vercel.app",
             secure: isProd,
             sameSite: isProd ? "none" : "lax",
             path: "/",
@@ -199,7 +199,7 @@ export class AuthController {
           accessToken,
           {
             httpOnly: true,
-            domain: ".vercel.app",
+            domain: "admin-egypt-solution.vercel.app",
             secure: isProd,
             sameSite: isProd ? "none" : "lax",
             path: "/",
@@ -281,7 +281,7 @@ export class AuthController {
         {
           httpOnly: true,
           secure: isProd,
-          domain: ".vercel.app",
+          domain: "admin-egypt-solution.vercel.app",
           sameSite: isProd ? "none" : "lax",
           path: "/",
           maxAge: 30 * 24 * 60 * 60 * 1000,
@@ -294,7 +294,7 @@ export class AuthController {
         {
           httpOnly: true,
           secure: isProd,
-          domain: ".vercel.app",
+          domain: "admin-egypt-solution.vercel.app",
           sameSite: isProd ? "none" : "lax",
           path: "/",
           maxAge: 15 * 60 * 1000,

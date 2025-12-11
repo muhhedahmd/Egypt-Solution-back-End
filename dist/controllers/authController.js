@@ -113,14 +113,14 @@ class AuthController {
                     .cookie(isProd ? "__Secure-refreshToken" : "refreshToken", tokens.refreshToken, {
                     httpOnly: true,
                     secure: isProd,
-                    domain: ".vercel.app",
+                    domain: "admin-egypt-solution.vercel.app",
                     sameSite: isProd ? "none" : "lax",
                     path: "/",
                     maxAge: tokens.refreshExpiresIn * 1000,
                 })
                     .cookie(isProd ? "__Secure-accessToken" : "accessToken", tokens.accessToken, {
                     httpOnly: true,
-                    domain: ".vercel.app",
+                    domain: "admin-egypt-solution.vercel.app",
                     secure: isProd,
                     sameSite: isProd ? "none" : "lax",
                     path: "/",
@@ -191,7 +191,7 @@ class AuthController {
                 return res
                     .cookie(isProd ? "__Secure-refreshToken" : "refreshToken", refreshToken, {
                     httpOnly: true,
-                    domain: ".vercel.app",
+                    domain: "admin-egypt-solution.vercel.app",
                     secure: isProd,
                     sameSite: isProd ? "none" : "lax",
                     path: "/",
@@ -199,7 +199,7 @@ class AuthController {
                 })
                     .cookie(isProd ? "__Secure-accessToken" : "accessToken", accessToken, {
                     httpOnly: true,
-                    domain: ".vercel.app",
+                    domain: "admin-egypt-solution.vercel.app",
                     secure: isProd,
                     sameSite: isProd ? "none" : "lax",
                     path: "/",
@@ -262,7 +262,7 @@ class AuthController {
                 res.cookie(isProd ? "__Secure-refreshToken" : "refreshToken", tokens.refreshToken, {
                     httpOnly: true,
                     secure: isProd,
-                    domain: ".vercel.app",
+                    domain: "admin-egypt-solution.vercel.app",
                     sameSite: isProd ? "none" : "lax",
                     path: "/",
                     maxAge: 30 * 24 * 60 * 60 * 1000,
@@ -270,7 +270,7 @@ class AuthController {
                 res.cookie(isProd ? "__Secure-accessToken" : "accessToken", tokens.accessToken, {
                     httpOnly: true,
                     secure: isProd,
-                    domain: ".vercel.app",
+                    domain: "admin-egypt-solution.vercel.app",
                     sameSite: isProd ? "none" : "lax",
                     path: "/",
                     maxAge: 15 * 60 * 1000,
