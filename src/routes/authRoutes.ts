@@ -26,8 +26,8 @@ const upload = multer({
 })
 
 // Public routes
-router.post("/register", AuthController.register as any)
-router.post("/login", AuthController.Login as any)
+// router.post("/register", AuthController.register as any)
+// router.post("/login", AuthController.Login as any)
 router.post("/send-otp", AuthController.sendOTP as any)
 router.post("/verify-otp", AuthController.sendOTP as any)
 router.post("/sync-user", AuthController.syncUser as any)
