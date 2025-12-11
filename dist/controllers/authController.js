@@ -51,9 +51,6 @@ const tokenService_1 = require("../services/tokenService");
 const axios_1 = __importDefault(require("axios"));
 const jwt = __importStar(require("jsonwebtoken"));
 const isProd = process.env.NODE_ENV === "production";
-console.log({
-    isProd,
-});
 class AuthController {
     static register(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -109,40 +106,25 @@ class AuthController {
                     return res.status(500).json({ error: "Internal server error" });
                 if (typeof user === "string")
                     return res.status(500).json({ error: user });
-                // const tokens = await TokenService.generateTokenPair(
-                //   user.id,
-                //   req.headers["user-agent"] || "",
-                //   req.ip || req.socket.remoteAddress || ""
-                // );
-                // if (!tokens)
-                //   return res.status(500).json({ error: "Internal server error" });
-                console.error(user, {
-                    isProd
-                });
+                const tokens = yield tokenService_1.TokenService.generateTokenPair(user.id, req.headers["user-agent"] || "", req.ip || req.socket.remoteAddress || "");
+                if (!tokens)
+                    return res.status(500).json({ error: "Internal server error" });
                 return res
-                    // .cookie(
-                    //   isProd ? "__secure-refreshToken" : "refreshToken",
-                    //   tokens.refreshToken,
-                    //   {
-                    //     httpOnly: true,
-                    //     secure: isProd,
-                    //     sameSite: isProd ? "none" : "lax",
-                    //     path: "/",
-                    //     maxAge: tokens.refreshExpiresIn * 1000,
-                    //   }
-                    // )
-                    // .cookie(
-                    //   isProd ? "__secure-accessToken" : "accessToken",
-                    //   tokens.accessToken,
-                    //   {
-                    //     httpOnly: true,
-                    //     secure: isProd,
-                    //     sameSite: isProd ? "none" : "lax",
-                    //     path: "/",
-                    //     maxAge: tokens.expiresIn * 1000,
-                    //   }
-                    // )
-                    .status(404)
+                    .cookie(isProd ? "__secure-refreshToken" : "refreshToken", tokens.refreshToken, {
+                    httpOnly: true,
+                    secure: isProd,
+                    sameSite: isProd ? "none" : "lax",
+                    path: "/",
+                    maxAge: tokens.refreshExpiresIn * 1000,
+                })
+                    .cookie(isProd ? "__secure-accessToken" : "accessToken", tokens.accessToken, {
+                    httpOnly: true,
+                    secure: isProd,
+                    sameSite: isProd ? "none" : "lax",
+                    path: "/",
+                    maxAge: tokens.expiresIn * 1000,
+                })
+                    .status(201)
                     .json({ success: true, user });
             }
             catch (error) {

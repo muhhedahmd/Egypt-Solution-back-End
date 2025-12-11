@@ -27,8 +27,8 @@ const upload = (0, multer_1.default)({
     },
 });
 // Public routes
-// router.post("/register", AuthController.register as any)
-// router.post("/login", AuthController.Login as any)
+router.post("/register", authController_1.AuthController.register);
+router.post("/login", authController_1.AuthController.Login);
 router.post("/send-otp", authController_1.AuthController.sendOTP);
 router.post("/verify-otp", authController_1.AuthController.sendOTP);
 router.post("/sync-user", authController_1.AuthController.syncUser);

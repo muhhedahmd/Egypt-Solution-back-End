@@ -6,9 +6,6 @@ import * as jwt from "jsonwebtoken";
 
 const isProd = process.env.NODE_ENV === "production";
 
-console.log({
-  isProd,
-})
 
 export class AuthController {
   static async register(req: Request, res: Response) {
@@ -73,7 +70,6 @@ export class AuthController {
   }
 
   static async Login(req: Request, res: Response) {
-
     try {
       const { email, password } = req.body;
       const user = await userService.login({ email, password });
@@ -82,43 +78,39 @@ export class AuthController {
       if (typeof user === "string")
         return res.status(500).json({ error: user });
 
-      // const tokens = await TokenService.generateTokenPair(
-      //   user.id,
-      //   req.headers["user-agent"] || "",
-      //   req.ip || req.socket.remoteAddress || ""
-      // );
+      const tokens = await TokenService.generateTokenPair(
+        user.id,
+        req.headers["user-agent"] || "",
+        req.ip || req.socket.remoteAddress || ""
+      );
 
+      if (!tokens)
+        return res.status(500).json({ error: "Internal server error" });
 
-
-      // if (!tokens)
-      //   return res.status(500).json({ error: "Internal server error" });
-      console.error(user , { 
-        isProd
-      })
       return res
-        // .cookie(
-        //   isProd ? "__secure-refreshToken" : "refreshToken",
-        //   tokens.refreshToken,
-        //   {
-        //     httpOnly: true,
-        //     secure: isProd,
-        //     sameSite: isProd ? "none" : "lax",
-        //     path: "/",
-        //     maxAge: tokens.refreshExpiresIn * 1000,
-        //   }
-        // )
-        // .cookie(
-        //   isProd ? "__secure-accessToken" : "accessToken",
-        //   tokens.accessToken,
-        //   {
-        //     httpOnly: true,
-        //     secure: isProd,
-        //     sameSite: isProd ? "none" : "lax",
-        //     path: "/",
-        //     maxAge: tokens.expiresIn * 1000,
-        //   }
-        // )
-        .status(404)
+        .cookie(
+          isProd ? "__secure-refreshToken" : "refreshToken",
+          tokens.refreshToken,
+          {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: isProd ? "none" : "lax",
+            path: "/",
+            maxAge: tokens.refreshExpiresIn * 1000,
+          }
+        )
+        .cookie(
+          isProd ? "__secure-accessToken" : "accessToken",
+          tokens.accessToken,
+          {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: isProd ? "none" : "lax",
+            path: "/",
+            maxAge: tokens.expiresIn * 1000,
+          }
+        )
+        .status(201)
         .json({ success: true, user });
     } catch (error) {
       console.log(error);

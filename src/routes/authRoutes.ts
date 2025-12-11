@@ -15,7 +15,6 @@ const upload = multer({
     fields: 100, // Allow many fields
     parts: 1000, // Allow many parts
   },
-  
   fileFilter: (req, file, cb) => {
     console.log("🔍 Multer processing file:", {
       fieldname: file.fieldname,
@@ -27,8 +26,8 @@ const upload = multer({
 })
 
 // Public routes
-// router.post("/register", AuthController.register as any)
-// router.post("/login", AuthController.Login as any)
+router.post("/register", AuthController.register as any)
+router.post("/login", AuthController.Login as any)
 router.post("/send-otp", AuthController.sendOTP as any)
 router.post("/verify-otp", AuthController.sendOTP as any)
 router.post("/sync-user", AuthController.syncUser as any)
