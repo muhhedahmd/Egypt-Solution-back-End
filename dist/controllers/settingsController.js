@@ -94,5 +94,20 @@ class companyInfoController {
             }
         });
     }
+    getMimalStats(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const stats = yield this.logic.getMimalStats();
+                return res.status(200).json({
+                    success: true,
+                    message: "Stats fetched successfully",
+                    data: stats,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
 }
 exports.companyInfoController = companyInfoController;

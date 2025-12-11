@@ -121,5 +121,66 @@ class CompanyInfoRepostery {
             }
         });
     }
+    getMimalStats() {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const totalServices = yield this.prisma.service.count({
+                    where: { isActive: true },
+                });
+                const progressProjects = yield this.prisma.project.count({
+                    where: { status: "IN_PROGRESS" },
+                });
+                const CompletedProjects = yield this.prisma.project.count({
+                    where: { status: "COMPLETED" },
+                });
+                const totalTeamMembers = yield this.prisma.teamMember.count();
+                const newContactsThisMonth = yield this.prisma.contact.count({
+                    where: {
+                        createdAt: {
+                            gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1), // first day of month
+                        },
+                    },
+                });
+                const testimonialCount = yield this.prisma.testimonial.count({});
+                return {
+                    stats: [
+                        {
+                            label: "Total Services",
+                            value: totalServices,
+                            // change: "+2 this month",
+                        },
+                        {
+                            label: "project in progress",
+                            value: progressProjects,
+                            // change: "+5 this month",
+                        },
+                        {
+                            label: "Completed Projects",
+                            value: CompletedProjects,
+                            // change: "+5 this month",/
+                        },
+                        {
+                            label: "Team Members",
+                            value: totalTeamMembers,
+                            // change: "New",
+                        },
+                        {
+                            label: "New Contacts",
+                            value: newContactsThisMonth,
+                            // change: "+12.5% from last month",
+                        },
+                        {
+                            label: "Testimonials",
+                            value: testimonialCount,
+                            // change: "Approved",
+                        },
+                    ],
+                };
+            }
+            catch (error) {
+                throw new companyInfo_1.CompanyInfoError("Error fetching mimal stats");
+            }
+        });
+    }
 }
 exports.CompanyInfoRepostery = CompanyInfoRepostery;

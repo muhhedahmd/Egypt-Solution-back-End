@@ -115,10 +115,10 @@ class slideShowLogic {
             if (!valid)
                 throw new services_error_1.ServiceError("Invalid data for create and attach many", 400, "SLIDESHOW_CREATE_ATTACH_MANY_ERROR");
             const { slides } = valid, rest = __rest(valid, ["slides"]);
-            // console.log( {
-            //   slides,
-            //   ...rest
-            // })
+            console.log({
+                slides,
+                rest,
+            });
             const createdAndAttached = yield this.repository.createAndAttachMany(Object.assign({ slides: slides.map((slide) => ({
                     id: slide.attachId,
                     type: slide.attachType,
@@ -128,6 +128,43 @@ class slideShowLogic {
                     customDesc: slide.customDesc,
                 })) }, rest));
             return createdAndAttached;
+        });
+    }
+    //*** */
+    bulkSlideOperations(data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Validate the data structure
+            console.log(data);
+            const valid = this.validator.validateBulkSlideOperations(data);
+            if (!valid) {
+                throw new services_error_1.ServiceError("Invalid data for bulk slide operations", 400, "INVALID_BULK_OPERATIONS_DATA");
+            }
+            const result = yield this.repository.bulkSlideOperations(valid);
+            return {
+                success: true,
+                message: "Bulk operations completed successfully",
+                data: {
+                    slideShow: result.slideShow,
+                    summary: {
+                        created: result.created.length,
+                        updated: result.updated.length,
+                        deleted: result.deleted.length,
+                        reordered: result.reordered.length,
+                    },
+                    details: result,
+                },
+            };
+        });
+    }
+    updateAndAttachMany(data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            console.log(data);
+            const valid = this.validator.validUpdateAndAttachManySchema(data);
+            if (!valid)
+                throw new services_error_1.ServiceError("Invalid data for update and attach many", 400, "SLIDESHOW_UPDATE_ATTACH_MANY_ERROR");
+            const { slides, delete: delArr, update } = valid, rest = __rest(valid, ["slides", "delete", "update"]);
+            const updatedAndAttached = yield this.repository.updateAndAttachMany(Object.assign(Object.assign({}, rest), { slides, delete: delArr, update }));
+            return updatedAndAttached;
         });
     }
     // ***
@@ -265,6 +302,15 @@ class slideShowLogic {
                 console.error(error);
                 throw new services_error_1.ServiceError("error get slide shows", 400, "SLIDESHOWS_GET_ERROR");
             }
+        });
+    }
+    reorderBulkSlideShow(data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const valid = this.validator.validateBulkReorder(data);
+            const updatedService = yield this.repository.reorderBulkSlideShow({
+                slideShowOrder: valid,
+            });
+            return updatedService;
         });
     }
 }

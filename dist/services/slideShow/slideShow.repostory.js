@@ -53,7 +53,7 @@ class slideShowRepository {
     findManyMinimal(prismaTouse) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                return yield (prismaTouse || this.prisma).slideShow.findMany({
+                const findMany = yield (prismaTouse || this.prisma).slideShow.findMany({
                     select: {
                         id: true,
                         title: true,
@@ -61,6 +61,18 @@ class slideShowRepository {
                         slug: true,
                         type: true,
                     },
+                    orderBy: {
+                        order: "asc",
+                    },
+                });
+                return findMany.map((slideShow) => {
+                    return {
+                        id: slideShow.id,
+                        title: slideShow.title,
+                        order: slideShow.order,
+                        slug: slideShow.slug,
+                        type: slideShow.type,
+                    };
                 });
             }
             catch (error) {
@@ -256,7 +268,10 @@ class slideShowRepository {
                     const isOrderChanged = data.order !== undefined && data.order != find.order;
                     if (isOrderChanged)
                         yield this.reorderUpdate({
-                            slideShowUpdate: find,
+                            slideShowUpdate: {
+                                id: find.id,
+                                order: find.order,
+                            },
                             orderBeforeUpdate: find.order,
                         });
                     const updateSlideShow = yield tx.slideShow.update({
@@ -354,13 +369,41 @@ class slideShowRepository {
                         },
                     });
                 }
-                console.log({
-                    findOrder,
-                });
             }
             catch (error) {
                 console.error(error);
                 throw new services_error_1.ServiceError("error updating a slideshow Reorder", 400, "SLIDESHOW_UPDATE_ERROR");
+            }
+        });
+    }
+    reorderBulkSlideShow(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ slideShowOrder, }) {
+            try {
+                if (!slideShowOrder.length) {
+                    return [];
+                }
+                const result = yield this.prisma.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
+                    const promises = slideShowOrder.map((item) => __awaiter(this, void 0, void 0, function* () {
+                        return tx.slideShow.update({
+                            where: {
+                                id: item.id,
+                            },
+                            data: {
+                                order: item.order,
+                            },
+                            select: {
+                                id: true,
+                                order: true,
+                            },
+                        });
+                    }));
+                    return yield Promise.all(promises);
+                }));
+                return result;
+            }
+            catch (error) {
+                console.error(error);
+                throw new services_error_1.ServiceError("Error updating slideshow reorder", 400, "SLIDESHOW_UPDATE_ERROR");
             }
         });
     }
@@ -399,6 +442,7 @@ class slideShowRepository {
     getSlidesPaged(slideShowId, opts) {
         return __awaiter(this, void 0, void 0, function* () {
             var _a, _b, _c, _d, _e, _f, _g;
+            console.log("test");
             yield this.findById(slideShowId);
             const perPageDefault = Math.min(Math.max((_a = opts === null || opts === void 0 ? void 0 : opts.perPage) !== null && _a !== void 0 ? _a : 10, 1), 100);
             const pageDefault = Math.max((_b = opts === null || opts === void 0 ? void 0 : opts.page) !== null && _b !== void 0 ? _b : 1, 1);
@@ -434,11 +478,6 @@ class slideShowRepository {
                         project: {
                             include: {
                                 image: true,
-                                technologies: {
-                                    include: {
-                                        technology: true,
-                                    },
-                                },
                             },
                         },
                     },
@@ -495,7 +534,28 @@ class slideShowRepository {
             const cliPage = process(rawCli, cli.perPage);
             const tstPage = process(rawTst, tst.perPage);
             const tmPage = process(rawTm, tm.perPage);
-            const toSlides = (rows, type, dataKey) => rows.map((r) => ({ type, id: r.id, order: r.order, data: r[dataKey] }));
+            const toSlides = (rows, type, dataKey) => rows.map((r) => {
+                var _a, _b, _c, _d, _e;
+                // r = pivot row (e.g. clientSlideShow), r[dataKey] = actual client/project object
+                const entity = (_a = r[dataKey]) !== null && _a !== void 0 ? _a : null;
+                const order = typeof r.order === "number" && r.order !== 0
+                    ? r.order
+                    : (_b = entity === null || entity === void 0 ? void 0 : entity.order) !== null && _b !== void 0 ? _b : 1000;
+                const isVisible = typeof r.isVisible === "boolean"
+                    ? r.isVisible
+                    : (_c = entity === null || entity === void 0 ? void 0 : entity.isActive) !== null && _c !== void 0 ? _c : true;
+                return {
+                    type,
+                    // slide id should be pivot id (the slideshow item id), data.id is resource id
+                    id: r.id,
+                    order,
+                    isVisible,
+                    data: entity,
+                    // copy any custom fields from pivot if exist
+                    customDesc: (_d = r.customDesc) !== null && _d !== void 0 ? _d : null,
+                    customTitle: (_e = r.customTitle) !== null && _e !== void 0 ? _e : null,
+                };
+            });
             const slides = [
                 ...toSlides(svcPage.items, "service", "service"),
                 ...toSlides(prjPage.items, "project", "project"),
@@ -534,7 +594,7 @@ class slideShowRepository {
     }
     // attaches
     attach(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ slideShowId, attachType, attachId, order, isVisible, customDesc = "", customTitle = "", isMany = false, tx, }) {
+        return __awaiter(this, arguments, void 0, function* ({ slideShowId, attachType, attachId, order, isVisible, customDesc = "", customTitle = "", isMany = false, tx, skipOrder, }) {
             try {
                 const prismaTouse = tx || this.prisma;
                 if (!isMany)
@@ -542,21 +602,24 @@ class slideShowRepository {
                 const findAttach = yield this.modelMap(prismaTouse || this.prisma)[attachType].findUnique({
                     where: { id: attachId },
                 });
+                console.log(findAttach);
                 if (!findAttach) {
                     throw new services_error_1.ServiceError("Attach entity not found id: " + attachId, 404, "id not found in DB");
                 }
                 const fieldName = `${attachType === "teamMember" ? "team" : attachType}Id`;
-                const lastOrder = (yield this.modelAttachMap(prismaTouse || this.prisma)[attachType].count()) - 1;
-                const findIstheretheOrder = yield this.modelAttachMap(prismaTouse || this.prisma)[attachType].findFirst({
-                    where: {
-                        order: order,
-                    },
-                });
-                if (findIstheretheOrder) {
-                    order = lastOrder + 1;
-                }
-                if (order && order > lastOrder) {
-                    order = lastOrder + 1;
+                if (!skipOrder) {
+                    const lastOrder = (yield this.modelAttachMap(prismaTouse || this.prisma)[attachType].count()) - 1;
+                    const findIstheretheOrder = yield this.modelAttachMap(prismaTouse || this.prisma)[attachType].findFirst({
+                        where: {
+                            order: order,
+                        },
+                    });
+                    if (findIstheretheOrder) {
+                        order = lastOrder + 1;
+                    }
+                    if (order && order > lastOrder) {
+                        order = lastOrder + 1;
+                    }
                 }
                 let attach;
                 if (attachType === "service") {
@@ -583,7 +646,7 @@ class slideShowRepository {
                         },
                     });
                 }
-                return attach;
+                return Object.assign(Object.assign({}, attach), { _id: attach === null || attach === void 0 ? void 0 : attach.fieldName });
             }
             catch (error) {
                 console.error(error);
@@ -627,6 +690,7 @@ class slideShowRepository {
                 if (!isMany)
                     yield this.findById(slideShowId, prismaTouse);
                 const findTheAttachedTable = yield this.findAttachTable(attachId, attachType, prismaTouse);
+                console.log(findTheAttachedTable);
                 if (!findTheAttachedTable) {
                     throw new services_error_1.ServiceError("Attach entity not found id: " + attachId, 404, "id not found in DB");
                 }
@@ -639,6 +703,44 @@ class slideShowRepository {
                             slideShowId,
                             [fieldName]: attachId,
                         },
+                        // [fieldName]: attachId, slideShowId
+                    },
+                });
+                return attach;
+            }
+            catch (error) {
+                console.error(error);
+                throw new services_error_1.ServiceError("error attaching to slideshow", 400, "SLIDESHOW_ATTACH_ERROR");
+            }
+        });
+    }
+    DeatchWithJoinTableId(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ slideShowId, type: attachType, id: attachId, isMany = false, tx, }) {
+            try {
+                const prismaTouse = tx || this.prisma;
+                if (!isMany)
+                    yield this.findById(slideShowId, prismaTouse);
+                // const findTheAttachedTable = await this.findAttachTable(
+                //   attachId,
+                //   attachType,
+                //   prismaTouse
+                // );
+                // console.log( findTheAttachedTable)
+                // if (!findTheAttachedTable) {
+                //   throw new ServiceError(
+                //     "Attach entity not found id: " + attachId,
+                //     404,
+                //     "id not found in DB"
+                //   );
+                // }
+                // const fieldName = `${
+                //   attachType === "teamMember" ? "team" : attachType
+                // }Id` as any;
+                let attach;
+                attach = yield this.modelAttachMap(prismaTouse || this.prisma)[attachType]
+                    .delete({
+                    where: {
+                        id: attachId,
                         // [fieldName]: attachId, slideShowId
                     },
                 });
@@ -703,7 +805,7 @@ class slideShowRepository {
                             slideShowId: slideShow.id,
                             attachType: att.type,
                             attachId: att.id,
-                            order: att.order,
+                            order: att.order || 1,
                             isVisible: att.isVisible,
                             isMany: true,
                             customTitle: att.customTitle || "",
@@ -722,6 +824,121 @@ class slideShowRepository {
             catch (error) {
                 console.error(error);
                 throw new services_error_1.ServiceError("error creating and attaching to slideshow", 400, "SLIDESHOW_CREATE_ATTACH_ERROR_MANY");
+            }
+        });
+    }
+    //***
+    updateAndAttachMany(_a) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var { slides: newSlides, delete: deleteArr, update } = _a, rest = __rest(_a, ["slides", "delete", "update"]);
+            try {
+                const transaction = this.prisma.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
+                    // TODO: Implement update and attach logic
+                    const find = yield this.findById(rest.id, tx);
+                    if (!find) {
+                        throw new services_error_1.ServiceError("slideShow not found id: " + rest.id, 404, "id not found in DB");
+                    }
+                    const updateSlideShow = yield tx.slideShow.update({
+                        where: {
+                            id: rest.id,
+                        },
+                        data: Object.assign({}, rest),
+                    });
+                    let cerated;
+                    if (newSlides) {
+                        cerated = Promise.all(newSlides.map((att) => {
+                            return this.attach({
+                                slideShowId: find.id,
+                                attachType: att.type,
+                                attachId: att.id,
+                                order: att.order || 1,
+                                isVisible: att.isVisible,
+                                isMany: true,
+                                customTitle: att.customTitle || "",
+                                customDesc: att.customDesc || "",
+                                tx,
+                            });
+                        }));
+                    }
+                    let deleted;
+                    if (deleteArr) {
+                        deleted = Promise.all(deleteArr.map((id) => {
+                            return this.Deattach({
+                                slideShowId: find.id,
+                                type: id.type,
+                                id: id.id,
+                                isMany: true,
+                                tx,
+                            });
+                        }));
+                    }
+                    let updated;
+                    if (update) {
+                        updated = Promise.all(update.map((up) => {
+                            return this.updateAttach({
+                                attachType: up.type,
+                                attachId: up.id,
+                                order: up.order,
+                                isVisible: up.isVisible,
+                                customTitle: up.customTitle || "",
+                                customDesc: up.customDesc || "",
+                                tx,
+                            });
+                        }));
+                    }
+                    return {
+                        slideShow: updateSlideShow,
+                        attacheds: yield cerated,
+                        deleted: yield deleted,
+                        updated: yield updated,
+                    };
+                }));
+                return transaction;
+            }
+            catch (error) {
+                console.error(error);
+                throw new services_error_1.ServiceError("error updating and attaching to slideshow", 400, "SLIDESHOW_UPDATE_ATTACH_ERROR_MANY");
+            }
+        });
+    }
+    updateAttach(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ attachType, attachId, order, isVisible, customDesc = "", customTitle = "", tx, }) {
+            try {
+                const prismaTouse = tx || this.prisma;
+                // Check if attachment exists by attachId (the junction table record ID)
+                const existingAttachment = yield this.modelAttachMap(prismaTouse)[attachType].findUnique({
+                    where: {
+                        id: attachId,
+                    },
+                });
+                if (!existingAttachment) {
+                    throw new services_error_1.ServiceError(`Attachment not found with id: ${attachId}`, 404, "ATTACHMENT_NOT_FOUND");
+                }
+                // Build update data
+                const updateData = {
+                    order,
+                    isVisible,
+                };
+                // Only services support custom title and description
+                if (attachType === "service") {
+                    updateData.customTitle = customTitle || "";
+                    updateData.customDesc = customDesc || "";
+                }
+                // Update the attachment
+                const attach = yield this.modelAttachMap(prismaTouse)[attachType].update({
+                    where: {
+                        id: attachId,
+                    },
+                    data: updateData,
+                });
+                return attach;
+            }
+            catch (error) {
+                console.error("Error in updateAttach:", error);
+                if (error instanceof services_error_1.ServiceError) {
+                    throw error;
+                }
+                throw new services_error_1.ServiceError("Error updating attachment in slideshow", 400, "SLIDESHOW_UPDATE_ATTACH_ERROR");
             }
         });
     }
@@ -822,6 +1039,105 @@ class slideShowRepository {
             catch (error) {
                 console.error(error);
                 throw new services_error_1.ServiceError("error getting attacheds to slideshow", 400, "SLIDESHOW_ATTACH_ERROR_MANY");
+            }
+        });
+    }
+    // ***
+    bulkSlideOperations(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ slideShowId, newSlides = [], updateSlides = [], deletedSlides = [], updatedOrder = [], }) {
+            try {
+                const transaction = yield this.prisma.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
+                    // Verify slideshow exists
+                    const slideShow = yield this.findById(slideShowId, tx);
+                    if (!slideShow) {
+                        throw new services_error_1.ServiceError(`Slideshow not found with id: ${slideShowId}`, 404, "SLIDESHOW_NOT_FOUND");
+                    }
+                    // 1. DELETE SLIDES
+                    const deleted = yield Promise.all(deletedSlides.map((item) => {
+                        return this.DeatchWithJoinTableId({
+                            tx,
+                            type: item.type === "team" ? "teamMember" : item.type,
+                            id: item.id,
+                            isMany: true,
+                            slideShowId: slideShowId,
+                        });
+                    }));
+                    // 2. CREATE NEW SLIDES
+                    const created = yield Promise.all(newSlides.map((slide) => {
+                        return this.attach({
+                            slideShowId,
+                            attachType: slide.type === "team" ? "teamMember" : slide.type,
+                            attachId: slide.id, // Resource ID
+                            order: slide.order,
+                            isVisible: slide.isVisible,
+                            customTitle: slide.customTitle || "",
+                            customDesc: slide.customDescription || "",
+                            isMany: true,
+                            tx,
+                            skipOrder: true,
+                        });
+                    }));
+                    // 3. UPDATE SLIDES (metadata only, not order)
+                    const updated = yield Promise.all(updateSlides.map((slide) => __awaiter(this, void 0, void 0, function* () {
+                        const updateData = {};
+                        console.log({
+                            slide
+                        }, "customDescription");
+                        if (slide.isVisible !== undefined) {
+                            updateData.isVisible = slide.isVisible;
+                        }
+                        // Only services support custom title and description
+                        if (slide.type === "service") {
+                            if (slide.customTitle !== undefined) {
+                                updateData.customTitle = slide.customTitle;
+                            }
+                            if (slide.customDescription !== undefined) {
+                                updateData.customDesc = slide.customDescription;
+                            }
+                        }
+                        const attachType = (slide.type === "team" ? "teamMember" : slide.type);
+                        return yield this.modelAttachMap(tx)[attachType].update({
+                            where: {
+                                id: slide.id,
+                            },
+                            data: updateData,
+                        });
+                        // return await (this.modelAttachMap(tx)[slide.type].update as any)({
+                        //   where: { id: slide.id },
+                        //   data: updateData,
+                        // });
+                    })));
+                    // 4. UPDATE ORDER (separate from metadata updates)
+                    const reordered = yield Promise.all(updatedOrder.map((slide) => __awaiter(this, void 0, void 0, function* () {
+                        const attachType = (slide.type === "team" ? "teamMember" : slide.type);
+                        return yield this.modelAttachMap(tx)[attachType].update({
+                            where: {
+                                id: slide.id,
+                            },
+                            data: {
+                                order: slide.order,
+                            },
+                        });
+                    })));
+                    return {
+                        slideShow,
+                        created,
+                        updated,
+                        deleted,
+                        reordered: reordered,
+                    };
+                }), {
+                    timeout: 120000,
+                    maxWait: 120000,
+                });
+                return transaction;
+            }
+            catch (error) {
+                console.error("Bulk slide operations error:", error);
+                if (error instanceof services_error_1.ServiceError) {
+                    throw error;
+                }
+                throw new services_error_1.ServiceError("Error performing bulk slide operations", 400, "BULK_SLIDE_OPERATIONS_ERROR");
             }
         });
     }

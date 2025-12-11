@@ -10,6 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.slideShowController = void 0;
+const services_error_1 = require("../errors/services.error");
 class slideShowController {
     constructor(logic) {
         this.logic = logic;
@@ -141,11 +142,46 @@ class slideShowController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const body = req.body;
+                console.log(body);
                 const created = yield this.logic.createAndAttachMany(body);
                 return res.status(200).json({
                     success: true,
                     message: "Slideshow created and attached successfully",
                     data: created,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    // *** #
+    bulkSlideOperations(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { id } = req.params; // slideShowId from URL
+                const body = req.body;
+                const result = yield this.logic.bulkSlideOperations(Object.assign({ slideShowId: id }, body));
+                return res.status(200).json(result);
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    UpdateAndAttachMany(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const body = req.body;
+                const { id } = req.params;
+                if (!id)
+                    throw new services_error_1.ServiceError("id is required", 400, "ID_NOT_FOUND");
+                console.log(Object.assign(Object.assign({}, body), { id }));
+                const updated = yield this.logic.updateAndAttachMany(Object.assign(Object.assign({}, body), { id }));
+                return res.status(200).json({
+                    success: true,
+                    message: "Slideshow updated and attached successfully",
+                    data: updated,
                 });
             }
             catch (error) {
@@ -270,6 +306,23 @@ class slideShowController {
                 return res.status(200).json({
                     success: true,
                     message: "Slideshow deattached successfully",
+                    data: updated,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    reorderBulkSlideShow(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const body = req.body;
+                const updated = yield this.logic.reorderBulkSlideShow(body);
+                console.log(updated);
+                return res.status(200).json({
+                    success: true,
+                    message: "Slideshow reordered successfully",
                     data: updated,
                 });
             }

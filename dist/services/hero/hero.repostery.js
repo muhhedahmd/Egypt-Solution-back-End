@@ -37,7 +37,7 @@ class HeroRepository {
                     skip: skip * take,
                     take: take,
                     orderBy: {
-                        createdAt: 'desc',
+                        createdAt: "desc",
                     },
                 });
                 return heroes.map((hero) => {
@@ -50,7 +50,7 @@ class HeroRepository {
             }
             catch (error) {
                 console.error(error);
-                throw new hero_error_1.HeroError('Error finding heroes', 400, 'HERO_FIND_MANY_ERROR');
+                throw new hero_error_1.HeroError("Error finding heroes", 400, "HERO_FIND_MANY_ERROR");
             }
         });
     }
@@ -71,7 +71,7 @@ class HeroRepository {
             }
             catch (error) {
                 console.error(error);
-                throw new Error('Error finding hero by ID');
+                throw new Error("Error finding hero by ID");
             }
         });
     }
@@ -84,7 +84,7 @@ class HeroRepository {
                         backgroundImage: true,
                     },
                     orderBy: {
-                        updatedAt: 'desc',
+                        updatedAt: "desc",
                     },
                 });
                 if (!hero)
@@ -97,7 +97,7 @@ class HeroRepository {
             }
             catch (error) {
                 console.error(error);
-                throw new hero_error_1.HeroError('Error finding active hero', 400, 'HERO_SEARCH_ERROR');
+                throw new hero_error_1.HeroError("Error finding active hero", 400, "HERO_SEARCH_ERROR");
             }
         });
     }
@@ -110,25 +110,25 @@ class HeroRepository {
                             {
                                 name: {
                                     contains: searchTerm,
-                                    mode: 'insensitive',
+                                    mode: "insensitive",
                                 },
                             },
                             {
                                 title: {
                                     contains: searchTerm,
-                                    mode: 'insensitive',
+                                    mode: "insensitive",
                                 },
                             },
                             {
                                 subtitle: {
                                     contains: searchTerm,
-                                    mode: 'insensitive',
+                                    mode: "insensitive",
                                 },
                             },
                             {
                                 description: {
                                     contains: searchTerm,
-                                    mode: 'insensitive',
+                                    mode: "insensitive",
                                 },
                             },
                         ],
@@ -139,7 +139,7 @@ class HeroRepository {
                     skip: skip * take,
                     take,
                     orderBy: {
-                        createdAt: 'desc',
+                        createdAt: "desc",
                     },
                 });
                 return heroes.map((hero) => {
@@ -152,7 +152,7 @@ class HeroRepository {
             }
             catch (error) {
                 console.error(error);
-                throw new hero_error_1.HeroError('Error searching hero', 400, 'HERO_SEARCH_ERROR');
+                throw new hero_error_1.HeroError("Error searching hero", 400, "HERO_SEARCH_ERROR");
             }
         });
     }
@@ -164,23 +164,40 @@ class HeroRepository {
                     let imageId = null;
                     // Upload background image if provided
                     if (data.backgroundImage) {
-                        const createImage = yield (0, helpers_1.UploadImage)(data.backgroundImage, data.name || 'hero-background');
+                        const createImage = yield (0, helpers_1.UploadImage)(data.backgroundImage, data.name || "hero-background");
                         if (!createImage)
-                            throw new Error('error upload image');
+                            throw new Error("error upload image");
                         const imageToDB = yield (0, helpers_1.AssignImageToDBImage)({
-                            imageType: 'HERO',
+                            imageType: "HERO",
                             blurhash: createImage.blurhash,
                             width: createImage.width,
                             height: createImage.height,
                             data: createImage.data,
                         }, tx);
                         if (!imageToDB)
-                            throw new Error('error create imageToDB');
+                            throw new Error("error create imageToDB");
                         imageId = imageToDB.id;
+                    }
+                    if (data.isActive) {
+                        const currentActiveHero = yield tx.hero.findFirst({
+                            where: {
+                                isActive: true,
+                            },
+                        });
+                        if (currentActiveHero) {
+                            yield tx.hero.update({
+                                where: {
+                                    id: currentActiveHero.id,
+                                },
+                                data: {
+                                    isActive: false,
+                                },
+                            });
+                        }
                     }
                     const hero = yield tx.hero.create({
                         data: {
-                            name: data.name || 'Main Hero',
+                            name: data.name || "Main Hero",
                             title: data.title,
                             subtitle: data.subtitle,
                             description: data.description,
@@ -196,7 +213,7 @@ class HeroRepository {
                             secondaryCtaUrl: data.secondaryCtaUrl,
                             secondaryCtaVariant: data.secondaryCtaVariant,
                             alignment: data.alignment,
-                            variant: data.variant || 'CENTERED',
+                            variant: data.variant || "CENTERED",
                             minHeight: data.minHeight,
                             titleSize: data.titleSize,
                             titleColor: data.titleColor,
@@ -215,14 +232,14 @@ class HeroRepository {
                     return { hero: rest, backgroundImage: backgroundImage };
                 }), {
                     timeout: 20000,
-                    isolationLevel: 'Serializable',
+                    isolationLevel: "Serializable",
                     maxWait: 5000,
                 });
                 return transaction;
             }
             catch (error) {
                 console.error(error);
-                throw new Error('Error creating hero');
+                throw new Error("Error creating hero");
             }
         });
     }
@@ -233,15 +250,15 @@ class HeroRepository {
                     var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0;
                     let newImageId = null;
                     if (!data.heroId)
-                        throw new Error('no heroId provided');
+                        throw new Error("no heroId provided");
                     const hero = yield prismaTx.hero.findUnique({
                         where: { id: data.heroId },
                     });
                     if (!hero)
-                        throw new Error('hero not found');
+                        throw new Error("hero not found");
                     newImageId = (hero === null || hero === void 0 ? void 0 : hero.backgroundImageId) || null;
                     // Handle image update/removal
-                    if (data.imageState === 'REMOVE') {
+                    if (data.imageState === "REMOVE") {
                         if (hero.backgroundImageId) {
                             yield prismaTx.hero.update({
                                 where: { id: data.heroId },
@@ -251,7 +268,7 @@ class HeroRepository {
                         }
                         newImageId = null;
                     }
-                    if (data.imageState === 'UPDATE') {
+                    if (data.imageState === "UPDATE") {
                         if (hero.backgroundImageId) {
                             yield prismaTx.hero.update({
                                 where: { id: data.heroId },
@@ -260,22 +277,39 @@ class HeroRepository {
                             yield (0, helpers_1.deleteImageById)(hero.backgroundImageId, prismaTx);
                         }
                         if (!data.backgroundImage)
-                            throw new Error('no image provided');
-                        const createImage = yield (0, helpers_1.UploadImage)(data.backgroundImage, data.name || 'hero-update');
+                            throw new Error("no image provided");
+                        const createImage = yield (0, helpers_1.UploadImage)(data.backgroundImage, data.name || "hero-update");
                         if (!createImage)
-                            throw new Error('error upload image');
+                            throw new Error("error upload image");
                         const imageToDB = yield (0, helpers_1.AssignImageToDBImage)({
-                            imageType: 'HERO',
+                            imageType: "HERO",
                             blurhash: createImage.blurhash,
                             width: createImage.width,
                             height: createImage.height,
                             data: createImage.data,
                         }, prismaTx);
                         if (!imageToDB)
-                            throw new Error('error create imageToDB');
+                            throw new Error("error create imageToDB");
                         newImageId = imageToDB.id;
                     }
                     // Update the hero with new data
+                    if (data.isActive) {
+                        const currentActiveHero = yield prismaTx.hero.findFirst({
+                            where: {
+                                isActive: true,
+                            },
+                        });
+                        if (currentActiveHero) {
+                            yield prismaTx.hero.update({
+                                where: {
+                                    id: currentActiveHero.id,
+                                },
+                                data: {
+                                    isActive: false,
+                                },
+                            });
+                        }
+                    }
                     const updatedHero = yield prismaTx.hero.update({
                         where: { id: data.heroId },
                         data: {
@@ -318,7 +352,7 @@ class HeroRepository {
             }
             catch (error) {
                 console.error(error);
-                throw new Error('Error updating hero');
+                throw new Error("Error updating hero");
             }
         });
     }
@@ -328,7 +362,7 @@ class HeroRepository {
                 const transaction = yield this.prisma.$transaction((prismaTx) => __awaiter(this, void 0, void 0, function* () {
                     const hero = yield prismaTx.hero.findUnique({ where: { id } });
                     if (!hero)
-                        throw new Error('hero not found');
+                        throw new Error("hero not found");
                     yield prismaTx.hero.update({
                         where: { id },
                         data: { backgroundImageId: null },
@@ -345,7 +379,7 @@ class HeroRepository {
             }
             catch (error) {
                 console.error(error);
-                throw new Error('Error deleting hero');
+                throw new Error("Error deleting hero");
             }
         });
     }

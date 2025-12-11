@@ -1410,7 +1410,7 @@ export class slideShowRepository {
                   order: slide.order,
                   isVisible: slide.isVisible,
                   customTitle: slide.customTitle || "",
-                  customDesc: slide.customDescription || "",
+                  customDesc: (slide as any).customDescription || "",
                   isMany: true,
                   tx,
                   skipOrder: true,
@@ -1437,16 +1437,15 @@ export class slideShowRepository {
                 if (slide.customTitle !== undefined) {
                   updateData.customTitle = slide.customTitle;
                 }
-                if (slide.customDescription !== undefined) {
+                if ((slide as any).customDescription !== undefined) {
 
-                  updateData.customDesc = slide.customDescription;
+                  updateData.customDesc = (slide as any).customDescription;
                 }
               }
+              const attachType = (slide.type === "team" ? "teamMember" : slide.type) as keyof ReturnType<typeof this.modelAttachMap>;
 
               return await (
-                this.modelAttachMap(tx)[
-                  slide.type === "team" ? "teamMember" : (slide.type as any)
-                ].update as any
+                this.modelAttachMap(tx)[attachType].update as any
               )({
                 where: {
                   id: slide.id,
@@ -1464,10 +1463,9 @@ export class slideShowRepository {
           // 4. UPDATE ORDER (separate from metadata updates)
           const reordered = await Promise.all(
             updatedOrder.map(async (slide) => {
+              const attachType = (slide.type === "team" ? "teamMember" : slide.type) as keyof ReturnType<typeof this.modelAttachMap>;
               return await (
-                this.modelAttachMap(tx)[
-                  slide.type === "team" ? "teamMember" : (slide.type as any)
-                ].update as any
+                this.modelAttachMap(tx)[attachType].update as any
               )({
                 where: {
                   id: slide.id,
@@ -1476,11 +1474,6 @@ export class slideShowRepository {
                   order: slide.order,
                 },
               });
-
-              // return await (this.modelAttachMap(tx)[slide.type].update as any)({
-              //   where: { id: slide.id },
-              //   data: { order: slide.order },
-              // });
             })
           );
 

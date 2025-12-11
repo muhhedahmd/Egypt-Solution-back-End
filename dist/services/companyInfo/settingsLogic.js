@@ -58,5 +58,18 @@ class CompanyInfoLogic {
             }
         });
     }
+    getMimalStats() {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const stats = yield this.settingsRepo.getMimalStats();
+                return stats;
+            }
+            catch (error) {
+                if (error instanceof companyInfo_1.CompanyInfoError)
+                    throw error;
+                throw new companyInfo_1.CompanyInfoError("Failed to fetch company settings");
+            }
+        });
+    }
 }
 exports.CompanyInfoLogic = CompanyInfoLogic;
