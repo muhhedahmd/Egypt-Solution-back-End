@@ -34,7 +34,7 @@ export class AuthController {
 
       return res
         .cookie(
-          isProd ? "__Secure-refreshToken" : "refreshToken",
+          isProd ? "__secure-refreshToken" : "refreshToken",
           tokens.refreshToken,
           {
             httpOnly: true,
@@ -45,7 +45,7 @@ export class AuthController {
           }
         )
         .cookie(
-          isProd ? "__Secure-accessToken" : "accessToken",
+          isProd ? "__secure-accessToken" : "accessToken",
           tokens.accessToken,
           {
             httpOnly: true,
@@ -88,7 +88,7 @@ export class AuthController {
 
       return res
         .cookie(
-          isProd ? "__Secure-refreshToken" : "refreshToken",
+          isProd ? "__secure-refreshToken" : "refreshToken",
           tokens.refreshToken,
           {
             httpOnly: true,
@@ -99,7 +99,7 @@ export class AuthController {
           }
         )
         .cookie(
-          isProd ? "__Secure-accessToken" : "accessToken",
+          isProd ? "__secure-accessToken" : "accessToken",
           tokens.accessToken,
           {
             httpOnly: true,
@@ -178,7 +178,7 @@ export class AuthController {
 
       return res
         .cookie(
-          isProd ? "__Secure-refreshToken" : "refreshToken",
+          isProd ? "__secure-refreshToken" : "refreshToken",
           refreshToken,
           {
             httpOnly: true,
@@ -189,7 +189,7 @@ export class AuthController {
           }
         )
         .cookie(
-          isProd ? "__Secure-accessToken" : "accessToken",
+          isProd ? "__secure-accessToken" : "accessToken",
           accessToken,
           {
             httpOnly: true,
@@ -269,7 +269,7 @@ export class AuthController {
       }
 
       res.cookie(
-        isProd ? "__Secure-refreshToken" : "refreshToken",
+        isProd ? "__secure-refreshToken" : "refreshToken",
         tokens.refreshToken,
         {
           httpOnly: true,
@@ -281,7 +281,7 @@ export class AuthController {
       );
 
       res.cookie(
-        isProd ? "__Secure-accessToken" : "accessToken",
+        isProd ? "__secure-accessToken" : "accessToken",
         tokens.accessToken,
         {
           httpOnly: true,
@@ -370,7 +370,7 @@ export class AuthController {
       );
 
       res.cookie(
-        isProd ? "__Secure-refreshToken" : "refreshToken",
+        isProd ? "__secure-refreshToken" : "refreshToken",
         tokens?.refreshToken,
         {
           httpOnly: true,
@@ -382,7 +382,7 @@ export class AuthController {
       );
 
       res.cookie(
-        isProd ? "__Secure-accessToken" : "accessToken",
+        isProd ? "__secure-accessToken" : "accessToken",
         tokens?.accessToken,
         {
           httpOnly: true,
