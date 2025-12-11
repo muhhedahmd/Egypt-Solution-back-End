@@ -6,6 +6,10 @@ import * as jwt from "jsonwebtoken";
 
 const isProd = process.env.NODE_ENV === "production";
 
+console.log({
+  isProd,
+})
+
 export class AuthController {
   static async register(req: Request, res: Response) {
     try {
