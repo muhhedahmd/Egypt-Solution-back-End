@@ -21,6 +21,7 @@ import { TestimonialModule } from "./services/testtimonials/testimonial.module";
 import { contactModule as contactMod } from "./services/contact/contact.module";
 import { CompanyInfoModule as companyInfo } from "./services/companyInfo/settingsModule";
 import { HeroModule as HeroMod } from "./services/hero/hero.modules";
+import { AnalyticModule as AnalyticMod } from "./services/analytic/analytic.module";
 
 const app = express();
 app.use(cookieParser());
@@ -28,7 +29,13 @@ app.use(cookieParser());
 // 1. CORS first
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    
+    origin: [process.env.FRONTEND_URL || "http://localhost:3000"  
+      , "http://localhost:3001"  , 
+     "https://end-user-landing-manager.vercel.app" 
+      , "https://end-user-landing-manager-grodjgoj6.vercel.app" 
+    
+    ],
     credentials: true,
   })
 );
@@ -84,6 +91,9 @@ const CompanyInfoModule = new companyInfo(prisma);
 app.use("/api/company-info", CompanyInfoModule.getRoutes());
 const HeroModule = new HeroMod(prisma);
 app.use("/api/hero", HeroModule.getRoutes());
+// ***
+const AnalyticModule = new AnalyticMod(prisma);
+app.use("/api/analytics", AnalyticModule.getRoutes());
 
 app.use(errorHandler as any);
 

@@ -29,13 +29,15 @@ export class ServicesLogic {
     return isValid;
   }
   async getAllServices(
-    params: PaginationParams
+    params: PaginationParams & {Active :boolean , isFeatured :boolean}
   ): Promise<PaginatedResponse<IService>> {
     const skip = params.skip || 0;
     const take = params.take || 10;
+    const Active= params.Active
+    const isFeatured= params.isFeatured
 
     const [services, totalItems] = await Promise.all([
-      this.repository.findMany(skip, take),
+      this.repository.findMany(skip, take, Active  , isFeatured),
       this.repository.count(),
     ]);
     const remainingItems = totalItems - (skip * take + services.length);

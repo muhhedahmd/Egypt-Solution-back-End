@@ -113,14 +113,14 @@ class AuthController {
                     .cookie(isProd ? "__Secure-refreshToken" : "refreshToken", tokens.refreshToken, {
                     httpOnly: true,
                     secure: isProd,
-                    domain: "admin-egypt-solution.vercel.app",
+                    // domain: "admin-egypt-solution.vercel.app",
                     sameSite: isProd ? "none" : "lax",
                     path: "/",
                     maxAge: tokens.refreshExpiresIn * 1000,
                 })
                     .cookie(isProd ? "__Secure-accessToken" : "accessToken", tokens.accessToken, {
                     httpOnly: true,
-                    domain: "admin-egypt-solution.vercel.app",
+                    // domain: "admin-egypt-solution.vercel.app",
                     secure: isProd,
                     sameSite: isProd ? "none" : "lax",
                     path: "/",
@@ -148,7 +148,6 @@ class AuthController {
                     Method: method,
                     userId,
                 });
-                console.log("Service result:", result);
                 if (typeof result === "string") {
                     return res.status(400).json({ error: result });
                 }
@@ -180,7 +179,6 @@ class AuthController {
                 // Read cookie based on environment
                 const cookieName = isProd ? "__Secure-refreshToken" : "refreshToken";
                 const refreshToken = req.cookies[cookieName] || req.body.refreshToken;
-                console.log("Refresh token:", refreshToken);
                 if (!refreshToken) {
                     return res.status(400).json({ error: "Refresh token is required" });
                 }
@@ -235,7 +233,6 @@ class AuthController {
                         .status(400)
                         .json({ error: "Failed to get ID token from Google" });
                 }
-                console.log({ access_token });
                 const decoded = jwt.decode(id_token);
                 const { email, name, picture, sub: googleId } = decoded;
                 if (!email) {
@@ -249,7 +246,6 @@ class AuthController {
                     image: picture,
                     googleId,
                 });
-                console.log({ user });
                 if (!user) {
                     res.redirect(`${process.env.FRONTEND_URL}/auth/error`);
                     return;
@@ -333,7 +329,6 @@ class AuthController {
     static syncUser(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                console.log({ body: req.body });
                 const { supabaseUserId, email, emailVerficatiion, provider } = req.body;
                 if (!supabaseUserId)
                     return res.status(500).json({ error: "Internal server error" });

@@ -93,7 +93,7 @@ export class AuthController {
           {
             httpOnly: true,
             secure: isProd,
-            domain: "admin-egypt-solution.vercel.app",
+            // domain: "admin-egypt-solution.vercel.app",
             sameSite: isProd ? "none" : "lax",
             path: "/",
             maxAge: tokens.refreshExpiresIn * 1000,
@@ -104,7 +104,7 @@ export class AuthController {
           tokens.accessToken,
           {
             httpOnly: true,
-            domain: "admin-egypt-solution.vercel.app",
+            // domain: "admin-egypt-solution.vercel.app",
             secure: isProd,
             sameSite: isProd ? "none" : "lax",
             path: "/",
@@ -134,7 +134,6 @@ export class AuthController {
         userId,
       });
 
-      console.log("Service result:", result);
 
       if (typeof result === "string") {
         return res.status(400).json({ error: result });
@@ -169,7 +168,6 @@ export class AuthController {
       const cookieName = isProd ? "__Secure-refreshToken" : "refreshToken";
       const refreshToken = req.cookies[cookieName] || req.body.refreshToken;
       
-      console.log("Refresh token:", refreshToken);
       if (!refreshToken) {
         return res.status(400).json({ error: "Refresh token is required" });
       }
@@ -239,7 +237,6 @@ export class AuthController {
           .json({ error: "Failed to get ID token from Google" });
       }
 
-      console.log({ access_token });
 
       const decoded: any = jwt.decode(id_token);
       const { email, name, picture, sub: googleId } = decoded;
@@ -257,7 +254,6 @@ export class AuthController {
         googleId,
       });
 
-      console.log({ user });
       if (!user) {
         res.redirect(`${process.env.FRONTEND_URL}/auth/error`);
         return;
@@ -358,7 +354,6 @@ export class AuthController {
 
   static async syncUser(req: Request, res: Response) {
     try {
-      console.log({ body: req.body });
       const { supabaseUserId, email, emailVerficatiion, provider } = req.body;
       if (!supabaseUserId)
         return res.status(500).json({ error: "Internal server error" });

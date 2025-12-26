@@ -44,8 +44,10 @@ class ServicesLogic {
         return __awaiter(this, void 0, void 0, function* () {
             const skip = params.skip || 0;
             const take = params.take || 10;
+            const Active = params.Active;
+            const isFeatured = params.isFeatured;
             const [services, totalItems] = yield Promise.all([
-                this.repository.findMany(skip, take),
+                this.repository.findMany(skip, take, Active, isFeatured),
                 this.repository.count(),
             ]);
             const remainingItems = totalItems - (skip * take + services.length);

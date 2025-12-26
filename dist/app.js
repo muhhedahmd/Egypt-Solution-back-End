@@ -25,11 +25,16 @@ const testimonial_module_1 = require("./services/testtimonials/testimonial.modul
 const contact_module_1 = require("./services/contact/contact.module");
 const settingsModule_1 = require("./services/companyInfo/settingsModule");
 const hero_modules_1 = require("./services/hero/hero.modules");
+const analytic_module_1 = require("./services/analytic/analytic.module");
 const app = (0, express_1.default)();
 app.use((0, cookie_parser_1.default)());
 // 1. CORS first
 app.use((0, cors_1.default)({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: [process.env.FRONTEND_URL || "http://localhost:3000",
+        "http://localhost:3001",
+        "https://end-user-landing-manager.vercel.app",
+        "https://end-user-landing-manager-grodjgoj6.vercel.app"
+    ],
     credentials: true,
 }));
 // 2. Configure multer properly
@@ -70,6 +75,9 @@ const CompanyInfoModule = new settingsModule_1.CompanyInfoModule(prisma_1.defaul
 app.use("/api/company-info", CompanyInfoModule.getRoutes());
 const HeroModule = new hero_modules_1.HeroModule(prisma_1.default);
 app.use("/api/hero", HeroModule.getRoutes());
+// ***
+const AnalyticModule = new analytic_module_1.AnalyticModule(prisma_1.default);
+app.use("/api/analytics", AnalyticModule.getRoutes());
 app.use(errorHandler_1.errorHandler);
 // 7. Error handling middleware1
 app.use((err, req, res, next) => {

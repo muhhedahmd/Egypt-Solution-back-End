@@ -15,10 +15,7 @@ export class blogRoutes {
       Promise.resolve(fn(req, res, next)).catch(next);
     };
 
-    // ============================================
-    // BLOG ROUTES
-    // ============================================
-
+ 
     // Get all blogs
     this.router.get(
       "/",

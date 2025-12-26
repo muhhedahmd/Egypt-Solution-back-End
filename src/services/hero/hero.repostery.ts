@@ -1,3 +1,4 @@
+import { HeroVariant } from "@prisma/client";
 import { PrismaClientConfig } from "../../config/prisma";
 import { HeroError } from "../../errors/hero.error";
 import {
@@ -394,4 +395,9 @@ export class HeroRepository {
       throw new Error("Error deleting hero");
     }
   }
+
+  async filter(variant  : HeroVariant) {
+
+  }
 }
+

@@ -24,9 +24,6 @@ import {
   TestimonialSlideShow,
 } from "@prisma/client";
 import { txInstance } from "../../lib/helpers";
-import { promise } from "zod";
-import { includes } from "zod/v4";
-import { serialize } from "v8";
 
 export class slideShowRepository {
   constructor(
@@ -559,6 +556,23 @@ export class slideShowRepository {
           project: {
             include: {
               image: true,
+              services : {
+                select : {
+                  name : true ,
+                  icon : true
+                }
+              },
+              technologies: {
+                select: {
+                  technology: {
+                    select: {
+                      icon: true,
+                      name: true,
+                      category: true,
+                    },
+                  },
+                },
+              }
             
             },
           },
@@ -572,6 +586,7 @@ export class slideShowRepository {
         take: cli.take,
 
         include: {
+
           client: {
             include: {
               image: true,

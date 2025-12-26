@@ -13,9 +13,6 @@ class blogRoutes {
         const asyncHandler = (fn) => (req, res, next) => {
             Promise.resolve(fn(req, res, next)).catch(next);
         };
-        // ============================================
-        // BLOG ROUTES
-        // ============================================
         // Get all blogs
         this.router.get("/", asyncHandler(this.controller.getAllBlogs.bind(this.controller)));
         // Get single blog by ID

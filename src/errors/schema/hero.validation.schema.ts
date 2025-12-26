@@ -41,7 +41,7 @@ const updateHeroSchema = z.object({
   subtitle: z.string().max(500).optional(),
   description: z.string().optional(),
   backgroundColor: z.string().optional(),
-  backgroundVideo: z.string().url('Invalid video URL').optional().or(z.literal('')),
+  backgroundVideo: z.string().url('Invalid video URL').optional().or(z.literal('')).nullable(),
   overlayColor: z.string().optional(),
   overlayOpacity: z.number().min(0).max(1).optional(),
   ctaText: z.string().max(100).optional(),
@@ -58,8 +58,8 @@ const updateHeroSchema = z.object({
   subtitleColor: z.string().optional(),
   descriptionColor: z.string().optional(),
   showScrollIndicator: z.boolean().optional(),
-  customCSS: z.string().optional(),
-  styleOverrides: z.any().optional(),
+  customCSS: z.string().optional().nullable(),
+  styleOverrides: z.any().optional().nullable(),
   isActive: z.boolean().optional(),
   backgroundImage: z.instanceof(Buffer).optional(),
   imageState: z.enum(['KEEP', 'REMOVE', 'UPDATE']).optional(),
@@ -85,7 +85,7 @@ export class HeroValidator {
     }
   }
 
-  validateUpdate(data: unknown): UpdateHeroDTO {
+  validateUpdate(data: unknown): any {
     try {
       return updateHeroSchema.parse(data);
     } catch (error) {

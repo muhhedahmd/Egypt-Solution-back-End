@@ -478,6 +478,23 @@ class slideShowRepository {
                         project: {
                             include: {
                                 image: true,
+                                services: {
+                                    select: {
+                                        name: true,
+                                        icon: true
+                                    }
+                                },
+                                technologies: {
+                                    select: {
+                                        technology: {
+                                            select: {
+                                                icon: true,
+                                                name: true,
+                                                category: true,
+                                            },
+                                        },
+                                    },
+                                }
                             },
                         },
                     },

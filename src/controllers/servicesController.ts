@@ -11,16 +11,19 @@ export class ServicesController {
   // Add methods to handle services-related operations here // pagniate
   async getAllServices(req: Request, res: Response, next: NextFunction) {
     try {
-      const { skip, take } = req.query;
+      const { skip, take  , Active , isFeatured} = req.query;
 
       const services = await this.servicesLogic.getAllServices({
         skip: Number(skip) || 0,
         take: Number(take) || 10,
+        Active : Active === "true" ? true : false,
+        isFeatured : isFeatured === "true" ? true : false
       });
       if (!services) throw new ServiceNotFoundError("error get services");
 
       return res.json({
         ...services,
+
         message: "services fetched successfully",
       });
     } catch (error) {

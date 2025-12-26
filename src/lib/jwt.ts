@@ -4,8 +4,6 @@
 
 import jwt from "jsonwebtoken"
 
-
-
 export const generateAccessToken = ({
 
   userId,
@@ -39,10 +37,10 @@ export const generateAccessToken = ({
       profileId,
       profileComplete,
       avatarUrl,
-      type: "access", // ✅ Mark as access token
+      type: "access", 
     },
     process.env.JWT_SECRET as string,
-    { expiresIn: "30D" }, // ✅ Short-lived (15 minutes)
+    { expiresIn: "30D" }, 
   )
 }
 
@@ -50,10 +48,10 @@ export const generateRefreshToken = (userId: string) => {
   return jwt.sign(
     {
       userId,
-      type: "refresh", // ✅ Mark as refresh token
+      type: "refresh", 
     },
-    process.env.JWT_REFRESH_SECRET as string, // ✅ Different secret
-    { expiresIn: "3d" }, // ✅ Long-lived (7 days)
+    process.env.JWT_REFRESH_SECRET as string, 
+    { expiresIn: "3d" }, 
   )
 }
 

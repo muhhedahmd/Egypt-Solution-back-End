@@ -23,9 +23,10 @@ export class companyInfoRoutes {
     const asyncHandler = (fn: any) => (req: any, res: any, next: any) => {
       Promise.resolve(fn(req, res, next)).catch(next);
     };
-
-    this.router.get("/", asyncHandler(requireAuthv2),  asyncHandler(this.controller.getSettings.bind(this.controller)));
-    this.router.get("/achivements", asyncHandler(requireAuthv2),  asyncHandler(this.controller.getMimalStats.bind(this.controller)));
+// asyncHandler(requireAuthv2)
+//  asyncHandler(requireAuthv2),
+    this.router.get("/" ,  asyncHandler(this.controller.getSettings.bind(this.controller)));
+    this.router.get("/achivements",  asyncHandler(this.controller.getMimalStats.bind(this.controller)));
     this.router.post("/", asyncHandler(requireAuthv2),  asyncHandler(this.controller.createSettings.bind(this.controller)));
     this.router.put("/:id", asyncHandler(requireAuthv2) ,  asyncHandler(this.controller.updateSettings.bind(this.controller)));
 

@@ -15,7 +15,7 @@ class slideShowRoutes {
         };
         this.router.post("/get-paginated-slides/:id", asyncHandler(this.controller.getPaginatedSlides.bind(this.controller)));
         this.router.get("/", asyncHandler(this.controller.getAllSlideShows.bind(this.controller)));
-        this.router.get("/all-minimal", asyncHandler(this.controller.getAllSlideShows.bind(this.controller)));
+        this.router.get("/all-minimal", asyncHandler(this.controller.getAllSlideShowsMinmal.bind(this.controller)));
         // *** & ####
         this.router.post("/bulk-operations/:id", asyncHandler(auth_1.requireAuthv2), asyncHandler(this.controller.bulkSlideOperations.bind(this.controller)));
         // ***

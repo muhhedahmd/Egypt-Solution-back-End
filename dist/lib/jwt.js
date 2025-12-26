@@ -16,16 +16,15 @@ const generateAccessToken = ({ userId, email, role, name, emailConfirmation, dev
         profileId,
         profileComplete,
         avatarUrl,
-        type: "access", // ✅ Mark as access token
+        type: "access",
     }, process.env.JWT_SECRET, { expiresIn: "30D" });
 };
 exports.generateAccessToken = generateAccessToken;
 const generateRefreshToken = (userId) => {
     return jsonwebtoken_1.default.sign({
         userId,
-        type: "refresh", // ✅ Mark as refresh token
-    }, process.env.JWT_REFRESH_SECRET, // ✅ Different secret
-    { expiresIn: "3d" });
+        type: "refresh",
+    }, process.env.JWT_REFRESH_SECRET, { expiresIn: "3d" });
 };
 exports.generateRefreshToken = generateRefreshToken;
 const verifyAccessToken = (token) => {

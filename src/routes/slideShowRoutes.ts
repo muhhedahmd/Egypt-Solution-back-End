@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { slideShowController } from "../controllers/slideShowController";
-import { requireAuth, requireAuthv2 } from "../middlewares/auth";
-
+import { requireAuthv2 } from "../middlewares/auth";
 export class slideShowRoutes {
   private router: Router;
   constructor(private controller: slideShowController) {
@@ -23,7 +22,7 @@ export class slideShowRoutes {
     );
     this.router.get(
       "/all-minimal",
-      asyncHandler(this.controller.getAllSlideShows.bind(this.controller))
+      asyncHandler(this.controller.getAllSlideShowsMinmal.bind(this.controller))
     );
     // *** & ####
 

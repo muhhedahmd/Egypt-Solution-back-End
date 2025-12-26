@@ -17,13 +17,36 @@ import { ServiceError } from "../../errors/services.error";
 export class ServicesRepository {
   constructor(private prisma: PrismaClientConfig) {}
 
-  async findMany(skip: number, take: number) {
-    return this.prisma.service.findMany({
-      include: { image: true },
+  async findMany(
+    skip: number,
+    take: number,
+    Active: boolean,
+    isFeatured: boolean
+  ) {
+    if (Active) {
+      return this.prisma.service.findMany({
+        where: { isActive: true },
+        include: { image: true },
 
-      skip: skip * take,
-      take: take,
-    });
+        skip: skip * take,
+        take: take,
+      });
+    }
+    if (Active && isFeatured) {
+      return this.prisma.service.findMany({
+        where: { isActive: true, isFeatured: true },
+        include: { image: true },
+
+        skip: skip * take,
+        take: take,
+      });
+    } else
+      return this.prisma.service.findMany({
+        include: { image: true },
+
+        skip: skip * take,
+        take: take,
+      });
   }
 
   async isValidOrder({ order }: { order: number }) {

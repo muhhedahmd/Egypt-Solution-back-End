@@ -383,5 +383,9 @@ class HeroRepository {
             }
         });
     }
+    filter(variant) {
+        return __awaiter(this, void 0, void 0, function* () {
+        });
+    }
 }
 exports.HeroRepository = HeroRepository;

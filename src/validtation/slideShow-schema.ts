@@ -8,7 +8,8 @@ import {
   UpdateslideShowDTO,
   deattachManyDTO,
 } from "../types/slideShow";
-import { SlideshowType } from "@prisma/client";
+
+import {  SlideshowType } from "@prisma/client";
 export class SlideShowValidator {
   private createSchema = z.object({
     title: z
@@ -30,6 +31,7 @@ export class SlideShowValidator {
         "CLIENTS",
         "HERO",
         "CUSTOM",
+        
       ],
       {
         errorMap: () => ({ message: "Invalid slideshow type" }),
@@ -44,7 +46,6 @@ export class SlideShowValidator {
         "FADE",
         "CUSTOM",
         "ZOOM",
-
         "PARALLAX",
         "COVERFLOW",
         "KEN_BURNS",
@@ -127,6 +128,7 @@ export class SlideShowValidator {
     customTitle: z.string().max(200).optional(),
     customDesc: z.string().max(500).optional(),
   });
+
   private validateTypeSchema = z.object({
     type: z.enum([
       "SERVICES",
@@ -186,6 +188,7 @@ export class SlideShowValidator {
   private validateCreateAndAttachManySchema = this.createSchema.extend({
     slides: this.attachGlobalSchema.omit({ slideShowId: true }).array(),
   });
+
   private reorderSchema = z.object({
     slideShowId: z.string().cuid("Invalid slideshow ID"),
     items: z
@@ -732,127 +735,3 @@ export class SlideShowValidator {
     }
   }
 }
-
-// private attachServiceSchema = z.object({
-//   slideShowId: z.string().cuid("Invalid slideshow ID"),
-//   serviceId: z.string().cuid("Invalid service ID"),
-//   order: z.number().int().min(0).default(0),
-//   isVisible: z.boolean().default(true),
-//   customTitle: z.string().max(200).optional(),
-//   customDesc: z.string().max(500).optional(),
-
-// private attachProjectSchema = z.object({
-//   slideShowId: z.string().cuid("Invalid slideshow ID"),
-//   projectId: z.string().cuid("Invalid project ID"),
-//   order: z.number().int().min(0).default(0),
-//   isVisible: z.boolean().default(true),
-// });
-
-// private attachClientSchema = z.object({
-//   slideShowId: z.string().cuid("Invalid slideshow ID"),
-//   clientId: z.string().cuid("Invalid client ID"),
-//   order: z.number().int().min(0).default(0),
-//   isVisible: z.boolean().default(true),
-// });
-
-// private attachTestimonialSchema = z.object({
-//   slideShowId: z.string().cuid("Invalid slideshow ID"),
-//   testimonialId: z.string().cuid("Invalid testimonial ID"),
-//   order: z.number().int().min(0).default(0),
-//   isVisible: z.boolean().default(true),
-// });
-
-// private attachTeamSchema = z.object({
-//   slideShowId: z.string().cuid("Invalid slideshow ID"),
-//   teamId: z.string().cuid("Invalid team member ID"),
-//   order: z.number().int().min(0).default(0),
-//   isVisible: z.boolean().default(true),
-// });
-
-// validateAttachProject(data: unknown) {
-//   try {
-//     return this.attachProjectSchema.parse(data);
-//   } catch (error) {
-//     if (error instanceof z.ZodError) {
-//       const messages = error.errors
-//         .map((e) => `${e.path.join(".")}: ${e.message}`)
-//         .join(", ");
-//       throw new ServiceValidationError(
-//         `Validation failed: ${messages}`,
-//         undefined,
-//         "SlideShowValidationError"
-//       );
-//     }
-//     throw new ServiceValidationError(
-//       "Invalid project attachment data",
-//       undefined,
-//       "SlideShowValidationError"
-//     );
-//   }
-// }
-
-// validateAttachClient(data: unknown) {
-//   try {
-//     return this.attachClientSchema.parse(data);
-//   } catch (error) {
-//     if (error instanceof z.ZodError) {
-//       const messages = error.errors
-//         .map((e) => `${e.path.join(".")}: ${e.message}`)
-//         .join(", ");
-//       throw new ServiceValidationError(
-//         `Validation failed: ${messages}`,
-//         undefined,
-//         "SlideShowValidationError"
-//       );
-//     }
-//     throw new ServiceValidationError(
-//       "Invalid client attachment data",
-//       undefined,
-//       "SlideShowValidationError"
-//     );
-//   }
-// }
-
-// validateAttachTestimonial(data: unknown) {
-//   try {
-//     return this.attachTestimonialSchema.parse(data);
-//   } catch (error) {
-//     if (error instanceof z.ZodError) {
-//       const messages = error.errors
-//         .map((e) => `${e.path.join(".")}: ${e.message}`)
-//         .join(", ");
-//       throw new ServiceValidationError(
-//         `Validation failed: ${messages}`,
-//         undefined,
-//         "SlideShowValidationError"
-//       );
-//     }
-//     throw new ServiceValidationError(
-//       "Invalid testimonial attachment data",
-//       undefined,
-//       "SlideShowValidationError"
-//     );
-//   }
-// }
-
-// validateAttachTeam(data: unknown) {
-//   try {
-//     return this.attachTeamSchema.parse(data);
-//   } catch (error) {
-//     if (error instanceof z.ZodError) {
-//       const messages = error.errors
-//         .map((e) => `${e.path.join(".")}: ${e.message}`)
-//         .join(", ");
-//       throw new ServiceValidationError(
-//         `Validation failed: ${messages}`,
-//         undefined,
-//         "SlideShowValidationError"
-//       );
-//     }
-//     throw new ServiceValidationError(
-//       "Invalid team attachment data",
-//       undefined,
-//       "SlideShowValidationError"
-//     );
-//   }
-// }

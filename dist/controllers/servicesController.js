@@ -19,10 +19,12 @@ class ServicesController {
     getAllServices(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const { skip, take } = req.query;
+                const { skip, take, Active, isFeatured } = req.query;
                 const services = yield this.servicesLogic.getAllServices({
                     skip: Number(skip) || 0,
                     take: Number(take) || 10,
+                    Active: Active === "true" ? true : false,
+                    isFeatured: isFeatured === "true" ? true : false
                 });
                 if (!services)
                     throw new services_error_1.ServiceNotFoundError("error get services");

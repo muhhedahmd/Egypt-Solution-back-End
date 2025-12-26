@@ -33,13 +33,30 @@ class ServicesRepository {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    findMany(skip, take) {
+    findMany(skip, take, Active, isFeatured) {
         return __awaiter(this, void 0, void 0, function* () {
-            return this.prisma.service.findMany({
-                include: { image: true },
-                skip: skip * take,
-                take: take,
-            });
+            if (Active) {
+                return this.prisma.service.findMany({
+                    where: { isActive: true },
+                    include: { image: true },
+                    skip: skip * take,
+                    take: take,
+                });
+            }
+            if (Active && isFeatured) {
+                return this.prisma.service.findMany({
+                    where: { isActive: true, isFeatured: true },
+                    include: { image: true },
+                    skip: skip * take,
+                    take: take,
+                });
+            }
+            else
+                return this.prisma.service.findMany({
+                    include: { image: true },
+                    skip: skip * take,
+                    take: take,
+                });
         });
     }
     isValidOrder(_a) {

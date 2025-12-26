@@ -214,53 +214,51 @@ enum ButtonVariant {
 // ============================================================================
 
 model Hero {
+  id          String  @id @default(cuid())
+  name        String  @default("Main Hero")
+  title       String
+  subtitle    String?
+  description String? @db.Text
 
-  
-  id                String  @id @default(cuid())
-  name              String  @default("Main Hero")
-  title             String
-  subtitle          String?
-  description       String? @db.Text
-  
   // Background
   backgroundImageId String?
   backgroundImage   Image?  @relation("HeroBackgroundImage", fields: [backgroundImageId], references: [id])
   backgroundColor   String? @default("#f5f5f5")
- //
+  //
   backgroundVideo   String? // Video URL
   overlayColor      String? // For image/video overlay
   overlayOpacity    Float?  @default(0.5)
-  
+
   // Primary CTA
-  ctaText           String? @default("Get Started")
-  ctaUrl            String? @default("/contact")
-  ctaVariant        ButtonVariant? @default(PRIMARY)
-  
+  ctaText    String?        @default("Get Started")
+  ctaUrl     String?        @default("/contact")
+  ctaVariant ButtonVariant? @default(PRIMARY)
+
   // Secondary CTA
   secondaryCtaText    String?
   secondaryCtaUrl     String?
   secondaryCtaVariant ButtonVariant? @default(GHOST)
-  
+
   // Layout / style
-  alignment         TextAlign?  @default(CENTER)
-  variant           HeroVariant @default(CENTERED)
-  minHeight         Int?        @default(600) // pixels
-  
+  alignment TextAlign?  @default(CENTER)
+  variant   HeroVariant @default(CENTERED)
+  minHeight Int?        @default(600) // pixels
+
   // Content styling
-  titleSize         String? @default("4xl") // Tailwind size class
-  titleColor        String? @default("#000000")
-  subtitleColor     String? @default("#666666")
-  descriptionColor  String? @default("#888888")
-  
+  titleSize        String? @default("4xl") // Tailwind size class
+  titleColor       String? @default("#000000")
+  subtitleColor    String? @default("#666666")
+  descriptionColor String? @default("#888888")
+
   // Additional features
   showScrollIndicator Boolean @default(false)
-  customCSS          String? @db.Text
-  styleOverrides     Json?
-  
+  customCSS           String? @db.Text
+  styleOverrides      Json?
+
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@map("heroes")
 }
 
@@ -271,8 +269,6 @@ enum HeroVariant {
   MINIMAL
   FULL_SCREEN
 }
-
-
 
 // ============================================================================
 // HEADER
@@ -310,9 +306,9 @@ model HeaderNavItem {
   isActive     Boolean @default(true)
   icon         String?
 
-  header   Header           @relation(fields: [headerId], references: [id], onDelete: Cascade)
-  parent   HeaderNavItem?   @relation("NavItemChildren", fields: [parentId], references: [id], onDelete: Cascade)
-  children HeaderNavItem[]  @relation("NavItemChildren")
+  header   Header          @relation(fields: [headerId], references: [id], onDelete: Cascade)
+  parent   HeaderNavItem?  @relation("NavItemChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children HeaderNavItem[] @relation("NavItemChildren")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -376,6 +372,7 @@ model FooterLink {
   @@index([columnId, order])
   @@map("footer_links")
 }
+
 // ============================================================================
 // SERVICES
 // ============================================================================
@@ -555,6 +552,36 @@ model Testimonial {
 // BLOG
 // ============================================================================
 
+model BlogViewer {
+  id         String   @id @default(cuid())
+  blogId     String
+  
+  sessionId  String    
+  
+  ipHash     String?   // Hashed IP as backup identifier
+  userAgent  String?   @db.Text
+  
+  // Optional analytics metadata
+  referrer   String?
+  country    String?   // From IP geolocation (optional)
+  device     String?   // "mobile" | "tablet" | "desktop"
+  
+  // View tracking
+  viewedAt   DateTime @default(now())
+  duration   Int?      // Reading time in seconds
+  
+  // Relations
+  blog       Blog     @relation("BlogViewers", fields: [blogId], references: [id], onDelete: Cascade)
+  
+  @@index([blogId])
+  @@index([sessionId])
+  @@index([viewedAt])
+  // Prevent same session viewing same blog multiple times in short period
+  @@unique([blogId, sessionId])
+  @@map("blog_viewers")
+}
+
+// Update Blog model to include the relation
 model Blog {
   id              String     @id @default(cuid())
   title           String
@@ -567,7 +594,7 @@ model Blog {
   publishedAt     DateTime?
   isFeatured      Boolean    @default(false)
   views           Int        @default(0)
-  readingTime     Int? // in minutes
+  readingTime     Int?
   metaTitle       String?
   metaDescription String?
   metaKeywords    String?
@@ -575,6 +602,7 @@ model Blog {
   image      Image?         @relation("BlogImage", fields: [imageId], references: [id])
   author     User           @relation(fields: [authorId], references: [id])
   categories BlogCategory[]
+  viewers    BlogViewer[]   @relation("BlogViewers") // Add this line
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -611,7 +639,7 @@ model BlogCategory {
 // SLIDESHOW SYSTEM
 // ============================================================================
 model SlideShow {
-  id          String          @id @default(cuid( ))
+  id          String          @id @default(cuid())
   title       String
   slug        String          @unique
   description String?
@@ -836,27 +864,127 @@ model Image {
 // ANALYTICS
 // ============================================================================
 
-model Analytics {
-  id        String   @id @default(cuid())
-  date      DateTime @unique @db.Date
-  visitors  Int      @default(0)
-  pageViews Int      @default(0)
-  contacts  Int      @default(0)
-  createdAt DateTime @default(now())
 
-  @@index([date])
+
+model Analytics {
+  id               String   @id @default(cuid())
+  date             DateTime @unique @db.Date
+  
+  // Traffic metrics
+  uniqueVisitors   Int      @default(0) // Unique sessions
+  totalPageViews   Int      @default(0) // Total page loads
+  totalBlogViews   Int      @default(0) // Blog-specific views
+  
+  // Engagement metrics
+  avgSessionTime   Int?     // Average seconds per session
+  bounceRate       Float?   // Percentage (0-100)
+  
+  // Conversion metrics
+  contacts         Int      @default(0)
+  formSubmissions  Int      @default(0)
+  
+  // Device breakdown
+  mobileVisitors   Int      @default(0)
+  desktopVisitors  Int      @default(0)
+  tabletVisitors   Int      @default(0)
+  
+  // Traffic sources
+  directVisitors   Int      @default(0)
+  searchVisitors   Int      @default(0)
+  socialVisitors   Int      @default(0)
+  referralVisitors Int      @default(0)
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([date(sort: Desc)])
   @@map("analytics")
 }
 
-model PageView {
-  id        String   @id @default(cuid())
-  path      String
-  referrer  String?
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now())
 
+// Session tracking (group page views by session)
+model SessionAnalytics {
+  id            String   @id @default(cuid())
+  sessionId     String   @unique
+  
+  // Session metadata
+  firstPagePath String   // Landing page
+  lastPagePath  String   // Exit page
+  pageCount     Int      @default(1) // Pages viewed in session
+  totalDuration Int      @default(0) // Total session time (seconds)
+  
+  // Traffic source (first touch)
+  referrer      String?  @db.Text
+  utmSource     String?
+  utmMedium     String?
+  utmCampaign   String?
+  
+  // Device info
+  device        String?  // "mobile" | "desktop" | "tablet"
+  browser       String?
+  os            String?
+  
+  // Location
+  ipHash        String?
+  country       String?
+  city          String?
+  
+  // Session outcome
+  converted     Boolean  @default(false) // Did they submit a form?
+  isBounce      Boolean  @default(false) // Single page visit?
+  
+  startedAt     DateTime @default(now())
+  endedAt       DateTime @default(now())
+  
+  @@index([sessionId])
+  @@index([startedAt(sort: Desc)])
+  @@index([country])
+  @@index([utmSource])
+  @@map("session-analytics")
+}
+
+model PageView {
+  id         String   @id @default(cuid())
+  
+  sessionId  String   // Cookie-based session
+  
+  // Page information
+  path       String   // "/blog/my-post"
+  pageTitle  String?  // "My Blog Post"
+  pageType   String?  // "blog" | "home" | "about" | "contact"
+  
+  // Traffic source
+  referrer   String?  @db.Text
+  utmSource  String?   // "google" | "facebook" | "newsletter"
+  utmMedium  String?   // "organic" | "cpc" | "email"
+  utmCampaign String?  // Campaign name
+  
+  // Device & browser
+  device     String?  // "mobile" | "desktop" | "tablet"
+  browser    String?  // "chrome" | "safari" | "firefox"
+  os         String?  // "windows" | "macos" | "ios" | "android"
+  userAgent  String?  @db.Text
+  
+  // Location (from IP)
+  ipHash     String?  // Hashed IP for privacy
+  country    String?  // "US" | "UK" | "EG"
+  city       String?  // "Cairo" | "London"
+  
+  // Engagement
+  timeOnPage Int?     // Seconds spent on page
+  scrollDepth Int?    // Percentage scrolled (0-100)
+  
+  // Session data
+  isNewSession Boolean @default(false)
+  isBounce     Boolean @default(false)
+  
+  createdAt  DateTime @default(now())
+
+  @@index([sessionId])
   @@index([path])
-  @@index([createdAt])
+  @@index([pageType])
+  @@index([createdAt(sort: Desc)])
+  @@index([referrer])
+  @@index([utmSource])
   @@map("page_views")
 }

@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { ServiceError } from "../errors/services.error";
+import prisma from "../config/prisma";
 
 
 
@@ -61,6 +62,19 @@ export const requireAuthv2 = async (
     if (typeof decoded === "string")
       return res.status(401).json({ error: "Unauthorized" });
 
+    const findUser = await prisma.user.findUnique({
+      where: {
+        id: decoded.userId,
+      },
+      select :{
+        id: true
+      }
+    })
+
+    if (!findUser) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
     req.user = {
       email: decoded.email,
       id: decoded.userId,
