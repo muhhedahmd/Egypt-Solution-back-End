@@ -46,7 +46,35 @@ class TeamRepository {
                 skip: skip * take,
                 take: take,
                 orderBy: {
-                    order: 'asc',
+                    order: "asc",
+                },
+            });
+        });
+    }
+    ActiveCount(isFeatured) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.prisma.teamMember.count({
+                where: {
+                    isActive: true,
+                    isFeatured: isFeatured || false,
+                },
+            });
+        });
+    }
+    findManyActive(skip, take, isFeatured) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.prisma.teamMember.findMany({
+                where: {
+                    isActive: true,
+                    isFeatured: isFeatured || false,
+                },
+                include: {
+                    image: true,
+                },
+                skip: skip * take,
+                take: take,
+                orderBy: {
+                    order: "asc",
                 },
             });
         });
@@ -64,7 +92,7 @@ class TeamRepository {
             }
             catch (error) {
                 console.error(error);
-                throw new Error('Error finding team member by order');
+                throw new Error("Error finding team member by order");
             }
         });
     }
@@ -90,7 +118,7 @@ class TeamRepository {
             }
             catch (error) {
                 console.error(error);
-                throw new Error('Error finding team member by ID');
+                throw new Error("Error finding team member by ID");
             }
         });
     }
@@ -106,7 +134,7 @@ class TeamRepository {
                                 slideShow: true,
                             },
                             orderBy: {
-                                order: 'asc',
+                                order: "asc",
                             },
                         },
                     },
@@ -130,7 +158,7 @@ class TeamRepository {
             }
             catch (error) {
                 console.error(error);
-                throw new team_error_1.TeamError('Error finding team member', 400, 'TEAM_SEARCH_ERROR');
+                throw new team_error_1.TeamError("Error finding team member", 400, "TEAM_SEARCH_ERROR");
             }
         });
     }
@@ -143,31 +171,31 @@ class TeamRepository {
                             {
                                 name: {
                                     contains: searchTerm,
-                                    mode: 'insensitive',
+                                    mode: "insensitive",
                                 },
                             },
                             {
                                 position: {
                                     contains: searchTerm,
-                                    mode: 'insensitive',
+                                    mode: "insensitive",
                                 },
                             },
                             {
                                 bio: {
                                     contains: searchTerm,
-                                    mode: 'insensitive',
+                                    mode: "insensitive",
                                 },
                             },
                             {
                                 email: {
                                     contains: searchTerm,
-                                    mode: 'insensitive',
+                                    mode: "insensitive",
                                 },
                             },
                             {
                                 slug: {
                                     contains: searchTerm,
-                                    mode: 'insensitive',
+                                    mode: "insensitive",
                                 },
                             },
                         ],
@@ -178,14 +206,14 @@ class TeamRepository {
                     skip: skip * take,
                     take,
                     orderBy: {
-                        createdAt: 'desc',
+                        createdAt: "desc",
                     },
                 });
                 return teamMembers;
             }
             catch (error) {
                 console.error(error);
-                throw new team_error_1.TeamError('Error searching team member', 400, 'TEAM_SEARCH_ERROR');
+                throw new team_error_1.TeamError("Error searching team member", 400, "TEAM_SEARCH_ERROR");
             }
         });
     }
@@ -197,22 +225,22 @@ class TeamRepository {
                         lower: true,
                     });
                     if (!slug)
-                        throw new Error('error create slug');
+                        throw new Error("error create slug");
                     let imageId = null;
                     // Upload image if provided
                     if (data.image) {
                         const createImage = yield (0, helpers_1.UploadImage)(data.image, data.name);
                         if (!createImage)
-                            throw new Error('error upload image');
+                            throw new Error("error upload image");
                         const imageToDB = yield (0, helpers_1.AssignImageToDBImage)({
-                            imageType: 'TEAM',
+                            imageType: "TEAM",
                             blurhash: createImage.blurhash,
                             width: createImage.width,
                             height: createImage.height,
                             data: createImage.data,
                         }, tx);
                         if (!imageToDB)
-                            throw new Error('error create imageToDB');
+                            throw new Error("error create imageToDB");
                         imageId = imageToDB.id;
                     }
                     const teamMember = yield tx.teamMember.create({
@@ -239,14 +267,14 @@ class TeamRepository {
                     return { Image: image, teamMember: rest };
                 }), {
                     timeout: 20000,
-                    isolationLevel: 'Serializable',
+                    isolationLevel: "Serializable",
                     maxWait: 5000,
                 });
                 return transaction;
             }
             catch (error) {
                 console.error(error);
-                throw new Error('Error creating team member');
+                throw new Error("Error creating team member");
             }
         });
     }
@@ -257,15 +285,15 @@ class TeamRepository {
                     var _a, _b, _c;
                     let NewImageId = null;
                     if (!data.teamId)
-                        throw new Error('no teamId provided');
+                        throw new Error("no teamId provided");
                     const teamMember = yield prismaTx.teamMember.findUnique({
                         where: { id: data.teamId },
                     });
                     if (!teamMember)
-                        throw new Error('team member not found');
+                        throw new Error("team member not found");
                     NewImageId = (teamMember === null || teamMember === void 0 ? void 0 : teamMember.imageId) || null;
                     // Handle image update/removal
-                    if (data.imageState === 'REMOVE') {
+                    if (data.imageState === "REMOVE") {
                         if (teamMember.imageId) {
                             yield prismaTx.teamMember.update({
                                 where: { id: data.teamId },
@@ -275,7 +303,7 @@ class TeamRepository {
                         }
                         NewImageId = null;
                     }
-                    if (data.imageState === 'UPDATE') {
+                    if (data.imageState === "UPDATE") {
                         if (teamMember.imageId) {
                             yield prismaTx.teamMember.update({
                                 where: { id: data.teamId },
@@ -284,19 +312,19 @@ class TeamRepository {
                             yield (0, helpers_1.deleteImageById)(teamMember.imageId, prismaTx);
                         }
                         if (!data.image)
-                            throw new Error('no image provided');
-                        const createImage = yield (0, helpers_1.UploadImage)(data.image, data.name || 'update');
+                            throw new Error("no image provided");
+                        const createImage = yield (0, helpers_1.UploadImage)(data.image, data.name || "update");
                         if (!createImage)
-                            throw new Error('error upload image');
+                            throw new Error("error upload image");
                         const imageToDB = yield (0, helpers_1.AssignImageToDBImage)({
-                            imageType: 'TEAM',
+                            imageType: "TEAM",
                             blurhash: createImage.blurhash,
                             width: createImage.width,
                             height: createImage.height,
                             data: createImage.data,
                         }, prismaTx);
                         if (!imageToDB)
-                            throw new Error('error create imageToDB');
+                            throw new Error("error create imageToDB");
                         NewImageId = imageToDB.id;
                     }
                     // Generate new slug if name changed
@@ -336,7 +364,7 @@ class TeamRepository {
             }
             catch (error) {
                 console.error(error);
-                throw new Error('Error updating team member');
+                throw new Error("Error updating team member");
             }
         });
     }
@@ -345,10 +373,10 @@ class TeamRepository {
             try {
                 const transaction = yield this.prisma.$transaction((prismaTx) => __awaiter(this, void 0, void 0, function* () {
                     const teamMember = yield prismaTx.teamMember.findUnique({
-                        where: { id }
+                        where: { id },
                     });
                     if (!teamMember)
-                        throw new Error('team member not found');
+                        throw new Error("team member not found");
                     yield prismaTx.teamMember.update({
                         where: { id },
                         data: { imageId: null },
@@ -365,7 +393,7 @@ class TeamRepository {
             }
             catch (error) {
                 console.error(error);
-                throw new Error('Error deleting team member');
+                throw new Error("Error deleting team member");
             }
         });
     }

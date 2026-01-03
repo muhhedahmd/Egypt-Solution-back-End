@@ -29,6 +29,26 @@ export class TeamController {
       next(error);
     }
   }
+  async getAllTeamMembersActive(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { skip, take, isFeatured } = req.query;
+
+      const teamMembers = await this.teamLogic.getAllTeamMembersActive({
+        skip: Number(skip) || 0,
+        take: Number(take) || 10,
+        isFeatured: isFeatured === 'true',
+      });
+
+      if (!teamMembers) throw new TeamNotFoundError('error get team members');
+
+      return res.json({
+        ...teamMembers,
+        message: 'team members fetched successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 
   async getTeamMemberById(req: Request, res: Response, next: NextFunction) {
     try {

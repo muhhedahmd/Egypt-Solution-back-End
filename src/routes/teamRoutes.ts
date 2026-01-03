@@ -21,6 +21,7 @@ export class teamRoutes {
     };
 
     this.router.get("/", asyncHandler(this.controller.getAllTeamMembers.bind(this.controller)));
+    this.router.get("/active", asyncHandler(this.controller.getAllTeamMembersActive.bind(this.controller)));
 
     this.router.get(
       "/search",

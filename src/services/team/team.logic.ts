@@ -52,6 +52,32 @@ export class TeamLogic {
       },
     };
   }
+  async getAllTeamMembersActive(
+    params: PaginationParams & { isFeatured?: boolean }
+  ): Promise<PaginatedResponse<ITeamMember>> {
+    const skip = params.skip || 0;
+    const take = params.take || 10;
+    const isFeatured = params.isFeatured || false;
+
+    const [teamMembers, totalItems] = await Promise.all([
+      this.repository.findManyActive(skip, take, isFeatured),
+      this.repository.ActiveCount(isFeatured),
+    ]);
+
+    const remainingItems = totalItems - (skip * take + teamMembers.length);
+
+    return {
+      data: teamMembers ,
+      pagination: {
+        totalItems,
+        remainingItems,
+        nowCount: teamMembers.length,
+        totalPages: Math.ceil(totalItems / take),
+        currentPage: skip + 1,
+        pageSize: take,
+      },
+    };
+  }
 
   async getTeamMemberById(id: string): Promise<any> {
     this.validator.validateId(id);

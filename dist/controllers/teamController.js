@@ -32,6 +32,24 @@ class TeamController {
             }
         });
     }
+    getAllTeamMembersActive(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { skip, take, isFeatured } = req.query;
+                const teamMembers = yield this.teamLogic.getAllTeamMembersActive({
+                    skip: Number(skip) || 0,
+                    take: Number(take) || 10,
+                    isFeatured: isFeatured === 'true',
+                });
+                if (!teamMembers)
+                    throw new team_error_1.TeamNotFoundError('error get team members');
+                return res.json(Object.assign(Object.assign({}, teamMembers), { message: 'team members fetched successfully' }));
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
     getTeamMemberById(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {

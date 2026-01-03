@@ -60,6 +60,29 @@ class TeamLogic {
             };
         });
     }
+    getAllTeamMembersActive(params) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const skip = params.skip || 0;
+            const take = params.take || 10;
+            const isFeatured = params.isFeatured || false;
+            const [teamMembers, totalItems] = yield Promise.all([
+                this.repository.findManyActive(skip, take, isFeatured),
+                this.repository.ActiveCount(isFeatured),
+            ]);
+            const remainingItems = totalItems - (skip * take + teamMembers.length);
+            return {
+                data: teamMembers,
+                pagination: {
+                    totalItems,
+                    remainingItems,
+                    nowCount: teamMembers.length,
+                    totalPages: Math.ceil(totalItems / take),
+                    currentPage: skip + 1,
+                    pageSize: take,
+                },
+            };
+        });
+    }
     getTeamMemberById(id) {
         return __awaiter(this, void 0, void 0, function* () {
             this.validator.validateId(id);

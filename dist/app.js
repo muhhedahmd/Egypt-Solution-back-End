@@ -75,7 +75,7 @@ const CompanyInfoModule = new settingsModule_1.CompanyInfoModule(prisma_1.defaul
 app.use("/api/company-info", CompanyInfoModule.getRoutes());
 const HeroModule = new hero_modules_1.HeroModule(prisma_1.default);
 app.use("/api/hero", HeroModule.getRoutes());
-// ***
+// *** 
 const AnalyticModule = new analytic_module_1.AnalyticModule(prisma_1.default);
 app.use("/api/analytics", AnalyticModule.getRoutes());
 app.use(errorHandler_1.errorHandler);

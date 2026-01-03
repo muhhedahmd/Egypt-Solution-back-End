@@ -1,23 +1,23 @@
-
-import slugify from 'slugify';
-import { randomUUID } from 'crypto';
-import { PrismaClientConfig } from '../../config/prisma';
+import slugify from "slugify";
+import { randomUUID } from "crypto";
+import { PrismaClientConfig } from "../../config/prisma";
 import {
   deleteImageById,
   UploadImage,
   AssignImageToDBImage,
-} from '../../lib/helpers';
+} from "../../lib/helpers";
 import {
   CreateTeamMemberDTO,
   UpdateTeamMember,
   InterFaceSearchTeamMember,
-} from '../../types/team';
-import { TeamError } from '../../errors/team.error';
+} from "../../types/team";
+import { TeamError } from "../../errors/team.error";
 
 export class TeamRepository {
   constructor(private prisma: PrismaClientConfig) {}
 
   async findMany(skip: number, take: number) {
+
     return this.prisma.teamMember.findMany({
       include: {
         image: true,
@@ -30,7 +30,32 @@ export class TeamRepository {
       skip: skip * take,
       take: take,
       orderBy: {
-        order: 'asc',
+        order: "asc",
+      },
+    });
+  }
+  async ActiveCount(isFeatured?: boolean) {
+    return this.prisma.teamMember.count({
+      where: {
+        isActive: true,
+        isFeatured: isFeatured || false,
+      },
+    });
+  }
+  async findManyActive(skip: number, take: number, isFeatured: boolean) {
+
+    return this.prisma.teamMember.findMany({
+      where: {
+        isActive: true,
+        isFeatured: isFeatured || false,
+      },
+      include: {
+        image: true,
+      },
+      skip: skip * take,
+      take: take,
+      orderBy: {
+        order: "asc",
       },
     });
   }
@@ -46,7 +71,7 @@ export class TeamRepository {
       };
     } catch (error) {
       console.error(error);
-      throw new Error('Error finding team member by order');
+      throw new Error("Error finding team member by order");
     }
   }
 
@@ -69,7 +94,7 @@ export class TeamRepository {
       });
     } catch (error) {
       console.error(error);
-      throw new Error('Error finding team member by ID');
+      throw new Error("Error finding team member by ID");
     }
   }
 
@@ -84,7 +109,7 @@ export class TeamRepository {
               slideShow: true,
             },
             orderBy: {
-              order: 'asc',
+              order: "asc",
             },
           },
         },
@@ -110,9 +135,9 @@ export class TeamRepository {
     } catch (error) {
       console.error(error);
       throw new TeamError(
-        'Error finding team member',
+        "Error finding team member",
         400,
-        'TEAM_SEARCH_ERROR'
+        "TEAM_SEARCH_ERROR"
       );
     }
   }
@@ -129,31 +154,31 @@ export class TeamRepository {
             {
               name: {
                 contains: searchTerm,
-                mode: 'insensitive',
+                mode: "insensitive",
               },
             },
             {
               position: {
                 contains: searchTerm,
-                mode: 'insensitive',
+                mode: "insensitive",
               },
             },
             {
               bio: {
                 contains: searchTerm,
-                mode: 'insensitive',
+                mode: "insensitive",
               },
             },
             {
               email: {
                 contains: searchTerm,
-                mode: 'insensitive',
+                mode: "insensitive",
               },
             },
             {
               slug: {
                 contains: searchTerm,
-                mode: 'insensitive',
+                mode: "insensitive",
               },
             },
           ],
@@ -164,7 +189,7 @@ export class TeamRepository {
         skip: skip * take,
         take,
         orderBy: {
-          createdAt: 'desc',
+          createdAt: "desc",
         },
       });
 
@@ -172,9 +197,9 @@ export class TeamRepository {
     } catch (error) {
       console.error(error);
       throw new TeamError(
-        'Error searching team member',
+        "Error searching team member",
         400,
-        'TEAM_SEARCH_ERROR'
+        "TEAM_SEARCH_ERROR"
       );
     }
   }
@@ -186,18 +211,18 @@ export class TeamRepository {
           const slug = slugify(data.name + randomUUID().substring(0, 8), {
             lower: true,
           });
-          if (!slug) throw new Error('error create slug');
+          if (!slug) throw new Error("error create slug");
 
           let imageId: string | null = null;
 
           // Upload image if provided
           if (data.image) {
             const createImage = await UploadImage(data.image, data.name);
-            if (!createImage) throw new Error('error upload image');
+            if (!createImage) throw new Error("error upload image");
 
             const imageToDB = await AssignImageToDBImage(
               {
-                imageType: 'TEAM',
+                imageType: "TEAM",
                 blurhash: createImage.blurhash,
                 width: createImage.width,
                 height: createImage.height,
@@ -205,7 +230,7 @@ export class TeamRepository {
               },
               tx
             );
-            if (!imageToDB) throw new Error('error create imageToDB');
+            if (!imageToDB) throw new Error("error create imageToDB");
             imageId = imageToDB.id;
           }
 
@@ -235,14 +260,14 @@ export class TeamRepository {
         },
         {
           timeout: 20000,
-          isolationLevel: 'Serializable',
+          isolationLevel: "Serializable",
           maxWait: 5000,
         }
       );
       return transaction;
     } catch (error) {
       console.error(error);
-      throw new Error('Error creating team member');
+      throw new Error("Error creating team member");
     }
   }
 
@@ -252,18 +277,18 @@ export class TeamRepository {
         async (prismaTx) => {
           let NewImageId: string | null = null;
 
-          if (!data.teamId) throw new Error('no teamId provided');
+          if (!data.teamId) throw new Error("no teamId provided");
 
           const teamMember = await prismaTx.teamMember.findUnique({
             where: { id: data.teamId },
           });
 
-          if (!teamMember) throw new Error('team member not found');
+          if (!teamMember) throw new Error("team member not found");
 
           NewImageId = teamMember?.imageId || null;
 
           // Handle image update/removal
-          if (data.imageState === 'REMOVE') {
+          if (data.imageState === "REMOVE") {
             if (teamMember.imageId) {
               await prismaTx.teamMember.update({
                 where: { id: data.teamId },
@@ -274,7 +299,7 @@ export class TeamRepository {
             NewImageId = null;
           }
 
-          if (data.imageState === 'UPDATE') {
+          if (data.imageState === "UPDATE") {
             if (teamMember.imageId) {
               await prismaTx.teamMember.update({
                 where: { id: data.teamId },
@@ -283,18 +308,18 @@ export class TeamRepository {
               await deleteImageById(teamMember.imageId, prismaTx);
             }
 
-            if (!data.image) throw new Error('no image provided');
+            if (!data.image) throw new Error("no image provided");
 
             const createImage = await UploadImage(
               data.image,
-              data.name || 'update'
+              data.name || "update"
             );
 
-            if (!createImage) throw new Error('error upload image');
+            if (!createImage) throw new Error("error upload image");
 
             const imageToDB = await AssignImageToDBImage(
               {
-                imageType: 'TEAM',
+                imageType: "TEAM",
                 blurhash: createImage.blurhash,
                 width: createImage.width,
                 height: createImage.height,
@@ -303,7 +328,7 @@ export class TeamRepository {
               prismaTx
             );
 
-            if (!imageToDB) throw new Error('error create imageToDB');
+            if (!imageToDB) throw new Error("error create imageToDB");
             NewImageId = imageToDB.id;
           }
 
@@ -348,7 +373,7 @@ export class TeamRepository {
       return transaction;
     } catch (error) {
       console.error(error);
-      throw new Error('Error updating team member');
+      throw new Error("Error updating team member");
     }
   }
 
@@ -356,17 +381,17 @@ export class TeamRepository {
     try {
       const transaction = await this.prisma.$transaction(
         async (prismaTx) => {
-          const teamMember = await prismaTx.teamMember.findUnique({ 
-            where: { id } 
+          const teamMember = await prismaTx.teamMember.findUnique({
+            where: { id },
           });
-          if (!teamMember) throw new Error('team member not found');
+          if (!teamMember) throw new Error("team member not found");
 
           await prismaTx.teamMember.update({
             where: { id },
             data: { imageId: null },
           });
 
-          if (teamMember.imageId) 
+          if (teamMember.imageId)
             await deleteImageById(teamMember.imageId, prismaTx);
 
           await prismaTx.teamMember.delete({ where: { id } });
@@ -380,7 +405,7 @@ export class TeamRepository {
       return transaction;
     } catch (error) {
       console.error(error);
-      throw new Error('Error deleting team member');
+      throw new Error("Error deleting team member");
     }
   }
 }
