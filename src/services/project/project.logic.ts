@@ -10,7 +10,9 @@ import {
   ProjectTechnology,
   ProjectStatus,
   Image,
+  Service,
 } from "@prisma/client";
+import { UpdateProjectDTO } from "../../types/project";
 
 // ==================== PROJECT LOGIC ====================
 export class projectLogic {
@@ -120,7 +122,8 @@ export class projectLogic {
       ReturnType<typeof this.repository.CreateProjecAndAssignTechnologies>
     >
   > {
-    const validData = this.validator.validateCreateProjectAndAssignTechsAndServices(data);
+    const validData =
+      this.validator.validateCreateProjectAndAssignTechsAndServices(data);
 
     const ProjectWithTechs =
       await this.repository.CreateProjecAndAssignTechnologies(validData);
@@ -189,9 +192,8 @@ export class projectLogic {
   }
 
   async createProjectAndTechnologies(
-    data: unknown // : Promise<{
-  ) // createdProject: {
-  // project: Project;
+    data: unknown // : Promise<{ // createdProject: {
+  ) // project: Project;
   // Image: Image | null;
   // };
   // createdTechnologies: Technology[];
@@ -279,9 +281,11 @@ export class projectLogic {
   async searchProjects(
     searchTerm: string,
     params: PaginationParams
-  ): Promise<PaginatedResponse< 
-  Awaited< ReturnType < typeof this.repository.searchProjects > > 
-  >> {
+  ): Promise<
+    PaginatedResponse<
+      Awaited<ReturnType<typeof this.repository.searchProjects>>
+    >
+  > {
     this.validator.validatePagination(params);
 
     if (!searchTerm || searchTerm.trim().length === 0) {
@@ -302,9 +306,8 @@ export class projectLogic {
 
     const remainingItems = totalItems - (skip * take + projects.length);
 
-  
     return {
-     data: projects as any,
+      data: projects as any,
 
       pagination: {
         totalItems,
@@ -442,6 +445,40 @@ export class projectLogic {
     const technology = await this.repository.updateTechnology(id, validData);
     return technology;
   }
+
+  async updateProjectWithTechsServices(data: unknown): Promise<{
+    project: Project;
+    image: Image | null;
+    technologies: Technology[];
+    services: Service[];
+  }> {
+    // Validate input
+    const validatedData =
+      this.validator.validateUpdateProjectWithTechsServices(data);
+
+    // Extract project data and relationship changes
+    const {
+      id,
+      deletedTechIds,
+      newTechIds,
+      deletedServiceIds,
+      newServiceIds,
+      ...projectData
+    } = validatedData;
+
+    // Call repository method
+    const result = await this.repository.updateProjectWithTechsServices({
+      id,
+      projectData: projectData as UpdateProjectDTO,
+      deletedTechIds,
+      newTechIds,
+      deletedServiceIds,
+      newServiceIds,
+    });
+
+    return result;
+  }
+
   async deleteTechnology(id: string): Promise<Technology> {
     this.validator.validateId(id);
     const technology = await this.repository.deleteTechnology(id);

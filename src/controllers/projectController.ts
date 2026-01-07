@@ -126,6 +126,36 @@ export class projectController {
       next(error);
     }
   }
+async updateProjectWithTechsServices(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const id = req.params.id;
+    const file = req.file; // From multer
+    const body = req.body;
+
+    const updated = await this.logic.updateProjectWithTechsServices({
+      ...body,
+      id,
+      image: file?.buffer,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Project updated successfully with technologies and services",
+      data: {
+        project: updated.project,
+        image: updated.image,
+        technologies: updated.technologies,
+        services: updated.services,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
 
   async deleteProject(req: Request, res: Response, next: NextFunction) {
     try {
@@ -143,7 +173,6 @@ export class projectController {
   }
 
   async searchProjects(req: Request, res: Response, next: NextFunction) {
-
     try {
       const { skip, take, q } = req.query;
 
@@ -419,20 +448,7 @@ export class projectController {
     try {
       // const project = req.body.project;
       // const technology = req.body.technologies;
-      const { technologies,  services, ...project  } = req.body;
-
-
-      console.log({
-        project: {
-          ...project,
-          image:
-            Array?.isArray(req?.files) && req?.files
-              ? req?.files?.[0]?.buffer
-              : undefined,
-        },
-        technologies: technologies ? JSON.parse(technologies) : [],
-        services: technologies ? JSON.parse(services) : [],
-      });
+      const { technologyIds, serviceIds, ...project } = req.body;
 
       const created = await this.logic.createProjectAndAssignTechnology({
         project: {
@@ -441,10 +457,10 @@ export class projectController {
             Array?.isArray(req?.files) && req?.files
               ? req?.files?.[0]?.buffer
               : undefined,
+          order: 0,
         },
-        technologies: technologies ? JSON.parse(technologies) : [],
-                services: technologies ? JSON.parse(services) : [],
-
+        technologies: technologyIds ? JSON.parse(technologyIds) : [],
+        services: serviceIds ? JSON.parse(serviceIds) : [],
       });
       return res.status(200).json({
         success: true,

@@ -7,13 +7,14 @@ export class ContactController {
 
   async cerateContact(req: Request, res: Response, next: NextFunction) {
     try {
-        const body = req.body;
-        const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-        const userAgent = req.headers['user-agent'];
+      const body = req.body;
+      const ipAddress =
+        req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+      const userAgent = req.headers["user-agent"];
       const newContact = await this.logic.create({
         ...body,
         ipAddress,
-        userAgent
+        userAgent,
       });
 
 
@@ -28,7 +29,6 @@ export class ContactController {
   }
 
   async getPagnittedContacts(req: Request, res: Response, next: NextFunction) {
-
     try {
       const { skip, take } = req.query;
       const contacts = await this.logic.getPagnittedMany({
@@ -59,13 +59,16 @@ export class ContactController {
   }
 
   async searchContacts(req: Request, res: Response, next: NextFunction) {
-
     try {
       const { skip, take, q } = req.query;
       if (typeof q !== "string") {
         throw new ContactError("Query parameter 'q' must be a string");
       }
-      const contacts = await this.logic.searchContacts(q , Number(skip) || 0, Number(take) || 10);
+      const contacts = await this.logic.searchContacts(
+        q,
+        Number(skip) || 0,
+        Number(take) || 10
+      );
       return res.status(200).json({
         success: true,
         message: "Contacts fetched successfully",
@@ -76,29 +79,27 @@ export class ContactController {
     }
   }
   async getStats(req: Request, res: Response, next: NextFunction) {
-    
-
     try {
-      const stats = await this.logic.getStats()
+      const stats = await this.logic.getStats();
 
       return res.status(200).json({
         success: true,
         message: "Contact stats fetched successfully",
         data: stats,
-      })
+      });
     } catch (error) {
-      next(error)
+      next(error);
     }
   }
 
   async multiFilter(req: Request, res: Response, next: NextFunction) {
-    
     try {
-      const { skip = 0, take = 10 } = req.query
-      const { ...filters} = req.body
-    
-      const filtersTyped: Partial<Record<string, any>> = Object.entries(filters)
-        .reduce((acc: Record<string, any>, [key , value ] ) => {
+      const { skip = 0, take = 10 } = req.query;
+      const { ...filters } = req.body;
+
+      const filtersTyped: Partial<Record<string, any>> = Object.entries(
+        filters
+      ).reduce((acc: Record<string, any>, [key, value]) => {
         acc[key as string] = value;
         return acc;
       }, {});
@@ -107,15 +108,14 @@ export class ContactController {
         filtersTyped,
         Number(skip),
         Number(take)
-      )
+      );
 
       return res.status(200).json({
         success: true,
         ...result,
-      })
+      });
     } catch (error) {
-      next(error)
-
+      next(error);
     }
   }
 
@@ -151,8 +151,8 @@ export class ContactController {
   async replay(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const { response  , subject, message} = req.body;
-      const replay = await this.logic.replay({id, response, });
+      const { response, subject, message } = req.body;
+      const replay = await this.logic.replay({ id, response });
       return res.status(200).json({
         success: true,
         message: "Contact replayed successfully",
@@ -162,6 +162,4 @@ export class ContactController {
       next(error);
     }
   }
-
-
 }

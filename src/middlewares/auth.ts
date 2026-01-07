@@ -67,7 +67,8 @@ export const requireAuthv2 = async (
         id: decoded.userId,
       },
       select :{
-        id: true
+        id: true, 
+        role : true 
       }
     })
 
@@ -75,6 +76,8 @@ export const requireAuthv2 = async (
       return res.status(401).json({ error: "Unauthorized" });
     }
     
+    if(findUser.role !== "ADMIN") return res.status(401).json({ error: "you do not have permission" });
+
     req.user = {
       email: decoded.email,
       id: decoded.userId,

@@ -152,6 +152,75 @@ export class ProjectsValidator {
     ),
   });
 
+
+  private updateProjectWithTechsServicesSchema = z.object({
+  id: z.string().cuid("Invalid project ID"),
+  // Project fields
+  title: z.string().min(3).max(200).optional(),
+  description: z.string().min(10).max(500).optional(),
+  richDescription: z.string().min(10).optional(),
+  clientName: z.string().max(100).optional(),
+  clientCompany: z.string().max(100).optional(),
+  projectUrl: z.string().url("Invalid project URL").optional(),
+  githubUrl: z.string().url("Invalid GitHub URL").optional(),
+  status: z.enum(["COMPLETED", "IN_PROGRESS", "PLANNING", "ON_HOLD"]).optional(),
+  startDate: z.preprocess((val) => {
+    if (typeof val === "string") return new Date(val);
+    return val;
+  }, z.date().optional()),
+  endDate: z.preprocess((val) => {
+    if (typeof val === "string") return new Date(val);
+    return val;
+  }, z.date().optional()),
+  image: z.instanceof(Buffer).optional(),
+  imageState: z.enum(["KEEP", "REMOVE", "UPDATE"]).default("KEEP"),
+  isFeatured: z.preprocess(
+    (val) => val === "true" || val === true,
+    z.boolean().optional()
+  ),
+  order: z.preprocess(
+    (val) => (typeof val === "string" ? parseInt(val, 10) : val),
+    z.number().int().min(0).optional()
+  ),
+  // Relationship updates
+  deletedTechIds: z.preprocess(
+    (val) => (typeof val === "string" ? JSON.parse(val) : val),
+    z.array(z.string().cuid()).default([])
+  ),
+  newTechIds: z.preprocess(
+    (val) => (typeof val === "string" ? JSON.parse(val) : val),
+    z.array(z.string().cuid()).default([])
+  ),
+  deletedServiceIds: z.preprocess(
+    (val) => (typeof val === "string" ? JSON.parse(val) : val),
+    z.array(z.string().cuid()).default([])
+  ),
+  newServiceIds: z.preprocess(
+    (val) => (typeof val === "string" ? JSON.parse(val) : val),
+    z.array(z.string().cuid()).default([])
+  ),
+});
+
+validateUpdateProjectWithTechsServices(data: unknown) {
+  try {
+    return this.updateProjectWithTechsServicesSchema.parse(data);
+  } catch (error : any) {
+    if ((error as any) instanceof ZodError) {
+      const messages = error?.errors?.map((e :any) => `${e.path.join(".")}: ${e.message}`).join(", ");
+      throw new ServiceValidationError(
+        "Invalid project update data",
+        messages,
+        "PROJECT_UPDATE_VALIDATION_ERROR"
+      );
+    }
+    throw new ServiceValidationError(
+      "Invalid project update data",
+      undefined,
+      "PROJECT_UPDATE_VALIDATION_ERROR"
+    );
+  }
+}
+
   validateCreateProjectAndAssignTechsAndServices(data: unknown): {
     project: CreateProjectDTO;
     technologies?: string[];

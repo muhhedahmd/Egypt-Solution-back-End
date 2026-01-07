@@ -61,7 +61,6 @@ export class ContactLogic {
     data: unknown
   ): Promise<Awaited<ReturnType<typeof this.ContactRepostery.create>>> {
     const validatedData = this.ContactValidator.createContactValidation(data);
-    console.log("validatedData", validatedData);
     const newContact = await this.ContactRepostery.create({
       ...validatedData,
     });

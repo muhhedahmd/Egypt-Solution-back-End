@@ -62,9 +62,9 @@ export class ContactValidator {
           "OTHER",
         ])
         .default("GENERAL_INQUIRY"),
-      serviceId: z.string().cuid("Invalid service ID format").nullable(),
-      budget: z.string().min(1, "Budget must not be empty").max(255).default("").nullable(),
-      timeline: z.string().min(1, "Timeline must not be empty").max(255).default("").nullable(),
+      serviceId: z.string().cuid("Invalid service ID format").optional().nullable(),
+      budget: z.string().min(1, "Budget must not be empty").max(255).default("").optional().nullable(),
+      timeline: z.string().min(1, "Timeline must not be empty").max(255).default("").optional().nullable(),
       status: z.enum(["NEW", "READ", "IN_PROGRESS", "RESOLVED", "CLOSED"]) .default("NEW"),
       priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
       ipAddress: z.string().default("").nullable(),

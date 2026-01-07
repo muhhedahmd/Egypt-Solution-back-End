@@ -98,10 +98,6 @@ export class slideShowLogic {
       );
 
     const { slides, ...rest } = valid;
-    console.log({
-      slides,
-      rest,
-    });
 
     const createdAndAttached = await this.repository.createAndAttachMany({
       slides: slides.map((slide) => ({
@@ -119,8 +115,6 @@ export class slideShowLogic {
   //*** */
   async bulkSlideOperations(data: unknown) {
 
-  // Validate the data structure
-  console.log(data)
   const valid = this.validator.validateBulkSlideOperations(data);
   
   if (!valid) {
@@ -154,7 +148,6 @@ export class slideShowLogic {
   async updateAndAttachMany(
     data: unknown
   ) {
-    console.log(data)
     const valid = this.validator.validUpdateAndAttachManySchema(data);
     if (!valid)
       throw new ServiceError(
@@ -299,7 +292,6 @@ export class slideShowLogic {
 
       const totalItems = count;
       const remainingItems = totalItems - (skip * take + attaches.length);
-      console.log({ attaches });
       return {
         data: attaches,
         pagination: {
@@ -337,7 +329,6 @@ export class slideShowLogic {
       const validateType = this.validator.validateModelNaming({ type });
       const validateId = this.validator.validateId(slideShowId);
 
-      console.log(validatePagination, validateType, validateId);
       const [attaches, count] = await Promise.all([
         await this.repository.getAttachesByType({
           ...validatePagination,
@@ -350,7 +341,6 @@ export class slideShowLogic {
         }),
       ]);
 
-      console.log(attaches.length, count, "Ss");
       const totalItems = +count;
       const remainingItems = totalItems - (skip * take + attaches.length);
       return {

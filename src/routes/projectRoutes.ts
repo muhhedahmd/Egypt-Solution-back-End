@@ -172,6 +172,11 @@ export class projectRoutes {
       asyncHandler(requireAuthv2),
       asyncHandler(this.controller.updateProject.bind(this.controller))
     );
+    this.router.put(
+      "/update-project-bulk/:id",
+      asyncHandler(requireAuthv2),
+      asyncHandler(this.controller.updateProjectWithTechsServices.bind(this.controller))
+    );
 
     // Delete project
     this.router.delete(

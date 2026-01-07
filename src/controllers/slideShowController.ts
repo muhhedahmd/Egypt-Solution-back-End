@@ -146,7 +146,6 @@ export class slideShowController {
   async CreateAndAttachMany(req: Request, res: Response, next: NextFunction) {
     try {
       const body = req.body;
-      console.log(body)
       const created = await this.logic.createAndAttachMany(body);
       
       return res.status(200).json({
@@ -184,7 +183,6 @@ export class slideShowController {
       const body = req.body;
       const { id  } = req.params;
       if(!id) throw new ServiceError("id is required" , 400 , "ID_NOT_FOUND");
-      console.log({...body , id })
       const updated = await this.logic.updateAndAttachMany({...body , id });
       return res.status(200).json({
         success: true,
@@ -270,7 +268,6 @@ export class slideShowController {
   }
   async getSlideShowsByType(req: Request, res: Response, next: NextFunction) {
     try {
-      console.log("triggered");
       const { skip, take } = req.query;
 
       const {
@@ -303,12 +300,7 @@ export class slideShowController {
         type: SlideshowType;
       } = req.body;
       const { id } = req.params;
-      console.log({
-        skip,
-        take,
-        type,
-        id,
-      });
+  
       const data = await this.logic.getAttachesByType({
         skip,
         take,
@@ -327,7 +319,6 @@ export class slideShowController {
   async deAttachMany(req: Request, res: Response, next: NextFunction) {
     try {
       const body = req.body;
-      console.log(body);
       const updated = await this.logic.deattchMany(body);
       return res.status(200).json({
         success: true,
@@ -342,7 +333,6 @@ export class slideShowController {
     try {
       const body = req.body;
       const updated = await this.logic.reorderBulkSlideShow(body);
-      console.log(updated)
       return res.status(200).json({
         success: true,
         message: "Slideshow reordered successfully",

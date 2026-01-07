@@ -546,6 +546,234 @@ export class projectRepository {
     }
   }
 
+  // *** 
+  async updateProjectWithTechsServices(data: {
+  id: string;
+  projectData: UpdateProjectDTO;
+  deletedTechIds: string[];
+  newTechIds: string[];
+  deletedServiceIds: string[];
+  newServiceIds: string[];
+}): Promise<{
+  project: Project;
+  image: Image | null;
+  technologies: Technology[];
+  services: Service[];
+}> {
+  try {
+    const transaction = await this.prisma.$transaction(
+      async (tx) => {
+        // 1. Update the project itself
+        let imageId: string | null = null;
+        const existingProject = await this.findById(data.id, tx);
+        
+        if (!existingProject) {
+          throw new ServiceError("Project not found", 404, "PROJECT_NOT_FOUND");
+        }
+
+        imageId = existingProject.imageId;
+
+        // Handle image updates
+        if (data.projectData.imageState === "REMOVE" && imageId) {
+          await tx.project.update({
+            where: { id: data.id },
+            data: { imageId: null },
+          });
+          await deleteImageById(imageId, tx);
+          imageId = null;
+        }
+
+        if (data.projectData.imageState === "UPDATE") {
+          if (imageId) {
+            await tx.project.update({
+              where: { id: data.id },
+              data: { imageId: null },
+            });
+            await deleteImageById(imageId, tx);
+          }
+
+          if (data.projectData.image) {
+            const uploadedImage = await UploadImage(
+              data.projectData.image,
+              data.projectData.title || existingProject.title
+            );
+            
+            if (!uploadedImage) {
+              throw new ServiceError("Failed to upload image", 400, "IMAGE_UPLOAD_ERROR");
+            }
+
+            const dbImage = await AssignImageToDBImage(
+              {
+                imageType: "PROJECT",
+                blurhash: uploadedImage.blurhash,
+                width: uploadedImage.width,
+                height: uploadedImage.height,
+                data: uploadedImage.data,
+              },
+              tx
+            );
+            imageId = dbImage.id;
+          }
+        }
+
+        // Generate new slug if title changed
+        let slug = existingProject.slug;
+        if (data.projectData.title && data.projectData.title !== existingProject.title) {
+          slug = slugify(data.projectData.title + randomUUID().substring(0, 8), {
+            lower: true,
+          });
+        }
+
+        // Handle order changes
+        if (
+          data.projectData.order !== undefined &&
+          data.projectData.order !== existingProject.order
+        ) {
+          await this.reorderUpdate({
+            projectUpdate: { ...existingProject, order: data.projectData.order },
+            orderBeforeUpdate: existingProject.order,
+          });
+        }
+
+        // Update project
+        const updatedProject = await tx.project.update({
+          where: { id: data.id },
+          data: {
+            title: data.projectData.title ?? existingProject.title,
+            description: data.projectData.description ?? existingProject.description,
+            richDescription: data.projectData.richDescription ?? existingProject.richDescription,
+            clientName: data.projectData.clientName ?? existingProject.clientName,
+            clientCompany: data.projectData.clientCompany ?? existingProject.clientCompany,
+            projectUrl: data.projectData.projectUrl ?? existingProject.projectUrl,
+            githubUrl: data.projectData.githubUrl ?? existingProject.githubUrl,
+            status: data.projectData.status ?? existingProject.status,
+            startDate: data.projectData.startDate ?? existingProject.startDate,
+            endDate: data.projectData.endDate ?? existingProject.endDate,
+            isFeatured: data.projectData.isFeatured ?? existingProject.isFeatured,
+            order: data.projectData.order ?? existingProject.order,
+            imageId,
+            slug,
+          },
+          include: {
+            image: true,
+          },
+        });
+
+        // 2. Handle technology deletions
+        if (data.deletedTechIds.length > 0) {
+          await tx.projectTechnology.deleteMany({
+            where: {
+              projectId: data.id,
+              technologyId: { in: data.deletedTechIds },
+            },
+          });
+        }
+
+        // 3. Handle technology additions
+        if (data.newTechIds.length > 0) {
+          // Check if technologies exist
+          const techs = await tx.technology.findMany({
+            where: { id: { in: data.newTechIds } },
+          });
+
+          if (techs.length !== data.newTechIds.length) {
+            throw new ServiceError(
+              "One or more technologies not found",
+              404,
+              "TECHNOLOGY_NOT_FOUND"
+            );
+          }
+
+          // Create new relationships
+          await tx.projectTechnology.createMany({
+            data: data.newTechIds.map((techId) => ({
+              projectId: data.id,
+              technologyId: techId,
+            })),
+            skipDuplicates: true,
+          });
+        }
+
+        // 4. Handle service deletions
+        if (data.deletedServiceIds.length > 0) {
+          await tx.project.update({
+            where: { id: data.id },
+            data: {
+              services: {
+                disconnect: data.deletedServiceIds.map((id) => ({ id })),
+              },
+            },
+          });
+        }
+
+        // 5. Handle service additions
+        if (data.newServiceIds.length > 0) {
+          // Check if services exist
+          const services = await tx.service.findMany({
+            where: { id: { in: data.newServiceIds } },
+          });
+
+          if (services.length !== data.newServiceIds.length) {
+            throw new ServiceError(
+              "One or more services not found",
+              404,
+              "SERVICE_NOT_FOUND"
+            );
+          }
+
+          await tx.project.update({
+            where: { id: data.id },
+            data: {
+              services: {
+                connect: data.newServiceIds.map((id) => ({ id })),
+              },
+            },
+          });
+        }
+
+        // 6. Fetch final state with all relationships
+        const finalProject = await tx.project.findUnique({
+          where: { id: data.id },
+          include: {
+            image: true,
+            technologies: {
+              include: {
+                technology: true,
+              },
+            },
+            services: true,
+          },
+        });
+
+        if (!finalProject) {
+          throw new ServiceError("Failed to retrieve updated project", 500, "PROJECT_RETRIEVAL_ERROR");
+        }
+
+        return {
+          project: finalProject,
+          image: finalProject.image,
+          technologies: finalProject.technologies.map((pt) => pt.technology),
+          services: finalProject.services,
+        };
+      },
+      {
+        timeout: 20000,
+        maxWait: 5000,
+      }
+    );
+
+    return transaction;
+  } catch (error) {
+    console.error("Error updating project with techs/services:", error);
+    if (error instanceof ServiceError) throw error;
+    throw new ServiceError(
+      "Failed to update project",
+      500,
+      "PROJECT_UPDATE_ERROR"
+    );
+  }
+}
+
   async delete(id: string): Promise<Project> {
     try {
       const transaction = await this.prisma.$transaction(
