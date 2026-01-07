@@ -109,6 +109,37 @@ class ProjectsValidator {
                 order: zod_1.z.number().int().min(0).default(0),
             })),
         });
+        this.updateProjectWithTechsServicesSchema = zod_1.z.object({
+            id: zod_1.z.string().cuid("Invalid project ID"),
+            // Project fields
+            title: zod_1.z.string().min(3).max(200).optional(),
+            description: zod_1.z.string().min(10).max(500).optional(),
+            richDescription: zod_1.z.string().min(10).optional(),
+            clientName: zod_1.z.string().max(100).optional(),
+            clientCompany: zod_1.z.string().max(100).optional(),
+            projectUrl: zod_1.z.string().url("Invalid project URL").optional(),
+            githubUrl: zod_1.z.string().url("Invalid GitHub URL").optional(),
+            status: zod_1.z.enum(["COMPLETED", "IN_PROGRESS", "PLANNING", "ON_HOLD"]).optional(),
+            startDate: zod_1.z.preprocess((val) => {
+                if (typeof val === "string")
+                    return new Date(val);
+                return val;
+            }, zod_1.z.date().optional()),
+            endDate: zod_1.z.preprocess((val) => {
+                if (typeof val === "string")
+                    return new Date(val);
+                return val;
+            }, zod_1.z.date().optional()),
+            image: zod_1.z.instanceof(Buffer).optional(),
+            imageState: zod_1.z.enum(["KEEP", "REMOVE", "UPDATE"]).default("KEEP"),
+            isFeatured: zod_1.z.preprocess((val) => val === "true" || val === true, zod_1.z.boolean().optional()),
+            order: zod_1.z.preprocess((val) => (typeof val === "string" ? parseInt(val, 10) : val), zod_1.z.number().int().min(0).optional()),
+            // Relationship updates
+            deletedTechIds: zod_1.z.preprocess((val) => (typeof val === "string" ? JSON.parse(val) : val), zod_1.z.array(zod_1.z.string().cuid()).default([])),
+            newTechIds: zod_1.z.preprocess((val) => (typeof val === "string" ? JSON.parse(val) : val), zod_1.z.array(zod_1.z.string().cuid()).default([])),
+            deletedServiceIds: zod_1.z.preprocess((val) => (typeof val === "string" ? JSON.parse(val) : val), zod_1.z.array(zod_1.z.string().cuid()).default([])),
+            newServiceIds: zod_1.z.preprocess((val) => (typeof val === "string" ? JSON.parse(val) : val), zod_1.z.array(zod_1.z.string().cuid()).default([])),
+        });
     }
     validateCreate(data) {
         try {
@@ -124,6 +155,19 @@ class ProjectsValidator {
         }
         catch (error) {
             throw new services_error_1.ServiceValidationError("Invalid update data", undefined, "ProjectValidationError");
+        }
+    }
+    validateUpdateProjectWithTechsServices(data) {
+        var _a;
+        try {
+            return this.updateProjectWithTechsServicesSchema.parse(data);
+        }
+        catch (error) {
+            if (error instanceof v4_1.ZodError) {
+                const messages = (_a = error === null || error === void 0 ? void 0 : error.errors) === null || _a === void 0 ? void 0 : _a.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ");
+                throw new services_error_1.ServiceValidationError("Invalid project update data", messages, "PROJECT_UPDATE_VALIDATION_ERROR");
+            }
+            throw new services_error_1.ServiceValidationError("Invalid project update data", undefined, "PROJECT_UPDATE_VALIDATION_ERROR");
         }
     }
     validateCreateProjectAndAssignTechsAndServices(data) {

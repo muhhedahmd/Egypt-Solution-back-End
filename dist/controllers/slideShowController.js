@@ -142,7 +142,6 @@ class slideShowController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const body = req.body;
-                console.log(body);
                 const created = yield this.logic.createAndAttachMany(body);
                 return res.status(200).json({
                     success: true,
@@ -176,7 +175,6 @@ class slideShowController {
                 const { id } = req.params;
                 if (!id)
                     throw new services_error_1.ServiceError("id is required", 400, "ID_NOT_FOUND");
-                console.log(Object.assign(Object.assign({}, body), { id }));
                 const updated = yield this.logic.updateAndAttachMany(Object.assign(Object.assign({}, body), { id }));
                 return res.status(200).json({
                     success: true,
@@ -257,7 +255,6 @@ class slideShowController {
     getSlideShowsByType(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                console.log("triggered");
                 const { skip, take } = req.query;
                 const { type, } = req.body;
                 const data = yield this.logic.getSlideshowsByType({
@@ -278,12 +275,6 @@ class slideShowController {
                 const { skip, take } = req.query;
                 const { type, } = req.body;
                 const { id } = req.params;
-                console.log({
-                    skip,
-                    take,
-                    type,
-                    id,
-                });
                 const data = yield this.logic.getAttachesByType({
                     skip,
                     take,
@@ -301,7 +292,6 @@ class slideShowController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const body = req.body;
-                console.log(body);
                 const updated = yield this.logic.deattchMany(body);
                 return res.status(200).json({
                     success: true,
@@ -319,7 +309,6 @@ class slideShowController {
             try {
                 const body = req.body;
                 const updated = yield this.logic.reorderBulkSlideShow(body);
-                console.log(updated);
                 return res.status(200).json({
                     success: true,
                     message: "Slideshow reordered successfully",

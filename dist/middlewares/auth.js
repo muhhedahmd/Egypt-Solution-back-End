@@ -60,12 +60,15 @@ const requireAuthv2 = (req, res, next) => __awaiter(void 0, void 0, void 0, func
                 id: decoded.userId,
             },
             select: {
-                id: true
+                id: true,
+                role: true
             }
         });
         if (!findUser) {
             return res.status(401).json({ error: "Unauthorized" });
         }
+        if (findUser.role !== "ADMIN")
+            return res.status(401).json({ error: "you do not have permission" });
         req.user = {
             email: decoded.email,
             id: decoded.userId,

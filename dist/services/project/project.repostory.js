@@ -449,6 +449,181 @@ class projectRepository {
             }
         });
     }
+    // *** 
+    updateProjectWithTechsServices(data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const transaction = yield this.prisma.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
+                    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
+                    // 1. Update the project itself
+                    let imageId = null;
+                    const existingProject = yield this.findById(data.id, tx);
+                    if (!existingProject) {
+                        throw new services_error_1.ServiceError("Project not found", 404, "PROJECT_NOT_FOUND");
+                    }
+                    imageId = existingProject.imageId;
+                    // Handle image updates
+                    if (data.projectData.imageState === "REMOVE" && imageId) {
+                        yield tx.project.update({
+                            where: { id: data.id },
+                            data: { imageId: null },
+                        });
+                        yield (0, helpers_1.deleteImageById)(imageId, tx);
+                        imageId = null;
+                    }
+                    if (data.projectData.imageState === "UPDATE") {
+                        if (imageId) {
+                            yield tx.project.update({
+                                where: { id: data.id },
+                                data: { imageId: null },
+                            });
+                            yield (0, helpers_1.deleteImageById)(imageId, tx);
+                        }
+                        if (data.projectData.image) {
+                            const uploadedImage = yield (0, helpers_1.UploadImage)(data.projectData.image, data.projectData.title || existingProject.title);
+                            if (!uploadedImage) {
+                                throw new services_error_1.ServiceError("Failed to upload image", 400, "IMAGE_UPLOAD_ERROR");
+                            }
+                            const dbImage = yield (0, helpers_1.AssignImageToDBImage)({
+                                imageType: "PROJECT",
+                                blurhash: uploadedImage.blurhash,
+                                width: uploadedImage.width,
+                                height: uploadedImage.height,
+                                data: uploadedImage.data,
+                            }, tx);
+                            imageId = dbImage.id;
+                        }
+                    }
+                    // Generate new slug if title changed
+                    let slug = existingProject.slug;
+                    if (data.projectData.title && data.projectData.title !== existingProject.title) {
+                        slug = (0, slugify_1.default)(data.projectData.title + (0, crypto_1.randomUUID)().substring(0, 8), {
+                            lower: true,
+                        });
+                    }
+                    // Handle order changes
+                    if (data.projectData.order !== undefined &&
+                        data.projectData.order !== existingProject.order) {
+                        yield this.reorderUpdate({
+                            projectUpdate: Object.assign(Object.assign({}, existingProject), { order: data.projectData.order }),
+                            orderBeforeUpdate: existingProject.order,
+                        });
+                    }
+                    // Update project
+                    const updatedProject = yield tx.project.update({
+                        where: { id: data.id },
+                        data: {
+                            title: (_a = data.projectData.title) !== null && _a !== void 0 ? _a : existingProject.title,
+                            description: (_b = data.projectData.description) !== null && _b !== void 0 ? _b : existingProject.description,
+                            richDescription: (_c = data.projectData.richDescription) !== null && _c !== void 0 ? _c : existingProject.richDescription,
+                            clientName: (_d = data.projectData.clientName) !== null && _d !== void 0 ? _d : existingProject.clientName,
+                            clientCompany: (_e = data.projectData.clientCompany) !== null && _e !== void 0 ? _e : existingProject.clientCompany,
+                            projectUrl: (_f = data.projectData.projectUrl) !== null && _f !== void 0 ? _f : existingProject.projectUrl,
+                            githubUrl: (_g = data.projectData.githubUrl) !== null && _g !== void 0 ? _g : existingProject.githubUrl,
+                            status: (_h = data.projectData.status) !== null && _h !== void 0 ? _h : existingProject.status,
+                            startDate: (_j = data.projectData.startDate) !== null && _j !== void 0 ? _j : existingProject.startDate,
+                            endDate: (_k = data.projectData.endDate) !== null && _k !== void 0 ? _k : existingProject.endDate,
+                            isFeatured: (_l = data.projectData.isFeatured) !== null && _l !== void 0 ? _l : existingProject.isFeatured,
+                            order: (_m = data.projectData.order) !== null && _m !== void 0 ? _m : existingProject.order,
+                            imageId,
+                            slug,
+                        },
+                        include: {
+                            image: true,
+                        },
+                    });
+                    // 2. Handle technology deletions
+                    if (data.deletedTechIds.length > 0) {
+                        yield tx.projectTechnology.deleteMany({
+                            where: {
+                                projectId: data.id,
+                                technologyId: { in: data.deletedTechIds },
+                            },
+                        });
+                    }
+                    // 3. Handle technology additions
+                    if (data.newTechIds.length > 0) {
+                        // Check if technologies exist
+                        const techs = yield tx.technology.findMany({
+                            where: { id: { in: data.newTechIds } },
+                        });
+                        if (techs.length !== data.newTechIds.length) {
+                            throw new services_error_1.ServiceError("One or more technologies not found", 404, "TECHNOLOGY_NOT_FOUND");
+                        }
+                        // Create new relationships
+                        yield tx.projectTechnology.createMany({
+                            data: data.newTechIds.map((techId) => ({
+                                projectId: data.id,
+                                technologyId: techId,
+                            })),
+                            skipDuplicates: true,
+                        });
+                    }
+                    // 4. Handle service deletions
+                    if (data.deletedServiceIds.length > 0) {
+                        yield tx.project.update({
+                            where: { id: data.id },
+                            data: {
+                                services: {
+                                    disconnect: data.deletedServiceIds.map((id) => ({ id })),
+                                },
+                            },
+                        });
+                    }
+                    // 5. Handle service additions
+                    if (data.newServiceIds.length > 0) {
+                        // Check if services exist
+                        const services = yield tx.service.findMany({
+                            where: { id: { in: data.newServiceIds } },
+                        });
+                        if (services.length !== data.newServiceIds.length) {
+                            throw new services_error_1.ServiceError("One or more services not found", 404, "SERVICE_NOT_FOUND");
+                        }
+                        yield tx.project.update({
+                            where: { id: data.id },
+                            data: {
+                                services: {
+                                    connect: data.newServiceIds.map((id) => ({ id })),
+                                },
+                            },
+                        });
+                    }
+                    // 6. Fetch final state with all relationships
+                    const finalProject = yield tx.project.findUnique({
+                        where: { id: data.id },
+                        include: {
+                            image: true,
+                            technologies: {
+                                include: {
+                                    technology: true,
+                                },
+                            },
+                            services: true,
+                        },
+                    });
+                    if (!finalProject) {
+                        throw new services_error_1.ServiceError("Failed to retrieve updated project", 500, "PROJECT_RETRIEVAL_ERROR");
+                    }
+                    return {
+                        project: finalProject,
+                        image: finalProject.image,
+                        technologies: finalProject.technologies.map((pt) => pt.technology),
+                        services: finalProject.services,
+                    };
+                }), {
+                    timeout: 20000,
+                    maxWait: 5000,
+                });
+                return transaction;
+            }
+            catch (error) {
+                console.error("Error updating project with techs/services:", error);
+                if (error instanceof services_error_1.ServiceError)
+                    throw error;
+                throw new services_error_1.ServiceError("Failed to update project", 500, "PROJECT_UPDATE_ERROR");
+            }
+        });
+    }
     delete(id) {
         return __awaiter(this, void 0, void 0, function* () {
             try {

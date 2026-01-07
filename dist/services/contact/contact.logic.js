@@ -62,7 +62,6 @@ class ContactLogic {
     create(data) {
         return __awaiter(this, void 0, void 0, function* () {
             const validatedData = this.ContactValidator.createContactValidation(data);
-            console.log("validatedData", validatedData);
             const newContact = yield this.ContactRepostery.create(Object.assign({}, validatedData));
             return newContact;
         });

@@ -122,6 +122,29 @@ class projectController {
             }
         });
     }
+    updateProjectWithTechsServices(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const id = req.params.id;
+                const file = req.file; // From multer
+                const body = req.body;
+                const updated = yield this.logic.updateProjectWithTechsServices(Object.assign(Object.assign({}, body), { id, image: file === null || file === void 0 ? void 0 : file.buffer }));
+                return res.status(200).json({
+                    success: true,
+                    message: "Project updated successfully with technologies and services",
+                    data: {
+                        project: updated.project,
+                        image: updated.image,
+                        technologies: updated.technologies,
+                        services: updated.services,
+                    },
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
     deleteProject(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
@@ -370,24 +393,17 @@ class projectController {
     }
     createProjectAndAssignTechnology(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b, _c, _d;
+            var _a, _b;
             try {
                 // const project = req.body.project;
                 // const technology = req.body.technologies;
-                const _e = req.body, { technologies, services } = _e, project = __rest(_e, ["technologies", "services"]);
-                console.log({
-                    project: Object.assign(Object.assign({}, project), { image: (Array === null || Array === void 0 ? void 0 : Array.isArray(req === null || req === void 0 ? void 0 : req.files)) && (req === null || req === void 0 ? void 0 : req.files)
-                            ? (_b = (_a = req === null || req === void 0 ? void 0 : req.files) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.buffer
-                            : undefined }),
-                    technologies: technologies ? JSON.parse(technologies) : [],
-                    services: technologies ? JSON.parse(services) : [],
-                });
+                const _c = req.body, { technologyIds, serviceIds } = _c, project = __rest(_c, ["technologyIds", "serviceIds"]);
                 const created = yield this.logic.createProjectAndAssignTechnology({
                     project: Object.assign(Object.assign({}, project), { image: (Array === null || Array === void 0 ? void 0 : Array.isArray(req === null || req === void 0 ? void 0 : req.files)) && (req === null || req === void 0 ? void 0 : req.files)
-                            ? (_d = (_c = req === null || req === void 0 ? void 0 : req.files) === null || _c === void 0 ? void 0 : _c[0]) === null || _d === void 0 ? void 0 : _d.buffer
-                            : undefined }),
-                    technologies: technologies ? JSON.parse(technologies) : [],
-                    services: technologies ? JSON.parse(services) : [],
+                            ? (_b = (_a = req === null || req === void 0 ? void 0 : req.files) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.buffer
+                            : undefined, order: 0 }),
+                    technologies: technologyIds ? JSON.parse(technologyIds) : [],
+                    services: serviceIds ? JSON.parse(serviceIds) : [],
                 });
                 return res.status(200).json({
                     success: true,

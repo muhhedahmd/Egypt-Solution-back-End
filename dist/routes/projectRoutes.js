@@ -58,6 +58,7 @@ class projectRoutes {
         asyncHandler(this.controller.createProject.bind(this.controller)));
         // Update project (with optional image upload)
         this.router.put("/:id", asyncHandler(auth_1.requireAuthv2), asyncHandler(this.controller.updateProject.bind(this.controller)));
+        this.router.put("/update-project-bulk/:id", asyncHandler(auth_1.requireAuthv2), asyncHandler(this.controller.updateProjectWithTechsServices.bind(this.controller)));
         // Delete project
         this.router.delete("/:id", asyncHandler(auth_1.requireAuthv2), asyncHandler(this.controller.deleteProject.bind(this.controller)));
     }

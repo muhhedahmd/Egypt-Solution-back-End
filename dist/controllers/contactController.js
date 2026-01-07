@@ -30,8 +30,8 @@ class ContactController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const body = req.body;
-                const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-                const userAgent = req.headers['user-agent'];
+                const ipAddress = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+                const userAgent = req.headers["user-agent"];
                 const newContact = yield this.logic.create(Object.assign(Object.assign({}, body), { ipAddress,
                     userAgent }));
                 return res.status(201).json({
@@ -111,8 +111,7 @@ class ContactController {
             try {
                 const { skip = 0, take = 10 } = req.query;
                 const filters = __rest(req.body, []);
-                const filtersTyped = Object.entries(filters)
-                    .reduce((acc, [key, value]) => {
+                const filtersTyped = Object.entries(filters).reduce((acc, [key, value]) => {
                     acc[key] = value;
                     return acc;
                 }, {});
@@ -158,7 +157,7 @@ class ContactController {
             try {
                 const { id } = req.params;
                 const { response, subject, message } = req.body;
-                const replay = yield this.logic.replay({ id, response, });
+                const replay = yield this.logic.replay({ id, response });
                 return res.status(200).json({
                     success: true,
                     message: "Contact replayed successfully",

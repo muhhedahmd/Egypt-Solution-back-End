@@ -161,7 +161,7 @@ class projectLogic {
             return result;
         });
     }
-    createProjectAndTechnologies(data // : Promise<{
+    createProjectAndTechnologies(data // : Promise<{ // createdProject: {
     ) {
         return __awaiter(this, void 0, void 0, function* () {
             // const validData =
@@ -356,6 +356,24 @@ class projectLogic {
             const validData = this.validator.validateUpdateTechnology(data);
             const technology = yield this.repository.updateTechnology(id, validData);
             return technology;
+        });
+    }
+    updateProjectWithTechsServices(data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Validate input
+            const validatedData = this.validator.validateUpdateProjectWithTechsServices(data);
+            // Extract project data and relationship changes
+            const { id, deletedTechIds, newTechIds, deletedServiceIds, newServiceIds } = validatedData, projectData = __rest(validatedData, ["id", "deletedTechIds", "newTechIds", "deletedServiceIds", "newServiceIds"]);
+            // Call repository method
+            const result = yield this.repository.updateProjectWithTechsServices({
+                id,
+                projectData: projectData,
+                deletedTechIds,
+                newTechIds,
+                deletedServiceIds,
+                newServiceIds,
+            });
+            return result;
         });
     }
     deleteTechnology(id) {

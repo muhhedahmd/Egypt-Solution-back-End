@@ -115,10 +115,6 @@ class slideShowLogic {
             if (!valid)
                 throw new services_error_1.ServiceError("Invalid data for create and attach many", 400, "SLIDESHOW_CREATE_ATTACH_MANY_ERROR");
             const { slides } = valid, rest = __rest(valid, ["slides"]);
-            console.log({
-                slides,
-                rest,
-            });
             const createdAndAttached = yield this.repository.createAndAttachMany(Object.assign({ slides: slides.map((slide) => ({
                     id: slide.attachId,
                     type: slide.attachType,
@@ -133,8 +129,6 @@ class slideShowLogic {
     //*** */
     bulkSlideOperations(data) {
         return __awaiter(this, void 0, void 0, function* () {
-            // Validate the data structure
-            console.log(data);
             const valid = this.validator.validateBulkSlideOperations(data);
             if (!valid) {
                 throw new services_error_1.ServiceError("Invalid data for bulk slide operations", 400, "INVALID_BULK_OPERATIONS_DATA");
@@ -158,7 +152,6 @@ class slideShowLogic {
     }
     updateAndAttachMany(data) {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log(data);
             const valid = this.validator.validUpdateAndAttachManySchema(data);
             if (!valid)
                 throw new services_error_1.ServiceError("Invalid data for update and attach many", 400, "SLIDESHOW_UPDATE_ATTACH_MANY_ERROR");
@@ -246,7 +239,6 @@ class slideShowLogic {
                 ]);
                 const totalItems = count;
                 const remainingItems = totalItems - (skip * take + attaches.length);
-                console.log({ attaches });
                 return {
                     data: attaches,
                     pagination: {
@@ -275,7 +267,6 @@ class slideShowLogic {
                 });
                 const validateType = this.validator.validateModelNaming({ type });
                 const validateId = this.validator.validateId(slideShowId);
-                console.log(validatePagination, validateType, validateId);
                 const [attaches, count] = yield Promise.all([
                     yield this.repository.getAttachesByType(Object.assign(Object.assign({}, validatePagination), { type: validateType, slideShowId: validateId })),
                     yield this.repository.getAttachesByTypeCount({
@@ -283,7 +274,6 @@ class slideShowLogic {
                         type: validateType,
                     }),
                 ]);
-                console.log(attaches.length, count, "Ss");
                 const totalItems = +count;
                 const remainingItems = totalItems - (skip * take + attaches.length);
                 return {
