@@ -1,7 +1,6 @@
-
-import { NextFunction, Response, Request } from 'express';
-import { HeroLogic } from '../services/hero/hero.logic';
-import { HeroError, HeroNotFoundError } from '../errors/hero.error';
+import { NextFunction, Response, Request } from "express";
+import { HeroLogic } from "../services/hero/hero.logic";
+import { HeroError, HeroNotFoundError } from "../errors/hero.error";
 
 export class HeroController {
   private heroLogic: HeroLogic;
@@ -12,18 +11,19 @@ export class HeroController {
 
   async getAllHeroes(req: Request, res: Response, next: NextFunction) {
     try {
+      const lang: "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
       const { skip, take } = req.query;
 
-      const heroes = await this.heroLogic.getAllHeroes({
+      const heroes = await this.heroLogic.getAllHeroes(lang, {
         skip: Number(skip) || 0,
         take: Number(take) || 10,
       });
 
-      if (!heroes) throw new HeroNotFoundError('error get heroes');
+      if (!heroes) throw new HeroNotFoundError("error get heroes");
 
       return res.json({
         ...heroes,
-        message: 'heroes fetched successfully',
+        message: "heroes fetched successfully",
         success: true,
       });
     } catch (error) {
@@ -34,13 +34,15 @@ export class HeroController {
   async getHeroById(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      if (!id) throw new HeroNotFoundError('id is required');
+      const lang: "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
 
-      const hero = await this.heroLogic.getHeroById(id);
+      if (!id) throw new HeroNotFoundError("id is required");
+
+      const hero = await this.heroLogic.getHeroById(lang, id);
 
       return res.json({
         data: hero,
-        message: 'hero fetched successfully',
+        message: "hero fetched successfully",
         success: true,
       });
     } catch (error) {
@@ -50,11 +52,15 @@ export class HeroController {
 
   async getActiveHero(req: Request, res: Response, next: NextFunction) {
     try {
-      const hero = await this.heroLogic.getActiveHero();
+      const lang: "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
+
+      const hero = await this.heroLogic.getActiveHero({
+        lang
+      });
 
       return res.json({
         data: hero,
-        message: 'active hero fetched successfully',
+        message: "active hero fetched successfully",
         success: true,
       });
     } catch (error) {
@@ -66,38 +72,17 @@ export class HeroController {
     try {
       const data = req.body;
 
-      // Parse JSON fields
       let styleOverrides = null;
-      // if (data.styleOverrides) {
-      //   try {
-      //     styleOverrides = JSON.parse(data.styleOverrides);
-      //   } catch (e) {
-      //     console.error('Error parsing styleOverrides:', e);
-      //   }
-      // }
 
-      // console.log({
-      //   ...data,
-      //   isActive: data.isActive === 'true' ? true : false,
-      //   showScrollIndicator:
-      //     data.showScrollIndicator === 'true' ? true : false,
-      //   overlayOpacity: data.overlayOpacity
-      //     ? parseFloat(data.overlayOpacity)
-      //     : undefined,
-      //   minHeight: data.minHeight ? Number(data.minHeight) : undefined,
-      //   styleOverrides: styleOverrides,
-      //   backgroundImage:
-      //     Array.isArray(req.files) && req.files.length > 0
-      //       ? req.files.find((f) => f.fieldname === 'backgroundImage')?.buffer
-      //       : null,
-      // })
-
-      const newHero = await this.heroLogic.createHero({
-
+      const lang: "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
+      if (!lang) return;
+      console.log({
+        lang,
+      });
+      const newHero = await this.heroLogic.createHero(lang, {
         ...data,
-        isActive: data.isActive === 'true' ? true : false,
-        showScrollIndicator:
-          data.showScrollIndicator === 'true' ? true : false,
+        isActive: data.isActive === "true" ? true : false,
+        showScrollIndicator: data.showScrollIndicator === "true" ? true : false,
         overlayOpacity: data.overlayOpacity
           ? parseFloat(data.overlayOpacity)
           : undefined,
@@ -105,13 +90,13 @@ export class HeroController {
         styleOverrides: styleOverrides,
         backgroundImage:
           Array.isArray(req.files) && req.files.length > 0
-            ? req.files.find((f) => f.fieldname === 'backgroundImage')?.buffer
+            ? req.files.find((f) => f.fieldname === "backgroundImage")?.buffer
             : undefined,
       });
 
       return res.status(201).json({
         data: newHero,
-        message: 'hero created successfully',
+        message: "hero created successfully",
         success: true,
       });
     } catch (error) {
@@ -132,7 +117,7 @@ export class HeroController {
         try {
           styleOverrides = JSON.parse(heroData.styleOverrides);
         } catch (e) {
-          console.error('Error parsing styleOverrides:', e);
+          console.error("Error parsing styleOverrides:", e);
         }
       }
 
@@ -141,29 +126,30 @@ export class HeroController {
         heroId: id,
         backgroundImage:
           Array.isArray(files) && files.length > 0
-            ? files.find((f) => f.fieldname === 'backgroundImage')?.buffer
+            ? files.find((f) => f.fieldname === "backgroundImage")?.buffer
             : undefined,
         imageState: heroData?.imageState as
-          | 'KEEP'
-          | 'REMOVE'
-          | 'UPDATE'
+          | "KEEP"
+          | "REMOVE"
+          | "UPDATE"
           | undefined,
       };
+      const lang: "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
 
-      const updatedHero = await this.heroLogic.updateHero({
+      const updatedHero = await this.heroLogic.updateHero(lang, {
         ...data,
         isActive:
-          data.isActive === 'true'
+          data.isActive === "true"
             ? true
-            : data.isActive === 'false'
-            ? false
-            : undefined,
+            : data.isActive === "false"
+              ? false
+              : undefined,
         showScrollIndicator:
-          data.showScrollIndicator === 'true'
+          data.showScrollIndicator === "true"
             ? true
-            : data.showScrollIndicator === 'false'
-            ? false
-            : undefined,
+            : data.showScrollIndicator === "false"
+              ? false
+              : undefined,
         overlayOpacity: data.overlayOpacity
           ? parseFloat(data.overlayOpacity)
           : undefined,
@@ -173,7 +159,23 @@ export class HeroController {
 
       return res.json({
         data: updatedHero,
-        message: 'hero updated successfully',
+        message: "hero updated successfully",
+        success: true,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+  async ToggleActive(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      // const heroData = req.body;
+
+      const toggle = await this.heroLogic.ToggleActive(id);
+
+      return res.json({
+        data: toggle,
+        message: "hero updated successfully",
         success: true,
       });
     } catch (error) {
@@ -184,14 +186,14 @@ export class HeroController {
   async deleteHero(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      if (!id) throw new HeroNotFoundError('id is required');
+      if (!id) throw new HeroNotFoundError("id is required");
 
       const deletedHero = await this.heroLogic.deleteHero(id);
-      if (!deletedHero) throw new HeroNotFoundError('error deleting hero');
+      if (!deletedHero) throw new HeroNotFoundError("error deleting hero");
 
       return res.json({
         data: deletedHero,
-        message: 'hero deleted successfully',
+        message: "hero deleted successfully",
         success: true,
       });
     } catch (error) {
@@ -202,19 +204,19 @@ export class HeroController {
   async SearchHeroes(req: Request, res: Response, next: NextFunction) {
     try {
       const { q } = req.query;
-      if (!q || typeof q !== 'string')
+      if (!q || typeof q !== "string")
         throw new HeroError(
-          'search query is required',
+          "search query is required",
           400,
-          'SEARCH_QUERY_REQUIRED'
+          "SEARCH_QUERY_REQUIRED",
         );
 
       const heroes = await this.heroLogic.Search(q);
-      if (!heroes) throw new HeroNotFoundError('error searching heroes');
+      if (!heroes) throw new HeroNotFoundError("error searching heroes");
 
       return res.json({
         data: heroes,
-        message: 'heroes searched successfully',
+        message: "heroes searched successfully",
         success: true,
       });
     } catch (error) {

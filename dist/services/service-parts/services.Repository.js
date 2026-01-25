@@ -33,30 +33,46 @@ class ServicesRepository {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    findMany(skip, take, Active, isFeatured) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (Active) {
-                return this.prisma.service.findMany({
-                    where: { isActive: true },
-                    include: { image: true },
-                    skip: skip * take,
-                    take: take,
-                });
-            }
+    findMany() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", skip, take, Active, isFeatured) {
+            const _Where = {};
+            if (Active)
+                _Where.isActive = true;
             if (Active && isFeatured) {
-                return this.prisma.service.findMany({
-                    where: { isActive: true, isFeatured: true },
-                    include: { image: true },
-                    skip: skip * take,
-                    take: take,
-                });
+                _Where.isActive = true;
+                _Where.isFeatured = true;
             }
-            else
-                return this.prisma.service.findMany({
-                    include: { image: true },
-                    skip: skip * take,
-                    take: take,
-                });
+            const find = yield this.prisma.service.findMany({
+                where: _Where,
+                select: {
+                    id: true,
+                    slug: true,
+                    price: true,
+                    isActive: true,
+                    isFeatured: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    image: true,
+                    serviceTranslation: {
+                        where: {
+                            lang,
+                        },
+                    },
+                },
+                skip: skip * take,
+                take: take,
+            });
+            const fixedReturn = find.map((s) => {
+                const { image, serviceTranslation, createdAt, id, isActive, isFeatured, price, slug, updatedAt, } = s;
+                return Object.assign(Object.assign({ image }, serviceTranslation[0]), { createdAt,
+                    id,
+                    isActive,
+                    isFeatured,
+                    price,
+                    slug,
+                    updatedAt });
+            });
+            return fixedReturn;
         });
     }
     isValidOrder(_a) {
@@ -82,13 +98,37 @@ class ServicesRepository {
             return this.prisma.service.count();
         });
     }
-    findById(id) {
-        return __awaiter(this, void 0, void 0, function* () {
+    findById() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", id) {
             try {
-                return this.prisma.service.findUnique({
+                const find = yield this.prisma.service.findUnique({
                     where: { id },
-                    include: { image: true },
+                    select: {
+                        id: true,
+                        slug: true,
+                        price: true,
+                        isActive: true,
+                        isFeatured: true,
+                        createdAt: true,
+                        updatedAt: true,
+                        image: true,
+                        serviceTranslation: {
+                            where: {
+                                lang,
+                            },
+                        },
+                    },
                 });
+                if (!find)
+                    throw new Error("Error finding service by ID");
+                const { image, serviceTranslation, createdAt, isActive, isFeatured, price, slug, updatedAt, } = find;
+                return Object.assign(Object.assign({ image }, serviceTranslation[0]), { createdAt,
+                    id,
+                    isActive,
+                    isFeatured,
+                    price,
+                    slug,
+                    updatedAt });
             }
             catch (error) {
                 console.log(error);
@@ -103,6 +143,7 @@ class ServicesRepository {
                     where: { slug },
                     include: {
                         image: true,
+                        serviceTranslation: true,
                         projects: {
                             include: {
                                 image: true,
@@ -182,7 +223,7 @@ class ServicesRepository {
             }
         });
     }
-    create(data) {
+    create(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const transication = yield this.prisma.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
@@ -215,26 +256,40 @@ class ServicesRepository {
                     const service = yield tx.service.create({
                         data: {
                             slug: slug,
-                            name: data.name,
-                            description: data.description,
-                            richDescription: data.richDescription,
+                            name: "",
                             imageId: imageToDB.id,
                             icon: iconUrl || "",
                             price: data.price || "",
                             isActive: data.isActive || false,
                             isFeatured: data.isFeatured || false,
                             order: data.order || 0,
+                            serviceTranslation: {
+                                create: {
+                                    name: data.name,
+                                    description: data.description,
+                                    richDescription: data.richDescription,
+                                    lang: lang,
+                                },
+                            },
                         },
-                        include: {
+                        select: {
+                            id: true,
+                            slug: true,
+                            price: true,
+                            isActive: true,
+                            isFeatured: true,
+                            createdAt: true,
+                            updatedAt: true,
+                            serviceTranslation: true,
                             image: true,
                         },
                     });
-                    const { image } = service, rest = __rest(service, ["image"]);
-                    return { Image: image, service: rest };
+                    const { image, serviceTranslation } = service, rest = __rest(service, ["image", "serviceTranslation"]);
+                    const translatedData = Object.assign(Object.assign({}, serviceTranslation[0]), { serviceId: service.id });
+                    return { Image: image, service: Object.assign(Object.assign({}, rest), translatedData) };
                 }), {
-                    timeout: 20000, // (milliseconds)
-                    isolationLevel: "Serializable",
-                    maxWait: 5000, // default: 2000
+                    timeout: 20000,
+                    maxWait: 5000,
                 });
                 return transication;
             }
@@ -243,7 +298,7 @@ class ServicesRepository {
             }
         });
     }
-    update(data) {
+    update(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const transaction = yield this.prisma.$transaction((prismaTx) => __awaiter(this, void 0, void 0, function* () {
@@ -298,15 +353,13 @@ class ServicesRepository {
                         });
                         data.slug = slug;
                     }
-                    console.log("Service ID:", data.serviceId, NewImageId);
+                    // console.log("Service ID:", data.serviceId, NewImageId);
                     // Update the service with new data
                     const updatedService = yield prismaTx.service.update({
                         where: { id: data.serviceId },
                         data: {
                             slug: data.slug || service.slug,
-                            name: data.name || service.name,
-                            description: data.description || service.description,
-                            richDescription: data.richDescription || service.richDescription,
+                            name: "",
                             imageId: NewImageId,
                             icon: data.icon || service.icon || "",
                             price: data.price || service.price || "",
@@ -314,10 +367,51 @@ class ServicesRepository {
                             isFeatured: data.isFeatured || service.isFeatured || false,
                             order: data.order || service.order || 0,
                         },
-                        include: { image: true },
+                        select: {
+                            id: true,
+                            slug: true,
+                            price: true,
+                            isActive: true,
+                            isFeatured: true,
+                            createdAt: true,
+                            updatedAt: true,
+                            image: true,
+                        },
+                    });
+                    // update translation
+                    const updateTranslation = yield prismaTx.serviceTranslation.upsert({
+                        where: {
+                            serviceId_lang: {
+                                lang,
+                                serviceId: data.serviceId,
+                            },
+                        },
+                        update: {
+                            name: data.name || service.name || "",
+                            description: data.description || service.description,
+                            richDescription: data.richDescription || service.richDescription,
+                        },
+                        create: {
+                            serviceId: data.serviceId,
+                            name: data.name || service.name || "",
+                            description: data.description || service.description,
+                            richDescription: data.richDescription || service.richDescription,
+                            lang,
+                        },
+                        // data: {
+                        //   name: data.name || service.name,
+                        //   description: data.description || service.description,
+                        //   richDescription: data.richDescription || service.richDescription,
+                        //   lang ,
+                        // },
+                        select: {
+                            name: true,
+                            description: true,
+                            richDescription: true,
+                        },
                     });
                     const { image } = updatedService, rest = __rest(updatedService, ["image"]);
-                    return { Image: image, service: rest };
+                    return { Image: image, service: Object.assign(Object.assign({}, rest), updateTranslation) };
                 }), {
                     timeout: 20000,
                     maxWait: 5000,

@@ -73,14 +73,12 @@ class TestimonialController {
     }
     createTestimonial(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b;
+            var _a;
             try {
                 const data = req.body;
-                console.log(Object.assign(Object.assign({}, data), { isActive: data.isActive === 'true' ? true : false, isFeatured: data.isFeatured === 'true' ? true : false, rating: Number(data.rating) || 5, order: Number(data.order) || 0, avatar: Array.isArray(req.files) && req.files.length > 0
+                const lang = req.lang;
+                const newTestimonial = yield this.testimonialLogic.createTestimonial(lang, Object.assign(Object.assign({}, data), { isActive: data.isActive === 'true' ? true : false, isFeatured: data.isFeatured === 'true' ? true : false, rating: Number(data.rating) || 5, order: Number(data.order) || 0, avatar: Array.isArray(req.files) && req.files.length > 0
                         ? (_a = req.files.find((f) => f.fieldname === 'avatar')) === null || _a === void 0 ? void 0 : _a.buffer
-                        : null }));
-                const newTestimonial = yield this.testimonialLogic.createTestimonial(Object.assign(Object.assign({}, data), { isActive: data.isActive === 'true' ? true : false, isFeatured: data.isFeatured === 'true' ? true : false, rating: Number(data.rating) || 5, order: Number(data.order) || 0, avatar: Array.isArray(req.files) && req.files.length > 0
-                        ? (_b = req.files.find((f) => f.fieldname === 'avatar')) === null || _b === void 0 ? void 0 : _b.buffer
                         : null }));
                 return res.status(201).json({
                     data: newTestimonial,
@@ -98,11 +96,12 @@ class TestimonialController {
             try {
                 const { id } = req.params;
                 const testimonialData = req.body;
+                const lang = req.lang;
                 const files = req.files;
                 const data = Object.assign(Object.assign({}, testimonialData), { testimonialId: id, avatar: Array.isArray(files) && files.length > 0
                         ? (_a = files.find((f) => f.fieldname === 'avatar')) === null || _a === void 0 ? void 0 : _a.buffer
                         : undefined, avatarState: testimonialData === null || testimonialData === void 0 ? void 0 : testimonialData.avatarState });
-                const updatedTestimonial = yield this.testimonialLogic.updateTestimonial(Object.assign(Object.assign({}, data), { isActive: data.isActive === 'true' ? true : data.isActive === 'false' ? false : undefined, isFeatured: data.isFeatured === 'true' ? true : data.isFeatured === 'false' ? false : undefined, rating: data.rating ? Number(data.rating) : undefined, order: data.order ? Number(data.order) : undefined }));
+                const updatedTestimonial = yield this.testimonialLogic.updateTestimonial(lang, Object.assign(Object.assign({}, data), { isActive: data.isActive === 'true' ? true : data.isActive === 'false' ? false : undefined, isFeatured: data.isFeatured === 'true' ? true : data.isFeatured === 'false' ? false : undefined, rating: data.rating ? Number(data.rating) : undefined, order: data.order ? Number(data.order) : undefined }));
                 return res.json({
                     data: updatedTestimonial,
                     message: 'testimonial updated successfully',
@@ -135,10 +134,11 @@ class TestimonialController {
     SearchTestimonials(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
+                const lang = req.lang;
                 const { q } = req.query;
                 if (!q || typeof q !== 'string')
                     throw new testimonal_error_1.TestimonialError('search query is required', 400, 'SEARCH_QUERY_REQUIRED');
-                const testimonials = yield this.testimonialLogic.Search(q);
+                const testimonials = yield this.testimonialLogic.Search(lang, q);
                 if (!testimonials)
                     throw new testimonal_error_1.TestimonialNotFoundError('error searching testimonials');
                 return res.json({

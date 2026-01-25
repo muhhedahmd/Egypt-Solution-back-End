@@ -20,14 +20,13 @@ import {
   Project,
   ProjectStatus,
   ProjectTechnology,
+  ProjectTranslation,
   Service,
   Technology,
 } from "@prisma/client";
 
 export class projectRepository {
-  constructor(
-    private prisma: PrismaClientConfig // private project : ServicesRepository
-  ) {}
+  constructor(private prisma: PrismaClientConfig) {}
 
   // reorder logic
   async reorderDelete({ projectDeleted }: { projectDeleted: Project }) {
@@ -103,7 +102,8 @@ export class projectRepository {
     }
   }
 
-  async findMany(skip: number, take: number) {
+  async findMany(lang: "AR" | "EN" = "EN", skip: number, take: number) {
+    console.log(lang);
     return this.prisma.project.findMany({
       include: {
         image: true,
@@ -118,22 +118,29 @@ export class projectRepository {
             },
           },
         },
+        ProjectTranslation: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            richDescription: true,
+            lang: true,
+          },
+        },
       },
       skip: skip * take,
       take: take,
     });
   }
 
-  async count() {
-    return this.prisma.project.count();
-  }
-
   async findBySlugFull(
-    id: string,
+    lang: "AR" | "EN" = "EN",
+    slug: string,
     prismaTouse?: txInstance
   ): Promise<{
     image: Image | null;
     technologies: Partial<Technology>[];
+    translation : Partial<ProjectTranslation>[]
     project: Project;
     servicesData: {
       image: Image | null;
@@ -143,9 +150,22 @@ export class projectRepository {
     try {
       const project = await (prismaTouse || this.prisma).project.findUnique({
         where: {
-          slug: id,
+          slug: slug,
         },
-        include: {
+        select: {
+          id: true,
+          createdAt: true,
+          endDate: true,
+          startDate: true,
+          githubUrl: true,
+          projectUrl: true,
+          order: true,
+          status: true,
+          updatedAt: true,
+          isFeatured: true,
+          clientName: true,
+          clientCompany: true,
+          slug: true,
           image: true,
           technologies: {
             select: {
@@ -165,23 +185,44 @@ export class projectRepository {
               image: true,
             },
           },
+          ProjectTranslation: {
+           
+            select: {
+              id:true ,
+              title: true,
+              description: true,
+              richDescription: true,
+
+              lang: true,
+            },
+          },
         },
       });
       if (!project) return null;
-      const { image, technologies, services, ...rest } = project;
-
+      const { image, technologies, services, ProjectTranslation, ...rest } =
+        project;
+      
       return {
         image,
         servicesData: services.map((service) => {
+
           const { image, ...rest } = service;
           return {
             image: image || null,
             service: rest,
           };
         }),
+        translation: ProjectTranslation ,
+
         technologies: technologies.map((tech) => tech.technology),
-        project: rest,
-      };
+
+        project: {
+          ...rest,
+          ...ProjectTranslation.find(
+            (t) => t.lang?.toLowerCase() === lang.toLowerCase()
+          ),
+        } as any ,
+      } ;
     } catch (error) {
       console.log(error);
       throw new ServiceError(
@@ -192,12 +233,17 @@ export class projectRepository {
     }
   }
 
+  async count() {
+    return this.prisma.project.count();
+  }
+
   async findById(
     id: string,
+    lang: "AR" | "EN" = "EN",
     prismaTouse?: txInstance
   ): Promise<(Project & { image: Image | null }) | null> {
     try {
-      const project = (prismaTouse || this.prisma).project.findUnique({
+      const project = await (prismaTouse || this.prisma).project.findUnique({
         where: { id },
         include: {
           image: true,
@@ -212,9 +258,23 @@ export class projectRepository {
               },
             },
           },
+          ProjectTranslation: {
+            where: {
+              lang,
+            },
+            select: {
+              title: true,
+              description: true,
+              richDescription: true,
+              lang: true,
+            },
+          },
         },
       });
-      return project;
+      if (!project) return null;
+
+      const { ProjectTranslation, ...rest } = project;
+      return { ...rest, ...ProjectTranslation[0] } as any;
     } catch (error) {
       console.log(error);
       throw new ServiceError(
@@ -226,6 +286,7 @@ export class projectRepository {
   }
 
   async create(
+    lang: "EN" | "AR",
     data: CreateProjectDTO & { slug: string; imageId?: string },
     prismaTouse?: txInstance
   ): Promise<{ project: Project; Image: Image | null }> {
@@ -271,16 +332,36 @@ export class projectRepository {
           const project = await tx.project.create({
             data: {
               ...CerateRest,
-              // imageId: imageToDB.id || null,
+              title: "",
+              description: "",
               order: data.order || 0,
               slug: slug,
+              ProjectTranslation: {
+                create: {
+                  title: data.title,
+                  description: data.description,
+                  richDescription: data.richDescription,
+                  lang: lang,
+                },
+              },
             },
             include: {
               image: true,
+              ProjectTranslation: {
+                select: {
+                  title: true,
+                  description: true,
+                  richDescription: true,
+                  lang: true,
+                },
+              },
             },
           });
-          const { image, ...rest } = project;
-          return { Image: image, project: rest };
+          const { image, ProjectTranslation, ...rest } = project;
+          return {
+            Image: image,
+            project: { ...rest, ...ProjectTranslation[0] },
+          };
         },
         {
           timeout: 20000,
@@ -297,7 +378,9 @@ export class projectRepository {
       );
     }
   }
+
   async createTransiaction(
+    lang: "EN" | "AR",
     data: CreateProjectDTO & { slug: string; imageId?: string },
     prismaTouse?: txInstance
   ): Promise<{ project: Project; Image: Image | null }> {
@@ -343,16 +426,40 @@ export class projectRepository {
       const project = await prismaTx.project.create({
         data: {
           ...CerateRest,
-          // imageId: imageToDB.id || null,
+          title: "",
+          description: "",
+          clientCompany: "",
+          clientName: "",
+          richDescription: "",
+
           order: data.order || 0,
           slug: slug,
+          ProjectTranslation: {
+            create: {
+              title: data.title,
+              description: data.description,
+              richDescription: data.richDescription,
+              lang: lang,
+            },
+          },
         },
         include: {
           image: true,
+          ProjectTranslation: {
+            select: {
+              title: true,
+              description: true,
+              richDescription: true,
+              lang: true,
+            },
+          },
         },
       });
-      const { image, ...rest } = project;
-      return { Image: image, project: rest };
+      const { image, ProjectTranslation, ...rest } = project;
+      return {
+        Image: image,
+        project: { ...rest, ...ProjectTranslation[0] },
+      };
     } catch (error) {
       console.log(error);
       throw new ServiceError(
@@ -363,19 +470,23 @@ export class projectRepository {
     }
   }
 
-  async CreateProjecAndAssignTechnologies({
-    project,
-    technologies,
-    services,
-  }: {
-    project: CreateProjectDTO;
-    technologies?: string[];
-    services?: string[];
-  }) {
+  async CreateProjecAndAssignTechnologies(
+    lang: "EN" | "AR" = "EN",
+    {
+      project,
+      technologies,
+      services,
+    }: {
+      project: CreateProjectDTO;
+      technologies?: string[];
+      services?: string[];
+    }
+  ) {
     const slug = slugify(project.title, { lower: true });
     const transaction = await this.prisma.$transaction(
       async (prismaTx) => {
         const createdProject = await this.createTransiaction(
+          lang,
           { ...project, slug },
           prismaTx
         );
@@ -430,8 +541,8 @@ export class projectRepository {
     );
     return transaction;
   }
-
   async update(
+    lang: "EN" | "AR",
     data: UpdateProjectDTO
   ): Promise<{ project: Project; Image: Image | null }> {
     try {
@@ -441,7 +552,7 @@ export class projectRepository {
 
           if (!data.id) throw new Error("no serviceId provided");
 
-          const project = await this.findById(data.id, prismaTx);
+          const project = await this.findById(data.id, lang, prismaTx);
 
           if (!project) throw new Error("project not found");
 
@@ -500,7 +611,6 @@ export class projectRepository {
             data.slug = slug;
           }
 
-          // console.log("project ID:", data.serviceId, NewImageId);
           const isOrderChanged =
             data.order !== undefined && data.order != project.order;
 
@@ -515,8 +625,8 @@ export class projectRepository {
             where: { id: data.id },
             data: {
               slug: data.slug || project.slug,
-              title: data.title || project.title,
-              description: data.description || project.description,
+              title: "",
+              description: "",
               richDescription: data.richDescription || project.richDescription,
               imageId: NewImageId,
               clientName: data.clientName || project.clientName || "",
@@ -527,11 +637,47 @@ export class projectRepository {
               isFeatured: data.isFeatured || project.isFeatured || false,
               order: data.order || project.order || 0,
             },
-            include: { image: true },
+            include: {
+              image: true,
+              ProjectTranslation: {
+                select: {
+                  title: true,
+                  description: true,
+                  richDescription: true,
+                  lang: true,
+                },
+              },
+            },
           });
 
-          const { image, ...rest } = updatedService;
-          return { Image: image, project: rest };
+          // Update translation
+          await prismaTx.projectTranslation.upsert({
+            where: {
+              projectId_lang: {
+                lang,
+                projectId: data.id,
+              },
+            },
+            update: {
+              title: data.title || project.title,
+              description: data.description || project.description,
+              richDescription: data.richDescription || project.richDescription,
+            },
+            create: {
+              projectId: data.id,
+              title: data.title || project.title,
+              description: data.description || project.description,
+              richDescription: data.richDescription || project.richDescription,
+              lang,
+            },
+          });
+
+          const { image, ProjectTranslation, ...rest } = updatedService;
+          const translation = ProjectTranslation.find((t) => t.lang === lang);
+          return {
+            Image: image,
+            project: { ...rest, ...translation },
+          };
         },
         {
           timeout: 20000,
@@ -546,233 +692,297 @@ export class projectRepository {
     }
   }
 
-  // *** 
-  async updateProjectWithTechsServices(data: {
-  id: string;
-  projectData: UpdateProjectDTO;
-  deletedTechIds: string[];
-  newTechIds: string[];
-  deletedServiceIds: string[];
-  newServiceIds: string[];
-}): Promise<{
-  project: Project;
-  image: Image | null;
-  technologies: Technology[];
-  services: Service[];
-}> {
-  try {
-    const transaction = await this.prisma.$transaction(
-      async (tx) => {
-        // 1. Update the project itself
-        let imageId: string | null = null;
-        const existingProject = await this.findById(data.id, tx);
-        
-        if (!existingProject) {
-          throw new ServiceError("Project not found", 404, "PROJECT_NOT_FOUND");
-        }
+  // ***
+  async updateProjectWithTechsServices(
+    data: {
+      id: string;
+      projectData: UpdateProjectDTO;
+      deletedTechIds: string[];
+      newTechIds: string[];
+      deletedServiceIds: string[];
+      newServiceIds: string[];
+    },
+    lang: "EN" | "AR" = "EN"
+  ): Promise<{
+    project: Project;
+    image: Image | null;
+    technologies: Technology[];
+    services: Service[];
+  }> {
+    try {
+      const transaction = await this.prisma.$transaction(
+        async (tx) => {
+          let imageId: string | null = null;
+          const existingProject = await this.findById(data.id, lang, tx);
 
-        imageId = existingProject.imageId;
+          if (!existingProject) {
+            throw new ServiceError(
+              "Project not found",
+              404,
+              "PROJECT_NOT_FOUND"
+            );
+          }
 
-        // Handle image updates
-        if (data.projectData.imageState === "REMOVE" && imageId) {
-          await tx.project.update({
-            where: { id: data.id },
-            data: { imageId: null },
-          });
-          await deleteImageById(imageId, tx);
-          imageId = null;
-        }
+          imageId = existingProject.imageId;
 
-        if (data.projectData.imageState === "UPDATE") {
-          if (imageId) {
+          // Handle image updates
+          if (data.projectData.imageState === "REMOVE" && imageId) {
             await tx.project.update({
               where: { id: data.id },
               data: { imageId: null },
             });
             await deleteImageById(imageId, tx);
+            imageId = null;
           }
 
-          if (data.projectData.image) {
-            const uploadedImage = await UploadImage(
-              data.projectData.image,
-              data.projectData.title || existingProject.title
-            );
-            
-            if (!uploadedImage) {
-              throw new ServiceError("Failed to upload image", 400, "IMAGE_UPLOAD_ERROR");
+          if (data.projectData.imageState === "UPDATE") {
+            if (imageId) {
+              await tx.project.update({
+                where: { id: data.id },
+                data: { imageId: null },
+              });
+              await deleteImageById(imageId, tx);
             }
 
-            const dbImage = await AssignImageToDBImage(
+            if (data.projectData.image) {
+              const uploadedImage = await UploadImage(
+                data.projectData.image,
+                data.projectData.title || existingProject.title
+              );
+
+              if (!uploadedImage) {
+                throw new ServiceError(
+                  "Failed to upload image",
+                  400,
+                  "IMAGE_UPLOAD_ERROR"
+                );
+              }
+
+              const dbImage = await AssignImageToDBImage(
+                {
+                  imageType: "PROJECT",
+                  blurhash: uploadedImage.blurhash,
+                  width: uploadedImage.width,
+                  height: uploadedImage.height,
+                  data: uploadedImage.data,
+                },
+                tx
+              );
+              imageId = dbImage.id;
+            }
+          }
+
+          // Generate new slug if title changed
+          let slug = existingProject.slug;
+          if (
+            data.projectData.title &&
+            data.projectData.title !== existingProject.title
+          ) {
+            slug = slugify(
+              data.projectData.title + randomUUID().substring(0, 8),
               {
-                imageType: "PROJECT",
-                blurhash: uploadedImage.blurhash,
-                width: uploadedImage.width,
-                height: uploadedImage.height,
-                data: uploadedImage.data,
-              },
-              tx
+                lower: true,
+              }
             );
-            imageId = dbImage.id;
           }
-        }
 
-        // Generate new slug if title changed
-        let slug = existingProject.slug;
-        if (data.projectData.title && data.projectData.title !== existingProject.title) {
-          slug = slugify(data.projectData.title + randomUUID().substring(0, 8), {
-            lower: true,
+          // Handle order changes
+          if (
+            data.projectData.order !== undefined &&
+            data.projectData.order !== existingProject.order
+          ) {
+            await this.reorderUpdate({
+              projectUpdate: {
+                ...existingProject,
+                order: data.projectData.order,
+              },
+              orderBeforeUpdate: existingProject.order,
+            });
+          }
+
+          // Update project
+          await tx.project.update({
+            where: { id: data.id },
+            data: {
+              title: "",
+              description: "",
+              richDescription: "",
+              clientCompany: data.projectData.clientCompany ?? existingProject.clientCompany,
+              clientName: data.projectData.clientName ?? existingProject.clientName,
+              projectUrl:
+                data.projectData.projectUrl ?? existingProject.projectUrl,
+              githubUrl:
+                data.projectData.githubUrl ?? existingProject.githubUrl,
+              status: data.projectData.status ?? existingProject.status,
+              startDate:
+                data.projectData.startDate ?? existingProject.startDate,
+              endDate: data.projectData.endDate ?? existingProject.endDate,
+              isFeatured:
+                data.projectData.isFeatured ?? existingProject.isFeatured,
+              order: data.projectData.order ?? existingProject.order,
+              imageId,
+              slug,
+            },
+            include: {
+              image: true,
+            },
           });
-        }
 
-        // Handle order changes
-        if (
-          data.projectData.order !== undefined &&
-          data.projectData.order !== existingProject.order
-        ) {
-          await this.reorderUpdate({
-            projectUpdate: { ...existingProject, order: data.projectData.order },
-            orderBeforeUpdate: existingProject.order,
-          });
-        }
-
-        // Update project
-        const updatedProject = await tx.project.update({
-          where: { id: data.id },
-          data: {
-            title: data.projectData.title ?? existingProject.title,
-            description: data.projectData.description ?? existingProject.description,
-            richDescription: data.projectData.richDescription ?? existingProject.richDescription,
-            clientName: data.projectData.clientName ?? existingProject.clientName,
-            clientCompany: data.projectData.clientCompany ?? existingProject.clientCompany,
-            projectUrl: data.projectData.projectUrl ?? existingProject.projectUrl,
-            githubUrl: data.projectData.githubUrl ?? existingProject.githubUrl,
-            status: data.projectData.status ?? existingProject.status,
-            startDate: data.projectData.startDate ?? existingProject.startDate,
-            endDate: data.projectData.endDate ?? existingProject.endDate,
-            isFeatured: data.projectData.isFeatured ?? existingProject.isFeatured,
-            order: data.projectData.order ?? existingProject.order,
-            imageId,
-            slug,
-          },
-          include: {
-            image: true,
-          },
-        });
-
-        // 2. Handle technology deletions
-        if (data.deletedTechIds.length > 0) {
-          await tx.projectTechnology.deleteMany({
+          // Update translation
+          await tx.projectTranslation.upsert({
             where: {
+              projectId_lang: {
+                lang,
+                projectId: data.id,
+              },
+            },
+            update: {
+              title: data.projectData.title || existingProject.title,
+              description:
+                data.projectData.description || existingProject.description,
+              richDescription:
+                data.projectData.richDescription ||
+                existingProject.richDescription,
+            },
+            create: {
               projectId: data.id,
-              technologyId: { in: data.deletedTechIds },
+              title: data.projectData.title || existingProject.title,
+              description:
+                data.projectData.description || existingProject.description,
+              richDescription:
+                data.projectData.richDescription ||
+                existingProject.richDescription,
+              lang,
             },
           });
-        }
 
-        // 3. Handle technology additions
-        if (data.newTechIds.length > 0) {
-          // Check if technologies exist
-          const techs = await tx.technology.findMany({
-            where: { id: { in: data.newTechIds } },
+          // Handle technology deletions
+          if (data.deletedTechIds.length > 0) {
+            await tx.projectTechnology.deleteMany({
+              where: {
+                projectId: data.id,
+                technologyId: { in: data.deletedTechIds },
+              },
+            });
+          }
+
+          // Handle technology additions
+          if (data.newTechIds.length > 0) {
+            const techs = await tx.technology.findMany({
+              where: { id: { in: data.newTechIds } },
+            });
+
+            if (techs.length !== data.newTechIds.length) {
+              throw new ServiceError(
+                "One or more technologies not found",
+                404,
+                "TECHNOLOGY_NOT_FOUND"
+              );
+            }
+
+            await tx.projectTechnology.createMany({
+              data: data.newTechIds.map((techId) => ({
+                projectId: data.id,
+                technologyId: techId,
+              })),
+              skipDuplicates: true,
+            });
+          }
+
+          // Handle service deletions
+          if (data.deletedServiceIds.length > 0) {
+            await tx.project.update({
+              where: { id: data.id },
+              data: {
+                services: {
+                  disconnect: data.deletedServiceIds.map((id) => ({ id })),
+                },
+              },
+            });
+          }
+
+          // Handle service additions
+          if (data.newServiceIds.length > 0) {
+            const services = await tx.service.findMany({
+              where: { id: { in: data.newServiceIds } },
+            });
+
+            if (services.length !== data.newServiceIds.length) {
+              throw new ServiceError(
+                "One or more services not found",
+                404,
+                "SERVICE_NOT_FOUND"
+              );
+            }
+
+            await tx.project.update({
+              where: { id: data.id },
+              data: {
+                services: {
+                  connect: data.newServiceIds.map((id) => ({ id })),
+                },
+              },
+            });
+          }
+
+          // Fetch final state with all relationships
+          const finalProject = await tx.project.findUnique({
+            where: { id: data.id },
+            include: {
+              image: true,
+              technologies: {
+                include: {
+                  technology: true,
+                },
+              },
+              services: true,
+              ProjectTranslation: {
+                where: {
+                  lang,
+                },
+                select: {
+                  title: true,
+                  description: true,
+                  richDescription: true,
+                  lang: true,
+                },
+              },
+            },
           });
 
-          if (techs.length !== data.newTechIds.length) {
+          if (!finalProject) {
             throw new ServiceError(
-              "One or more technologies not found",
-              404,
-              "TECHNOLOGY_NOT_FOUND"
+              "Failed to retrieve updated project",
+              500,
+              "PROJECT_RETRIEVAL_ERROR"
             );
           }
 
-          // Create new relationships
-          await tx.projectTechnology.createMany({
-            data: data.newTechIds.map((techId) => ({
-              projectId: data.id,
-              technologyId: techId,
-            })),
-            skipDuplicates: true,
-          });
+          const { ProjectTranslation, ...projectRest } = finalProject;
+          return {
+            project: { ...projectRest, ...ProjectTranslation[0] } as any,
+            image: finalProject.image,
+            technologies: finalProject.technologies.map((pt) => pt.technology),
+            services: finalProject.services,
+          };
+        },
+        {
+          timeout: 20000,
+          maxWait: 5000,
         }
+      );
 
-        // 4. Handle service deletions
-        if (data.deletedServiceIds.length > 0) {
-          await tx.project.update({
-            where: { id: data.id },
-            data: {
-              services: {
-                disconnect: data.deletedServiceIds.map((id) => ({ id })),
-              },
-            },
-          });
-        }
-
-        // 5. Handle service additions
-        if (data.newServiceIds.length > 0) {
-          // Check if services exist
-          const services = await tx.service.findMany({
-            where: { id: { in: data.newServiceIds } },
-          });
-
-          if (services.length !== data.newServiceIds.length) {
-            throw new ServiceError(
-              "One or more services not found",
-              404,
-              "SERVICE_NOT_FOUND"
-            );
-          }
-
-          await tx.project.update({
-            where: { id: data.id },
-            data: {
-              services: {
-                connect: data.newServiceIds.map((id) => ({ id })),
-              },
-            },
-          });
-        }
-
-        // 6. Fetch final state with all relationships
-        const finalProject = await tx.project.findUnique({
-          where: { id: data.id },
-          include: {
-            image: true,
-            technologies: {
-              include: {
-                technology: true,
-              },
-            },
-            services: true,
-          },
-        });
-
-        if (!finalProject) {
-          throw new ServiceError("Failed to retrieve updated project", 500, "PROJECT_RETRIEVAL_ERROR");
-        }
-
-        return {
-          project: finalProject,
-          image: finalProject.image,
-          technologies: finalProject.technologies.map((pt) => pt.technology),
-          services: finalProject.services,
-        };
-      },
-      {
-        timeout: 20000,
-        maxWait: 5000,
-      }
-    );
-
-    return transaction;
-  } catch (error) {
-    console.error("Error updating project with techs/services:", error);
-    if (error instanceof ServiceError) throw error;
-    throw new ServiceError(
-      "Failed to update project",
-      500,
-      "PROJECT_UPDATE_ERROR"
-    );
+      return transaction;
+    } catch (error) {
+      console.error("Error updating project with techs/services:", error);
+      if (error instanceof ServiceError) throw error;
+      throw new ServiceError(
+        "Failed to update project",
+        500,
+        "PROJECT_UPDATE_ERROR"
+      );
+    }
   }
-}
 
   async delete(id: string): Promise<Project> {
     try {
@@ -958,6 +1168,7 @@ export class projectRepository {
     }
   }
   async assignProjectToTechnolgy(
+    lang: "EN" | "AR" = "EN",
     data: ProjectWithTechnologiesDTO[]
   ): Promise<ProjectTechnology[]> {
     try {
@@ -965,9 +1176,8 @@ export class projectRepository {
         async (prismaTx) => {
           const promises = await Promise.all(
             data.map(async (data) => {
-              await this.findById(data.projectId, prismaTx);
+              await this.findById(data.projectId, lang, prismaTx);
               await this.findTechById(data.technologyId, prismaTx);
-              console.log({ data });
               const projectTechnology = await prismaTx.projectTechnology.create(
                 {
                   data: {
@@ -1000,6 +1210,8 @@ export class projectRepository {
   }
 
   async removeProjectToTechnolgy(
+    lang: "EN" | "AR" = "EN",
+
     data: ProjectWithTechnologiesDTO[]
   ): Promise<ProjectTechnology[]> {
     try {
@@ -1007,7 +1219,7 @@ export class projectRepository {
         async (prismaTx) => {
           const promises = await Promise.all(
             data.map(async (data) => {
-              await this.findById(data.projectId, prismaTx);
+              await this.findById(data.projectId, lang, prismaTx);
               await this.findTechById(data.technologyId, prismaTx);
 
               const projectTechnology = await prismaTx.projectTechnology.delete(
@@ -1041,10 +1253,13 @@ export class projectRepository {
       );
     }
   }
-  async createTechnologyAndProject(data: {
-    CreateTechnology: CreateTechnologyDTO;
-    CreateProject: (CreateProjectDTO & { slug: string })[];
-  }) {
+  async createTechnologyAndProject(
+    lang: "EN" | "AR" = "EN",
+    data: {
+      CreateTechnology: CreateTechnologyDTO;
+      CreateProject: (CreateProjectDTO & { slug: string })[];
+    }
+  ) {
     try {
       const transaction = await this.prisma.$transaction(
         async (prismaTx) => {
@@ -1060,7 +1275,7 @@ export class projectRepository {
           const projectIds = (
             await Promise.all(
               data.CreateProject.map((project) =>
-                this.create(project, prismaTx)
+                this.create(lang, project, prismaTx)
               )
             )
           ).map((project) => project.project.id);
@@ -1073,7 +1288,7 @@ export class projectRepository {
           }));
           const projectWithTechnology = await Promise.all(
             dataToAssign.map(async (data) => {
-              await this.findById(data.projectId, prismaTx);
+              await this.findById(data.projectId, lang, prismaTx);
               await this.findTechById(data.technologyId, prismaTx);
               const projectTechnology = await prismaTx.projectTechnology.create(
                 {
@@ -1113,16 +1328,18 @@ export class projectRepository {
   }
 
   async createProjectAndTechnologies({
+    lang = "EN",
     project,
     technologies,
   }: {
+    lang: "EN" | "AR";
     project: CreateProjectDTO & { slug: string };
     technologies: CreateTechnologyDTO[];
   }) {
     try {
       const transaction = await this.prisma.$transaction(
         async (prismaTx) => {
-          const createdProject = await this.create(project, prismaTx);
+          const createdProject = await this.create(lang, project, prismaTx);
 
           const createdTechnologies = await Promise.all(
             technologies.map((tech) =>

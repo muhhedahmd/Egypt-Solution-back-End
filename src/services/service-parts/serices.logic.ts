@@ -29,21 +29,22 @@ export class ServicesLogic {
     return isValid;
   }
   async getAllServices(
-    params: PaginationParams & {Active :boolean , isFeatured :boolean}
+    lang: "EN" | "AR" = "EN",
+    params: PaginationParams & { Active: boolean; isFeatured: boolean }
   ): Promise<PaginatedResponse<IService>> {
     const skip = params.skip || 0;
     const take = params.take || 10;
-    const Active= params.Active
-    const isFeatured= params.isFeatured
+    const Active = params.Active;
+    const isFeatured = params.isFeatured;
 
     const [services, totalItems] = await Promise.all([
-      this.repository.findMany(skip, take, Active  , isFeatured),
+      this.repository.findMany(lang, skip, take, Active, isFeatured),
       this.repository.count(),
     ]);
     const remainingItems = totalItems - (skip * take + services.length);
 
     return {
-      data : (services as any),
+      data: services as any,
       pagination: {
         totalItems,
         remainingItems,
@@ -55,12 +56,12 @@ export class ServicesLogic {
     };
   }
 
-  async getServiceById(id: string): Promise<any> {
+  async getServiceById(lang: "EN" | "AR" = "EN", id: string): Promise<any> {
     console.log({
       id,
     });
     this.validator.validateId(id);
-    const service = await this.repository.findById(id);
+    const service = await this.repository.findById(lang, id);
     if (!service) {
       throw new ServiceNotFoundError(id);
     }
@@ -87,13 +88,14 @@ export class ServicesLogic {
   }
 
   async createService(
+    lang: "EN" | "AR",
     data: CreateServiceDTO
-  ): Promise<IServiceRepositoryCreateResponse> {
+  ): Promise<Awaited<ReturnType<typeof this.repository.create>>> {
     const valid = this.validator.validateCreate(data);
     const slug = slugify(data.name + randomUUID().substring(0, 8), {
       lower: true,
     });
-    const serices = await this.repository.create({
+    const serices = await this.repository.create(lang, {
       ...valid,
       slug: slug,
     });
@@ -129,9 +131,14 @@ export class ServicesLogic {
       );
     return services;
   }
-  async updateService(data: updateService) {
+  async updateService(lang: "EN" | "AR" = "EN", data: updateService) {
+
+    console.log( { 
+      lang , 
+      data 
+    })
     this.validator.validateUpdate(data);
-    const updatedService = await this.repository.update(data);
+    const updatedService = await this.repository.update(lang, data);
     if (!updatedService)
       throw new ServiceError(
         "error updating service",

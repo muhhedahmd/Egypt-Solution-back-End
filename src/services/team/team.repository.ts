@@ -14,13 +14,20 @@ import {
 import { TeamError } from "../../errors/team.error";
 
 export class TeamRepository {
-  constructor(private prisma: PrismaClientConfig) {}
+  constructor(private prisma: PrismaClientConfig) { }
 
-  async findMany(skip: number, take: number) {
-
-    return this.prisma.teamMember.findMany({
+  async findMany( skip: number, take: number) {
+    const teamMembers = await this.prisma.teamMember.findMany({
       include: {
         image: true,
+        TeamMemberTranslation: {
+          select: {
+            name: true,
+            position: true,
+            bio: true,
+            lang: true,
+          },
+        },
         slideShows: {
           include: {
             slideShow: true,
@@ -33,7 +40,18 @@ export class TeamRepository {
         order: "asc",
       },
     });
+
+    return teamMembers.map((member) => {
+      const { image, TeamMemberTranslation, slideShows, ...rest } = member;
+      return {
+        teamMember: { ...rest },
+        image: image || null,
+        translation: TeamMemberTranslation,
+        slideShows,
+      };
+    });
   }
+
   async ActiveCount(isFeatured?: boolean) {
     return this.prisma.teamMember.count({
       where: {
@@ -42,21 +60,44 @@ export class TeamRepository {
       },
     });
   }
-  async findManyActive(skip: number, take: number, isFeatured: boolean) {
 
-    return this.prisma.teamMember.findMany({
+  async findManyActive(
+   
+    skip: number,
+    take: number,
+    isFeatured: boolean
+  ) {
+    const teamMembers = await this.prisma.teamMember.findMany({
       where: {
         isActive: true,
         isFeatured: isFeatured || false,
       },
       include: {
         image: true,
+        TeamMemberTranslation: {
+          select: {
+            name: true,
+            position: true,
+            bio: true,
+
+            lang: true,
+          },
+        },
       },
       skip: skip * take,
       take: take,
       orderBy: {
         order: "asc",
       },
+    });
+
+    return teamMembers.map((member) => {
+      const { image, TeamMemberTranslation, ...rest } = member;
+      return {
+        teamMember: { ...rest },
+        image: image || null,
+        translation: TeamMemberTranslation,
+      };
     });
   }
 
@@ -81,10 +122,18 @@ export class TeamRepository {
 
   async findById(id: string) {
     try {
-      return this.prisma.teamMember.findUnique({
+      const member = await this.prisma.teamMember.findUnique({
         where: { id },
         include: {
           image: true,
+          TeamMemberTranslation: {
+            select: {
+              name: true,
+              position: true,
+              bio: true,
+              lang: true,
+            },
+          },
           slideShows: {
             include: {
               slideShow: true,
@@ -92,18 +141,36 @@ export class TeamRepository {
           },
         },
       });
+
+      if (!member) return null;
+
+      const { image, TeamMemberTranslation, slideShows, ...rest } = member;
+      return {
+        teamMember: { ...rest },
+        image: image || null,
+        translation: TeamMemberTranslation,
+        slideShows,
+      };
     } catch (error) {
       console.error(error);
       throw new Error("Error finding team member by ID");
     }
   }
 
-  async findBySlug(slug: string) {
+  async findBySlug( slug: string) {
     try {
       const findedTeamMember = await this.prisma.teamMember.findUnique({
         where: { slug },
         include: {
           image: true,
+          TeamMemberTranslation: {
+            select: {
+              name: true,
+              position: true,
+              bio: true,
+              lang: true,
+            },
+          },
           slideShows: {
             include: {
               slideShow: true,
@@ -119,7 +186,8 @@ export class TeamRepository {
         return null;
       }
 
-      const { image, slideShows, ...rest } = findedTeamMember;
+      const { image, TeamMemberTranslation, slideShows, ...rest } =
+        findedTeamMember;
       return {
         image: image || null,
         slideShows: slideShows.map((ss) => ({
@@ -130,7 +198,8 @@ export class TeamRepository {
           createdAt: ss.createdAt,
           updatedAt: ss.updatedAt,
         })),
-        teamMember: rest,
+        teamMember: { ...rest },
+        translation: TeamMemberTranslation,
       };
     } catch (error) {
       console.error(error);
@@ -143,6 +212,7 @@ export class TeamRepository {
   }
 
   async SearchTeamMember(
+    lang: "EN" | "AR",
     searchTerm: string,
     skip: number,
     take: number
@@ -152,21 +222,33 @@ export class TeamRepository {
         where: {
           OR: [
             {
-              name: {
-                contains: searchTerm,
-                mode: "insensitive",
+              TeamMemberTranslation: {
+                some: {
+                  name: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
               },
             },
             {
-              position: {
-                contains: searchTerm,
-                mode: "insensitive",
+              TeamMemberTranslation: {
+                some: {
+                  position: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
               },
             },
             {
-              bio: {
-                contains: searchTerm,
-                mode: "insensitive",
+              TeamMemberTranslation: {
+                some: {
+                  bio: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
               },
             },
             {
@@ -185,6 +267,15 @@ export class TeamRepository {
         },
         include: {
           image: true,
+          TeamMemberTranslation: {
+            where: { lang },
+            select: {
+              name: true,
+              position: true,
+              bio: true,
+              lang: true,
+            },
+          },
         },
         skip: skip * take,
         take,
@@ -193,7 +284,14 @@ export class TeamRepository {
         },
       });
 
-      return teamMembers;
+      return teamMembers.map((member) => {
+        const { image, TeamMemberTranslation, ...rest } = member;
+        return {
+          ...rest,
+          translation: TeamMemberTranslation,
+          image,
+        } as InterFaceSearchTeamMember;
+      });
     } catch (error) {
       console.error(error);
       throw new TeamError(
@@ -204,7 +302,10 @@ export class TeamRepository {
     }
   }
 
-  async create(data: CreateTeamMemberDTO & { slug: string }) {
+  async create(
+    lang: "EN" | "AR",
+    data: CreateTeamMemberDTO & { slug: string }
+  ) {
     try {
       const transaction = await this.prisma.$transaction(
         async (tx) => {
@@ -237,9 +338,6 @@ export class TeamRepository {
           const teamMember = await tx.teamMember.create({
             data: {
               slug: slug,
-              name: data.name,
-              position: data.position,
-              bio: data.bio,
               email: data.email,
               phone: data.phone,
               linkedin: data.linkedin,
@@ -249,18 +347,41 @@ export class TeamRepository {
               isActive: data.isActive || false,
               isFeatured: data.isFeatured || false,
               order: data.order || 0,
+              name: "",
+              position: "",
+              TeamMemberTranslation: {
+                create: {
+                  name: data.name,
+                  position: data.position,
+                  bio: data.bio,
+                  lang: lang,
+                },
+              },
             },
             include: {
               image: true,
+              TeamMemberTranslation: {
+                where: { lang },
+                select: {
+                  name: true,
+                  position: true,
+                  bio: true,
+                  lang: true,
+                },
+              },
             },
           });
 
-          const { image, ...rest } = teamMember;
-          return { Image: image, teamMember: rest };
+          const { image, TeamMemberTranslation, ...rest } = teamMember;
+          return {
+            Image: image,
+            translation: TeamMemberTranslation,
+
+            teamMember: { ...rest },
+          };
         },
         {
           timeout: 20000,
-          isolationLevel: "Serializable",
           maxWait: 5000,
         }
       );
@@ -271,7 +392,7 @@ export class TeamRepository {
     }
   }
 
-  async update(data: UpdateTeamMember) {
+  async update(lang: "EN" | "AR", data: UpdateTeamMember) {
     try {
       const transaction = await this.prisma.$transaction(
         async (prismaTx) => {
@@ -333,7 +454,7 @@ export class TeamRepository {
           }
 
           // Generate new slug if name changed
-          if (data.name && data.name !== teamMember.name) {
+          if (data.name) {
             const slug = slugify(data.name + randomUUID().substring(0, 8), {
               lower: true,
             });
@@ -345,9 +466,6 @@ export class TeamRepository {
             where: { id: data.teamId },
             data: {
               slug: data.slug || teamMember.slug,
-              name: data.name || teamMember.name,
-              position: data.position || teamMember.position,
-              bio: data.bio || teamMember.bio,
               email: data.email || teamMember.email,
               phone: data.phone || teamMember.phone,
               linkedin: data.linkedin || teamMember.linkedin,
@@ -358,11 +476,41 @@ export class TeamRepository {
               isFeatured: data.isFeatured ?? teamMember.isFeatured,
               order: data.order ?? teamMember.order,
             },
-            include: { image: true },
+            include: {
+              image: true,
+
+            },
+          });
+
+          // Update or create translation
+          const t = await prismaTx.teamMemberTranslation.upsert({
+            where: {
+              memberId_lang: {
+                memberId: data.teamId,
+                lang: lang,
+              },
+            },
+            update: {
+              name: data.name,
+              position: data.position,
+              bio: data.bio,
+            },
+            create: {
+              memberId: data.teamId,
+              name: data.name || "Team Member",
+              position: data.position || "Position",
+              bio: data.bio,
+              lang: lang,
+            },
           });
 
           const { image, ...rest } = updatedTeamMember;
-          return { Image: image, teamMember: rest };
+          // const translation = translations.find((t) => t.lang === lang);
+          return {
+            Image: image,
+            translation: t,
+            teamMember: { ...rest },
+          };
         },
         {
           timeout: 20000,
@@ -377,7 +525,7 @@ export class TeamRepository {
     }
   }
 
-  async delete(id: string) {
+  async delete( id: string) {
     try {
       const transaction = await this.prisma.$transaction(
         async (prismaTx) => {

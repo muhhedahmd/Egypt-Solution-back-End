@@ -10,16 +10,28 @@ class TestimonialRoutes {
     }
     initializeRoutes() {
         // GET routes
-        this.router.get('/', this.controller.getAllTestimonials.bind(this.controller));
-        this.router.get('/search', this.controller.SearchTestimonials.bind(this.controller));
-        this.router.get('/check-order', this.controller.isValidOrder.bind(this.controller));
-        this.router.get('/:id', this.controller.getTestimonialById.bind(this.controller));
+        this.router.get("/", this.controller.getAllTestimonials.bind(this.controller));
+        this.router.get("/search", 
+        // requireAuthv2,
+        this.controller.SearchTestimonials.bind(this.controller));
+        this.router.get("/check-order", 
+        // requireAuthv2,
+        this.controller.isValidOrder.bind(this.controller));
+        this.router.get("/:id", 
+        // requireAuthv2,
+        this.controller.getTestimonialById.bind(this.controller));
         // POST routes
-        this.router.post('/', this.controller.createTestimonial.bind(this.controller));
+        this.router.post("/", 
+        // requireAuthv2,
+        this.controller.createTestimonial.bind(this.controller));
         // PUT routes
-        this.router.put('/:id', this.controller.updateTestimonial.bind(this.controller));
+        this.router.put("/:id", 
+        // requireAuthv2,
+        this.controller.updateTestimonial.bind(this.controller));
         // DELETE routes
-        this.router.delete('/:id', this.controller.deleteTestimonial.bind(this.controller));
+        this.router.delete("/:id", 
+        // requireAuthv2, 
+        this.controller.deleteTestimonial.bind(this.controller));
     }
     getRouter() {
         return this.router;

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { ClientController } from "../controllers/clientController";
+import { requireAuthv2 } from "../middlewares/auth";
 
 // const upload = multer({ storage: multer.memoryStorage() });
 
@@ -15,50 +16,58 @@ export class ClientRoutes {
 
   private initializeRoutes() {
     
-    const asyncHandler = (fn: any) => (req: any, res: any, next: any) => {
-      Promise.resolve(fn(req, res, next)).catch(next);
-    };
 
-    this.router.get("/", asyncHandler(this.controller.getAllClients.bind(this.controller)));
+
+    this.router.get("/", this.controller.getAllClients.bind(this.controller))
 
     this.router.get(
       "/search",
-      asyncHandler(this.controller.SearchClients.bind(this.controller))
+      requireAuthv2,
+      this.controller.SearchClients.bind(this.controller)
     );
 
     this.router.get(
       "/check-order",
-      asyncHandler(this.controller.isValidOrder.bind(this.controller))
+      requireAuthv2,
+
+      this.controller.isValidOrder.bind(this.controller)
     );
 
     this.router.get(
       "/:id",
-      asyncHandler(this.controller.getClientById.bind(this.controller))
+      requireAuthv2,
+      this.controller.getClientById.bind(this.controller)
     );
 
     this.router.get(
       "/slug/:slug",
-      asyncHandler(this.controller.getClientBySlug.bind(this.controller))
+      requireAuthv2,
+
+      this.controller.getClientBySlug.bind(this.controller)
     );
 
     // POST routes
     this.router.post(
       "/",
-    //   upload.any(),
-      asyncHandler(this.controller.createClient.bind(this.controller))
+      requireAuthv2,
+      this.controller.createClient.bind(this.controller)
     );
 
     // PUT routes
     this.router.put(
       "/:id",
+      requireAuthv2,
+
      
-      asyncHandler(this.controller.updateClient.bind(this.controller))
+      this.controller.updateClient.bind(this.controller)
     );
 
     // DELETE routes
     this.router.delete(
       "/:id",
-      asyncHandler(this.controller.deleteClient.bind(this.controller))
+      requireAuthv2,
+
+      this.controller.deleteClient.bind(this.controller)
     );
   }
 

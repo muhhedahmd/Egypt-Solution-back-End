@@ -93,7 +93,6 @@ export class AuthController {
           {
             httpOnly: true,
             secure: isProd,
-            // domain: "admin-egypt-solution.vercel.app",
             sameSite: isProd ? "none" : "lax",
             path: "/",
             maxAge: tokens.refreshExpiresIn * 1000,
@@ -118,6 +117,22 @@ export class AuthController {
       return res.status(500).json({ error: "Internal server error" });
     }
   }
+  
+  static async logOut(req: Request, res: Response) {
+    try {
+      const refreshToken = req.cookies.refreshToken || req.cookies["__Secure-refreshToken"]
+      if(!refreshToken) return res.status(400).json({ error: "Refresh token is required" });
+        await TokenService.logout(refreshToken)
+      
+      return res
+        .clearCookie(isProd ? "__Secure-refreshToken" : "refreshToken")
+        .clearCookie(isProd ? "__Secure-accessToken" : "accessToken")
+        .status(200)
+        .json({ success: true, message: "User logged out successfully" });
+    } catch (error) {
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
 
   static async sendOTP(req: Request, res: Response) {
     try {
@@ -133,7 +148,6 @@ export class AuthController {
         Method: method,
         userId,
       });
-
 
       if (typeof result === "string") {
         return res.status(400).json({ error: result });
@@ -167,7 +181,7 @@ export class AuthController {
       // Read cookie based on environment
       const cookieName = isProd ? "__Secure-refreshToken" : "refreshToken";
       const refreshToken = req.cookies[cookieName] || req.body.refreshToken;
-      
+
       if (!refreshToken) {
         return res.status(400).json({ error: "Refresh token is required" });
       }
@@ -192,18 +206,14 @@ export class AuthController {
             maxAge: 30 * 24 * 60 * 60 * 1000,
           }
         )
-        .cookie(
-          isProd ? "__Secure-accessToken" : "accessToken",
-          accessToken,
-          {
-            httpOnly: true,
-            domain: "admin-egypt-solution.vercel.app",
-            secure: isProd,
-            sameSite: isProd ? "none" : "lax",
-            path: "/",
-            maxAge: 15 * 60 * 1000,
-          }
-        )
+        .cookie(isProd ? "__Secure-accessToken" : "accessToken", accessToken, {
+          httpOnly: true,
+          domain: "admin-egypt-solution.vercel.app",
+          secure: isProd,
+          sameSite: isProd ? "none" : "lax",
+          path: "/",
+          maxAge: 15 * 60 * 1000,
+        })
         .status(200)
         .json(user);
     } catch (error) {
@@ -236,7 +246,6 @@ export class AuthController {
           .status(400)
           .json({ error: "Failed to get ID token from Google" });
       }
-
 
       const decoded: any = jwt.decode(id_token);
       const { email, name, picture, sub: googleId } = decoded;
@@ -323,15 +332,6 @@ export class AuthController {
         });
       const avatar = req.file?.buffer;
 
-      console.log("before", formData, {
-        avatar: avatar || null,
-        userId,
-        bio: formData?.bio,
-        role: formData?.role,
-        dateOfBirth: formData?.dateOfBirth,
-        gender: formData?.gender,
-        phone: formData?.phone,
-      });
       const response = await userService.successGoogle({
         avatar: avatar || null,
         userId,

@@ -28,7 +28,6 @@ export class userService {
       if (!name || !email || !password) {
         return "All fields are required";
       }
-      // console.log("email", email)
       if (
         await prisma.user.findUnique({
           where: {
@@ -55,7 +54,7 @@ export class userService {
           name: name,
           email: email,
           password: hashedpassword,
-          role: role as UserRole,
+          role: role ,
           profile: {
             create: {},
           },

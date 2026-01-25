@@ -1,6 +1,7 @@
 import { NextFunction, Response, Request } from "express";
 import { ServicesLogic } from "../services/service-parts/serices.logic";
 import { ServiceError, ServiceNotFoundError } from "../errors/services.error";
+import {TeamMemberTranslation } from "@prisma/client"
 
 export class ServicesController {
   private servicesLogic: ServicesLogic;
@@ -10,10 +11,12 @@ export class ServicesController {
 
   // Add methods to handle services-related operations here // pagniate
   async getAllServices(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { skip, take  , Active , isFeatured} = req.query;
 
-      const services = await this.servicesLogic.getAllServices({
+    try {
+      const { skip, take  , Active , isFeatured , langEnd} = req.query;
+      const lang : "AR" | "EN" = langEnd ? langEnd as "AR" | "EN" : (req.lang as "AR" | "EN") || "EN";
+
+      const services = await this.servicesLogic.getAllServices( lang , {
         skip: Number(skip) || 0,
         take: Number(take) || 10,
         Active : Active === "true" ? true : false,
@@ -35,8 +38,9 @@ export class ServicesController {
     
     try {
       const { id } = req.params;
+      const lang : "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
       if (!id) throw new ServiceNotFoundError("id is required");
-      const service = await this.servicesLogic.getServiceById(id);
+      const service = await this.servicesLogic.getServiceById(lang ,id);
       return res.json({
         data: service,
         message: "service fetched successfully",
@@ -78,40 +82,16 @@ export class ServicesController {
   }
   async createService(req: Request, res: Response, next: NextFunction) {
     try {
-  
       const data = req.body;
-      // name
-      // slug
-      // description
-      // richDescription
-      // price
-      // order
-      // isActive
-      // isFeatured
-      // icon
-      // image
-      // iconImage
-      console.log({
+      const lang : "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
      
+      const newService = await this.servicesLogic.createService( lang, {
         ...data,
         isActive: data.isActive === "true" ? true : false,
         isFeatured: data.isFeatured === "true" ? true : false,
         order: Number(data.order) || 0,
         icon: data.icon || "",
-        // iconImage: req.files || "",
-         image:  Array.isArray(req.files) && req.files.length > 0 ? req.files.find((f)=> f.fieldname === "image")?.buffer  : null,
-        iconImage:  Array.isArray(req.files) && req.files.length > 0 ? req.files.find((f)=> f.fieldname === "iconImage")?.buffer : null
-
-      
-       
-      });
-
-      const newService = await this.servicesLogic.createService({
-        ...data,
-        isActive: data.isActive === "true" ? true : false,
-        isFeatured: data.isFeatured === "true" ? true : false,
-        order: Number(data.order) || 0,
-        icon: data.icon || "",
+ 
    
          image:  Array.isArray(req.files) && req.files.length > 0 ? req.files.find((f)=> f.fieldname === "image")?.buffer  : null,
         iconImage:  Array.isArray(req.files) && req.files.length > 0 ? req.files.find((f)=> f.fieldname === "iconImage")?.buffer : null
@@ -129,6 +109,7 @@ export class ServicesController {
   async updateService(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
+      const lang : "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
       const serviceData = req.body;
       const data = {
         ...serviceData,
@@ -143,7 +124,8 @@ export class ServicesController {
           | "UPDATE"
           | undefined,
       };
-      const updatedService = await this.servicesLogic.updateService({
+
+      const updatedService = await this.servicesLogic.updateService( lang , {
         ...data,
         isActive: data.isActive === "true" ? true : false,
         isFeatured: data.isFeatured === "true" ? true : false,

@@ -40,14 +40,14 @@ class ServicesLogic {
             return isValid;
         });
     }
-    getAllServices(params) {
-        return __awaiter(this, void 0, void 0, function* () {
+    getAllServices() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", params) {
             const skip = params.skip || 0;
             const take = params.take || 10;
             const Active = params.Active;
             const isFeatured = params.isFeatured;
             const [services, totalItems] = yield Promise.all([
-                this.repository.findMany(skip, take, Active, isFeatured),
+                this.repository.findMany(lang, skip, take, Active, isFeatured),
                 this.repository.count(),
             ]);
             const remainingItems = totalItems - (skip * take + services.length);
@@ -64,13 +64,13 @@ class ServicesLogic {
             };
         });
     }
-    getServiceById(id) {
-        return __awaiter(this, void 0, void 0, function* () {
+    getServiceById() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", id) {
             console.log({
                 id,
             });
             this.validator.validateId(id);
-            const service = yield this.repository.findById(id);
+            const service = yield this.repository.findById(lang, id);
             if (!service) {
                 throw new services_error_1.ServiceNotFoundError(id);
             }
@@ -91,13 +91,13 @@ class ServicesLogic {
             return service;
         });
     }
-    createService(data) {
+    createService(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             const valid = this.validator.validateCreate(data);
             const slug = (0, slugify_1.default)(data.name + (0, crypto_1.randomUUID)().substring(0, 8), {
                 lower: true,
             });
-            const serices = yield this.repository.create(Object.assign(Object.assign({}, valid), { slug: slug }));
+            const serices = yield this.repository.create(lang, Object.assign(Object.assign({}, valid), { slug: slug }));
             if (!serices)
                 throw new Error("error create services");
             return serices;
@@ -130,10 +130,14 @@ class ServicesLogic {
             return services;
         });
     }
-    updateService(data) {
-        return __awaiter(this, void 0, void 0, function* () {
+    updateService() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", data) {
+            console.log({
+                lang,
+                data
+            });
             this.validator.validateUpdate(data);
-            const updatedService = yield this.repository.update(data);
+            const updatedService = yield this.repository.update(lang, data);
             if (!updatedService)
                 throw new services_error_1.ServiceError("error updating service", 400, "ERROR_UPDATING_SERVICE");
             const { Image } = updatedService, rest = __rest(updatedService, ["Image"]);

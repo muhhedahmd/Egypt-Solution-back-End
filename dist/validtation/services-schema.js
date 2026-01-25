@@ -29,7 +29,7 @@ class ServicesValidator {
             name: zod_1.z.string().min(3).max(100).optional(),
             description: zod_1.z.string().min(10).max(500).optional(),
             richDescription: zod_1.z.string().min(10).optional(),
-            image: zod_1.z.instanceof(Buffer).optional(),
+            image: zod_1.z.instanceof(Buffer).optional().nullable(),
             imageState: zod_1.z.enum(["KEEP", "REMOVE", "UPDATE"]).optional(),
             slug: zod_1.z.string().optional(),
             icon: zod_1.z.string().optional(),
@@ -44,6 +44,9 @@ class ServicesValidator {
             return this.createSchema.parse(data);
         }
         catch (error) {
+            if (error instanceof zod_1.z.ZodError) {
+                throw new services_error_1.ServiceValidationError(error.issues[0].message);
+            }
             throw new services_error_1.ServiceValidationError("Invalid service data");
         }
     }

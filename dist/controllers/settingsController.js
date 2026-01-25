@@ -19,8 +19,12 @@ var __rest = (this && this.__rest) || function (s, e) {
         }
     return t;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.companyInfoController = void 0;
+const prisma_1 = __importDefault(require("../config/prisma"));
 class companyInfoController {
     constructor(logic) {
         this.logic = logic;
@@ -29,8 +33,9 @@ class companyInfoController {
         return __awaiter(this, void 0, void 0, function* () {
             var _a;
             try {
+                const lang = req.lang || "EN";
                 const body = req.body;
-                const newSettings = yield this.logic.createSettings({
+                const newSettings = yield this.logic.createSettings(lang, {
                     data: body,
                     logo: Array.isArray(req.files) && req.files
                         ? (_a = req.files[0]) === null || _a === void 0 ? void 0 : _a.buffer
@@ -62,10 +67,70 @@ class companyInfoController {
             }
         });
     }
+    SwitchLang(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { lang } = req.body;
+                if (!["EN", "AR"].includes(lang)) {
+                    return res.status(400).json({ error: "Invalid language" });
+                }
+                const companyInfo = yield prisma_1.default.companyInfo.findFirst();
+                const currentLang = companyInfo === null || companyInfo === void 0 ? void 0 : companyInfo.lang;
+                if (lang === currentLang) {
+                    return res.status(400).json({ error: "Language already set" });
+                }
+                yield prisma_1.default.companyInfo.update({
+                    where: {
+                        id: companyInfo === null || companyInfo === void 0 ? void 0 : companyInfo.id,
+                    },
+                    data: {
+                        lang,
+                    },
+                });
+                res.cookie("user_lang", lang, {
+                    maxAge: 365 * 24 * 60 * 60 * 1000,
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === "production",
+                    sameSite: "lax",
+                });
+                res.json({
+                    success: true,
+                    lang,
+                    isRTL: lang === "AR",
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    currentLang(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const companyInfo = yield prisma_1.default.companyInfo.findFirst();
+                const currentLang = (companyInfo === null || companyInfo === void 0 ? void 0 : companyInfo.lang) || "EN";
+                res.cookie("user_lang", currentLang, {
+                    maxAge: 365 * 24 * 60 * 60 * 1000,
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === "production",
+                    sameSite: "lax",
+                });
+                res.json({
+                    success: true,
+                    currentLang,
+                    isRTL: currentLang === "AR",
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
     updateSettings(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             var _a, _b;
             try {
+                const lang = req.lang || "EN";
                 const { id } = req.params;
                 const body = req.body;
                 const { LogoState } = body, CompanyInfo = __rest(body, ["LogoState"]);
@@ -76,7 +141,7 @@ class companyInfoController {
                         ? (_a = req.files[0]) === null || _a === void 0 ? void 0 : _a.buffer
                         : undefined,
                 });
-                const updatedSettings = yield this.logic.updateSettings(id, {
+                const updatedSettings = yield this.logic.updateSettings(lang, id, {
                     CompanyInfo,
                     LogoState,
                     logo: Array.isArray(req.files) && req.files

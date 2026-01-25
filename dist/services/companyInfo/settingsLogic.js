@@ -15,8 +15,8 @@ class CompanyInfoLogic {
     constructor(settingsRepo) {
         this.settingsRepo = settingsRepo;
     }
-    createSettings(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ data, logo, }) {
+    createSettings(lang_1, _a) {
+        return __awaiter(this, arguments, void 0, function* (lang, { data, logo, }) {
             try {
                 const newSettings = yield this.settingsRepo.createSettings({ data, logo });
                 return newSettings;
@@ -45,7 +45,7 @@ class CompanyInfoLogic {
             }
         });
     }
-    updateSettings(id, data) {
+    updateSettings(lang, id, data) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const updatedSettings = yield this.settingsRepo.updateSettings(id, data);
@@ -61,7 +61,7 @@ class CompanyInfoLogic {
     getMimalStats() {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const stats = yield this.settingsRepo.getMimalStats();
+                const stats = yield this.settingsRepo.getMinimalStats();
                 return stats;
             }
             catch (error) {

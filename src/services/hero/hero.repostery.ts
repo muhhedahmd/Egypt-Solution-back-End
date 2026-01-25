@@ -7,15 +7,28 @@ import {
   AssignImageToDBImage,
 } from "../../lib/helpers";
 import { CreateHeroDTO, UpdateHeroDTO } from "../../types/hero";
+import { firebaserules_v1 } from "googleapis";
 
 export class HeroRepository {
   constructor(private prisma: PrismaClientConfig) {}
 
-  async findMany(skip: number, take: number) {
+  async findMany(lang: "AR" | "EN" = "EN", skip: number, take: number) {
     try {
       const heroes = await this.prisma.hero.findMany({
         include: {
           backgroundImage: true,
+          HeroTranslation: {
+            select: {
+              id: true,
+              name: true,
+              ctaText: true,
+              description: true,
+              secondaryCtaText: true,
+              lang: true,
+              subtitle: true,
+              title: true,
+            },
+          },
         },
         skip: skip * take,
         take: take,
@@ -25,9 +38,9 @@ export class HeroRepository {
       });
 
       return heroes.map((hero) => {
-        const { backgroundImage, ...rest } = hero;
+        const { backgroundImage, HeroTranslation, ...rest } = hero;
         return {
-          hero: rest,
+          hero: { ...rest, HeroTranslation },
           backgroundImage: backgroundImage || null,
         };
       });
@@ -41,26 +54,110 @@ export class HeroRepository {
     return this.prisma.hero.count();
   }
 
-  async findById(id: string) {
+  async findById(lang: "EN" | "AR" = "EN", id: string) {
     try {
-      return this.prisma.hero.findUnique({
+      const hero = await this.prisma.hero.findUnique({
         where: { id },
         include: {
           backgroundImage: true,
+          HeroTranslation: {
+            where: {
+              lang,
+            },
+            select: {
+              name: true,
+              ctaText: true,
+              description: true,
+              secondaryCtaText: true,
+              lang: true,
+              subtitle: true,
+              title: true,
+            },
+          },
         },
       });
+
+      if (!hero) return null;
+
+      const { backgroundImage, HeroTranslation, ...rest } = hero;
+      return {
+        hero: { ...rest, ...HeroTranslation[0] },
+        backgroundImage: backgroundImage || null,
+      };
     } catch (error) {
       console.error(error);
       throw new Error("Error finding hero by ID");
     }
   }
 
-  async findActiveHero() {
+  async toggleActive(id: string) {
+    try {
+      const hero = await this.prisma.hero.findUnique({
+        where: { id },
+        select: {
+          isActive: true,
+        },
+      });
+
+      if (!hero) {
+        throw new HeroError("Hero not found", 404, "HERO_NOT_FOUND");
+      }
+
+      const newActiveState = !hero.isActive;
+
+      if (newActiveState === true) {
+        await this.prisma.hero.updateMany({
+          where: {
+            id: {
+              not: id,
+            },
+          },
+          data: {
+            isActive: false,
+          },
+        });
+      }
+
+      return await this.prisma.hero.update({
+        where: { id },
+        data: {
+          isActive: newActiveState,
+        },
+        select: {
+          id: true,
+          isActive: true,
+        },
+      });
+    } catch (error) {
+      if (error instanceof HeroError) throw error;
+      throw new HeroError(
+        "Error toggling active hero",
+        400,
+        "HERO_TOGGLE_ERROR"
+      );
+    }
+  }
+  async findActiveHero(lang: "AR" | "EN" = "EN") {
+    console.log(lang , "lang") 
     try {
       const hero = await this.prisma.hero.findFirst({
         where: { isActive: true },
         include: {
           backgroundImage: true,
+          HeroTranslation: {
+            where: {
+              lang,
+            },
+            select: {
+              name: true,
+              ctaText: true,
+              description: true,
+              secondaryCtaText: true,
+              lang: true,
+              subtitle: true,
+              title: true,
+            },
+          },
         },
         orderBy: {
           updatedAt: "desc",
@@ -69,9 +166,9 @@ export class HeroRepository {
 
       if (!hero) return null;
 
-      const { backgroundImage, ...rest } = hero;
+      const { backgroundImage, HeroTranslation, ...rest } = hero;
       return {
-        hero: rest,
+        hero: { ...rest, ...HeroTranslation[0] },
         backgroundImage: backgroundImage || null,
       };
     } catch (error) {
@@ -90,33 +187,60 @@ export class HeroRepository {
         where: {
           OR: [
             {
-              name: {
-                contains: searchTerm,
-                mode: "insensitive",
+              HeroTranslation: {
+                some: {
+                  name: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
               },
             },
             {
-              title: {
-                contains: searchTerm,
-                mode: "insensitive",
+              HeroTranslation: {
+                some: {
+                  title: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
               },
             },
             {
-              subtitle: {
-                contains: searchTerm,
-                mode: "insensitive",
+              HeroTranslation: {
+                some: {
+                  subtitle: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
               },
             },
             {
-              description: {
-                contains: searchTerm,
-                mode: "insensitive",
+              HeroTranslation: {
+                some: {
+                  description: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
               },
             },
           ],
         },
         include: {
           backgroundImage: true,
+          HeroTranslation: {
+            select: {
+              name: true,
+              ctaText: true,
+              description: true,
+              secondaryCtaText: true,
+              lang: true,
+              subtitle: true,
+              title: true,
+            },
+          },
         },
         skip: skip * take,
         take,
@@ -126,9 +250,9 @@ export class HeroRepository {
       });
 
       return heroes.map((hero) => {
-        const { backgroundImage, ...rest } = hero;
+        const { backgroundImage, HeroTranslation, ...rest } = hero;
         return {
-          hero: rest,
+          hero: { ...rest, HeroTranslation },
           backgroundImage: backgroundImage || null,
         };
       });
@@ -138,7 +262,7 @@ export class HeroRepository {
     }
   }
 
-  async create(data: CreateHeroDTO) {
+  async create(lang: "EN" | "AR", data: CreateHeroDTO) {
     try {
       const transaction = await this.prisma.$transaction(
         async (tx) => {
@@ -186,19 +310,15 @@ export class HeroRepository {
 
           const hero = await tx.hero.create({
             data: {
-              name: data.name || "Main Hero",
-              title: data.title,
-              subtitle: data.subtitle,
-              description: data.description,
+              name: "",
+              title: "",
               backgroundImageId: imageId,
               backgroundColor: data.backgroundColor,
               backgroundVideo: data.backgroundVideo,
               overlayColor: data.overlayColor,
               overlayOpacity: data.overlayOpacity,
-              ctaText: data.ctaText,
               ctaUrl: data.ctaUrl,
               ctaVariant: data.ctaVariant,
-              secondaryCtaText: data.secondaryCtaText,
               secondaryCtaUrl: data.secondaryCtaUrl,
               secondaryCtaVariant: data.secondaryCtaVariant,
               alignment: data.alignment,
@@ -212,14 +332,39 @@ export class HeroRepository {
               customCSS: data.customCSS,
               styleOverrides: data.styleOverrides,
               isActive: data.isActive ?? true,
+              HeroTranslation: {
+                create: {
+                  name: data.name || "Main Hero",
+                  title: data.title,
+                  subtitle: data.subtitle,
+                  description: data.description,
+                  ctaText: data.ctaText,
+                  secondaryCtaText: data.secondaryCtaText,
+                  lang: lang,
+                },
+              },
             },
             include: {
               backgroundImage: true,
+              HeroTranslation: {
+                select: {
+                  name: true,
+                  ctaText: true,
+                  description: true,
+                  secondaryCtaText: true,
+                  lang: true,
+                  subtitle: true,
+                  title: true,
+                },
+              },
             },
           });
 
-          const { backgroundImage, ...rest } = hero;
-          return { hero: rest, backgroundImage: backgroundImage };
+          const { backgroundImage, HeroTranslation, ...rest } = hero;
+          return {
+            hero: { ...rest, ...HeroTranslation[0] },
+            backgroundImage: backgroundImage,
+          };
         },
         {
           timeout: 20000,
@@ -234,7 +379,7 @@ export class HeroRepository {
     }
   }
 
-  async update(data: UpdateHeroDTO) {
+  async update(lang: "EN" | "AR", data: UpdateHeroDTO) {
     try {
       const transaction = await this.prisma.$transaction(
         async (prismaTx) => {
@@ -318,19 +463,15 @@ export class HeroRepository {
           const updatedHero = await prismaTx.hero.update({
             where: { id: data.heroId },
             data: {
-              name: data.name ?? hero.name,
-              title: data.title ?? hero.title,
-              subtitle: data.subtitle ?? hero.subtitle,
-              description: data.description ?? hero.description,
+              name: "",
+              title: "",
               backgroundImageId: newImageId,
               backgroundColor: data.backgroundColor ?? hero.backgroundColor,
               backgroundVideo: data.backgroundVideo ?? hero.backgroundVideo,
               overlayColor: data.overlayColor ?? hero.overlayColor,
               overlayOpacity: data.overlayOpacity ?? hero.overlayOpacity,
-              ctaText: data.ctaText ?? hero.ctaText,
               ctaUrl: data.ctaUrl ?? hero.ctaUrl,
               ctaVariant: data.ctaVariant ?? hero.ctaVariant,
-              secondaryCtaText: data.secondaryCtaText ?? hero.secondaryCtaText,
               secondaryCtaUrl: data.secondaryCtaUrl ?? hero.secondaryCtaUrl,
               secondaryCtaVariant:
                 data.secondaryCtaVariant ?? hero.secondaryCtaVariant,
@@ -347,11 +488,65 @@ export class HeroRepository {
               styleOverrides: data.styleOverrides ?? hero.styleOverrides,
               isActive: data.isActive ?? hero.isActive,
             },
-            include: { backgroundImage: true },
+            include: {
+              backgroundImage: true,
+              HeroTranslation: {
+                select: {
+                  name: true,
+                  ctaText: true,
+                  description: true,
+                  secondaryCtaText: true,
+                  lang: true,
+                  subtitle: true,
+                  title: true,
+                },
+              },
+            },
           });
 
-          const { backgroundImage, ...rest } = updatedHero;
-          return { hero: rest, backgroundImage: backgroundImage };
+          // Update translation
+          await prismaTx.heroTranslation.upsert({
+            where: {
+              heroId_lang: {
+                lang,
+                heroId: data.heroId,
+              },
+            },
+            update: {
+              name: data.name || hero.name,
+              title: data.title || hero.title,
+              subtitle: data.subtitle || hero.subtitle,
+              description: data.description || hero.description,
+              ctaText: data.ctaText || hero.ctaText,
+              secondaryCtaText: data.secondaryCtaText || hero.secondaryCtaText,
+            },
+            create: {
+              heroId: data.heroId,
+              name: data.name || hero.name,
+              title: data.title || hero.title,
+              subtitle: data.subtitle || hero.subtitle,
+              description: data.description || hero.description,
+              ctaText: data.ctaText || hero.ctaText,
+              secondaryCtaText: data.secondaryCtaText || hero.secondaryCtaText,
+              lang,
+            },
+            select: {
+              name: true,
+              ctaText: true,
+              description: true,
+              secondaryCtaText: true,
+              lang: true,
+              subtitle: true,
+              title: true,
+            },
+          });
+
+          const { backgroundImage, HeroTranslation, ...rest } = updatedHero;
+          const translation = HeroTranslation.find((t) => t.lang === lang);
+          return {
+            hero: { ...rest, ...translation },
+            backgroundImage: backgroundImage,
+          };
         },
         {
           timeout: 20000,
@@ -395,9 +590,4 @@ export class HeroRepository {
       throw new Error("Error deleting hero");
     }
   }
-
-  async filter(variant  : HeroVariant) {
-
-  }
 }
-

@@ -5,7 +5,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  // output   = "./generated/client"
 }
 
 datasource db {
@@ -99,6 +98,7 @@ enum BlogStatus {
 // USER MANAGEMENT
 // ============================================================================
 model User {
+  
   id                      String   @id @default(cuid())
   name                    String
   email                   String   @unique
@@ -161,7 +161,15 @@ model Profile {
 // COMPANY INFO
 // ============================================================================
 
+// EnumLang 
+
+enum EnumLang {
+  EN
+  AR
+}
+
 model CompanyInfo {
+
   id          String  @id @default(cuid())
   name        String
   tagline     String?
@@ -183,10 +191,13 @@ model CompanyInfo {
   youtube   String?
   website   String?
 
+  lang EnumLang @default(EN)
+
+  companyTranslation CompanyTranslation[]
   // SEO
-  metaTitle       String?
-  metaDescription String?
-  metaKeywords    String?
+  metaTitle          String?
+  metaDescription    String?
+  metaKeywords       String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -194,6 +205,31 @@ model CompanyInfo {
   logoId    String?
 
   @@map("company_info")
+}
+
+model CompanyTranslation {
+  id   String   @id @default(cuid())
+  lang EnumLang
+
+  name        String
+  tagline     String?
+  description String?
+  footerText  String?
+
+  // SEO (translated)
+  metaTitle       String?
+  metaDescription String?
+  metaKeywords    String?
+
+  // Relation
+  company   CompanyInfo @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, lang])
+  @@map("company_translation")
 }
 
 enum TextAlign {
@@ -224,7 +260,7 @@ model Hero {
   backgroundImageId String?
   backgroundImage   Image?  @relation("HeroBackgroundImage", fields: [backgroundImageId], references: [id])
   backgroundColor   String? @default("#f5f5f5")
-  //
+
   backgroundVideo   String? // Video URL
   overlayColor      String? // For image/video overlay
   overlayOpacity    Float?  @default(0.5)
@@ -259,7 +295,31 @@ model Hero {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  HeroTranslation HeroTranslation[] @relation("hero_translation_rel")
+
   @@map("heroes")
+}
+
+model HeroTranslation {
+  id   String   @id @default(cuid())
+  lang EnumLang
+
+  name             String  @default("Main Hero")
+  title            String
+  subtitle         String?
+  description      String? @db.Text
+  ctaText          String? @default("Get Started")
+  secondaryCtaText String?
+
+  // Relation
+  hero   Hero   @relation("hero_translation_rel", fields: [heroId], references: [id], onDelete: Cascade)
+  heroId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([heroId, lang])
+  @@map("hero_translation")
 }
 
 enum HeroVariant {
@@ -275,26 +335,44 @@ enum HeroVariant {
 // ============================================================================
 
 model Header {
-  id                   String  @id @default(cuid())
+  id                   String              @id @default(cuid())
   logo                 String?
   siteName             String
   tagline              String?
-  showSearch           Boolean @default(false)
-  showLanguageSelector Boolean @default(false)
-  isSticky             Boolean @default(false)
+  showSearch           Boolean             @default(false)
+  showLanguageSelector Boolean             @default(false)
+  isSticky             Boolean             @default(false)
   backgroundColor      String?
   textColor            String?
-  height               Int?    @default(80)
-  isActive             Boolean @default(true)
-
-  navItems  HeaderNavItem[]
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  height               Int?                @default(80)
+  isActive             Boolean             @default(true)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  navItems             HeaderNavItem[]
+  HeaderTranslation    HeaderTranslation[] @relation("Header_translation_rel")
 
   @@map("headers")
 }
 
+model HeaderTranslation {
+  id       String   @id @default(cuid())
+  lang     EnumLang
+  siteName String
+  tagline  String?
+
+  // Relation
+  header   Header @relation("Header_translation_rel", fields: [headerId], references: [id], onDelete: Cascade)
+  headerId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([headerId, lang])
+  @@map("header_translation")
+}
+
 model HeaderNavItem {
+
   id           String  @id @default(cuid())
   headerId     String
   label        String
@@ -309,6 +387,7 @@ model HeaderNavItem {
   header   Header          @relation(fields: [headerId], references: [id], onDelete: Cascade)
   parent   HeaderNavItem?  @relation("NavItemChildren", fields: [parentId], references: [id], onDelete: Cascade)
   children HeaderNavItem[] @relation("NavItemChildren")
+  HeaderNavItemTranslation HeaderNavItemTranslation[] @relation("header_nav_item_translation_rel")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -323,6 +402,7 @@ model HeaderNavItem {
 // ============================================================================
 
 model Footer {
+
   id              String  @id @default(cuid())
   copyrightText   String
   showSocialLinks Boolean @default(true)
@@ -332,6 +412,7 @@ model Footer {
   isActive        Boolean @default(true)
 
   columns   FooterColumn[]
+  FooterTranslation FooterTranslation[] @relation("footer_translation_rel")
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
@@ -339,11 +420,14 @@ model Footer {
 }
 
 model FooterColumn {
+
   id       String  @id @default(cuid())
   footerId String
   title    String
   order    Int     @default(0)
   isActive Boolean @default(true)
+  FooterColumnTranslation FooterColumnTranslation[] @relation("footer_column_translation_rel")
+
 
   footer    Footer       @relation(fields: [footerId], references: [id], onDelete: Cascade)
   links     FooterLink[]
@@ -355,6 +439,7 @@ model FooterColumn {
 }
 
 model FooterLink {
+
   id           String  @id @default(cuid())
   columnId     String
   label        String
@@ -364,6 +449,8 @@ model FooterLink {
   openInNewTab Boolean @default(false)
   isActive     Boolean @default(true)
   icon         String?
+
+  FooterLinkTranslation FooterLinkTranslation[]  @relation("footer_link_translation")
 
   column    FooterColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
   createdAt DateTime     @default(now())
@@ -379,7 +466,7 @@ model FooterLink {
 
 model Service {
   id              String  @id @default(cuid())
-  name            String
+  name            String?
   slug            String  @unique
   description     String?
   richDescription String? @db.Text
@@ -397,10 +484,30 @@ model Service {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   contacts  Contact[]
+  serviceTranslation serviceTranslation[] @relation("service_translation_rel")
 
   @@index([slug])
   @@index([isActive])
   @@map("services")
+}
+
+model serviceTranslation {
+  id       String   @id @default(cuid())
+  lang     EnumLang
+  name            String
+  description     String?
+  richDescription String? @db.Text
+
+
+  // Relation
+  service  Service @relation("service_translation_rel", fields: [serviceId], references: [id], onDelete: Cascade)
+  serviceId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([serviceId, lang])
+  @@map("service_translation")
 }
 
 // ============================================================================
@@ -425,9 +532,10 @@ model Project {
   order           Int           @default(0)
 
   image        Image?              @relation("ProjectImage", fields: [imageId], references: [id])
-  technologies ProjectTechnology[]
   services     Service[]
+  technologies ProjectTechnology[]
   slideShows   ProjectSlideShow[]
+  ProjectTranslation ProjectTranslation[] @relation("project_translation_rel")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -437,6 +545,7 @@ model Project {
   @@map("projects")
 }
 
+
 model Technology {
   id       String  @id @default(cuid())
   name     String  @unique
@@ -445,6 +554,7 @@ model Technology {
   category String? // e.g., "Frontend", "Backend", "Database"
 
   projects  ProjectTechnology[]
+  TechnologyTranslation  TechnologyTranslation[] @relation("technology_translation_rel")
   createdAt DateTime            @default(now())
   updatedAt DateTime            @updatedAt
 
@@ -486,7 +596,7 @@ model TeamMember {
 
   image      Image?          @relation("TeamImage", fields: [imageId], references: [id])
   slideShows TeamSlideShow[]
-
+  TeamMemberTranslation TeamMemberTranslation[] @relation("team_member_translation_rel")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -515,6 +625,7 @@ model Client {
   image      Image?            @relation("ClientImage", fields: [imageId], references: [id])
   logo       Image?            @relation("ClientLogo", fields: [logoId], references: [id])
   slideShows ClientSlideShow[]
+  ClientTranslation ClientTranslation[] @relation("client_translation_rel")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -541,6 +652,7 @@ model Testimonial {
 
   avatar     Image?                 @relation("TestimonialAvatar", fields: [avatarId], references: [id])
   slideShows TestimonialSlideShow[]
+  TestimonialTranslation TestimonialTranslation[] @relation("testimonial_translation_rel")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -553,31 +665,28 @@ model Testimonial {
 // ============================================================================
 
 model BlogViewer {
-  id         String   @id @default(cuid())
-  blogId     String
-  
-  sessionId  String    
-  
-  ipHash     String?   // Hashed IP as backup identifier
-  userAgent  String?   @db.Text
-  
+  id     String @id @default(cuid())
+  blogId String
+
+  sessionId String
+
+  ipHash    String? // Hashed IP as backup identifier
+  userAgent String? @db.Text
+
   // Optional analytics metadata
-  referrer   String?
-  country    String?   // From IP geolocation (optional)
-  device     String?   // "mobile" | "tablet" | "desktop"
-  
-  // View tracking
-  viewedAt   DateTime @default(now())
-  duration   Int?      // Reading time in seconds
-  
-  // Relations
-  blog       Blog     @relation("BlogViewers", fields: [blogId], references: [id], onDelete: Cascade)
-  
+  referrer String?
+  country  String? // From IP geolocation (optional)
+  device   String? // "mobile" | "tablet" | "desktop"
+
+  viewedAt DateTime @default(now())
+  duration Int? // Reading time in seconds
+
+  blog Blog @relation("BlogViewers", fields: [blogId], references: [id], onDelete: Cascade)
+
+  @@unique([blogId, sessionId])
   @@index([blogId])
   @@index([sessionId])
   @@index([viewedAt])
-  // Prevent same session viewing same blog multiple times in short period
-  @@unique([blogId, sessionId])
   @@map("blog_viewers")
 }
 
@@ -593,7 +702,6 @@ model Blog {
   status          BlogStatus @default(DRAFT)
   publishedAt     DateTime?
   isFeatured      Boolean    @default(false)
-  views           Int        @default(0)
   readingTime     Int?
   metaTitle       String?
   metaDescription String?
@@ -602,8 +710,8 @@ model Blog {
   image      Image?         @relation("BlogImage", fields: [imageId], references: [id])
   author     User           @relation(fields: [authorId], references: [id])
   categories BlogCategory[]
-  viewers    BlogViewer[]   @relation("BlogViewers") // Add this line
-
+  viewers    BlogViewer[]   @relation("BlogViewers") 
+  BlogTranslation BlogTranslation[] @relation("blog_translation_rel")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -617,6 +725,7 @@ model Category {
   id   String @id @default(cuid())
   name String @unique
   slug String @unique
+  CategoryTranslation CategoryTranslation[] @relation("category_translation_rel")
 
   blogs     BlogCategory[]
   createdAt DateTime       @default(now())
@@ -625,7 +734,9 @@ model Category {
   @@map("categories")
 }
 
+// relation 
 model BlogCategory {
+
   blogId     String
   categoryId String
 
@@ -657,6 +768,7 @@ model SlideShow {
   clients      ClientSlideShow[]
   testimonials TestimonialSlideShow[]
   team         TeamSlideShow[]
+  SlideShowTranslation SlideShowTranslation[] @relation("slideshow_translation_rel")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -865,78 +977,70 @@ model Image {
 // ANALYTICS
 // ============================================================================
 
-
-
 model Analytics {
-  id               String   @id @default(cuid())
-  date             DateTime @unique @db.Date
-  
+  id   String   @id @default(cuid())
+  date DateTime @unique @db.Date
+
   // Traffic metrics
-  uniqueVisitors   Int      @default(0) // Unique sessions
-  totalPageViews   Int      @default(0) // Total page loads
-  totalBlogViews   Int      @default(0) // Blog-specific views
-  
+  uniqueVisitors Int @default(0) // Unique sessions
+  totalPageViews Int @default(0) // Total page loads
+  totalBlogViews Int @default(0) // Blog-specific views
+
   // Engagement metrics
-  avgSessionTime   Int?     // Average seconds per session
-  bounceRate       Float?   // Percentage (0-100)
-  
+  avgSessionTime Int? // Average seconds per session
+  bounceRate     Float? // Percentage (0-100)
+
   // Conversion metrics
-  contacts         Int      @default(0)
-  formSubmissions  Int      @default(0)
-  
+  contacts        Int @default(0)
+  formSubmissions Int @default(0)
+
   // Device breakdown
-  mobileVisitors   Int      @default(0)
-  desktopVisitors  Int      @default(0)
-  tabletVisitors   Int      @default(0)
-  
+  mobileVisitors  Int @default(0)
+  desktopVisitors Int @default(0)
+  tabletVisitors  Int @default(0)
+
   // Traffic sources
-  directVisitors   Int      @default(0)
-  searchVisitors   Int      @default(0)
-  socialVisitors   Int      @default(0)
-  referralVisitors Int      @default(0)
-  
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  directVisitors   Int @default(0)
+  searchVisitors   Int @default(0)
+  socialVisitors   Int @default(0)
+  referralVisitors Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([date(sort: Desc)])
   @@map("analytics")
 }
 
-
-// Session tracking (group page views by session)
 model SessionAnalytics {
-  id            String   @id @default(cuid())
-  sessionId     String   @unique
-  
-  // Session metadata
-  firstPagePath String   // Landing page
-  lastPagePath  String   // Exit page
-  pageCount     Int      @default(1) // Pages viewed in session
-  totalDuration Int      @default(0) // Total session time (seconds)
-  
-  // Traffic source (first touch)
-  referrer      String?  @db.Text
-  utmSource     String?
-  utmMedium     String?
-  utmCampaign   String?
-  
-  // Device info
-  device        String?  // "mobile" | "desktop" | "tablet"
-  browser       String?
-  os            String?
-  
-  // Location
-  ipHash        String?
-  country       String?
-  city          String?
-  
-  // Session outcome
-  converted     Boolean  @default(false) // Did they submit a form?
-  isBounce      Boolean  @default(false) // Single page visit?
-  
-  startedAt     DateTime @default(now())
-  endedAt       DateTime @default(now())
-  
+
+  id        String @id @default(cuid())
+  sessionId String @unique
+
+  firstPagePath String // Landing page
+  lastPagePath  String // Exit page
+  pageCount     Int    @default(1) // Pages viewed in session
+  totalDuration Int    @default(0) // Total session time (seconds)
+
+  referrer    String? @db.Text
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+
+  device  String? 
+  browser String?
+  os      String?
+
+  ipHash  String?
+  country String?
+  city    String?
+
+  converted Boolean @default(false) // Did they submit a form?
+  isBounce  Boolean @default(false) // Single page visit?
+
+  startedAt DateTime @default(now())
+  endedAt   DateTime @default(now())
+
   @@index([sessionId])
   @@index([startedAt(sort: Desc)])
   @@index([country])
@@ -945,41 +1049,41 @@ model SessionAnalytics {
 }
 
 model PageView {
-  id         String   @id @default(cuid())
-  
-  sessionId  String   // Cookie-based session
-  
+  id String @id @default(cuid())
+
+  sessionId String // Cookie-based session
+
   // Page information
-  path       String   // "/blog/my-post"
-  pageTitle  String?  // "My Blog Post"
-  pageType   String?  // "blog" | "home" | "about" | "contact"
-  
+  path      String // "/blog/my-post"
+  pageTitle String? // "My Blog Post"
+  pageType  String? // "blog" | "home" | "about" | "contact"
+
   // Traffic source
-  referrer   String?  @db.Text
-  utmSource  String?   // "google" | "facebook" | "newsletter"
-  utmMedium  String?   // "organic" | "cpc" | "email"
-  utmCampaign String?  // Campaign name
-  
+  referrer    String? @db.Text
+  utmSource   String? // "google" | "facebook" | "newsletter"
+  utmMedium   String? // "organic" | "cpc" | "email"
+  utmCampaign String? // Campaign name
+
   // Device & browser
-  device     String?  // "mobile" | "desktop" | "tablet"
-  browser    String?  // "chrome" | "safari" | "firefox"
-  os         String?  // "windows" | "macos" | "ios" | "android"
-  userAgent  String?  @db.Text
-  
+  device    String? // "mobile" | "desktop" | "tablet"
+  browser   String? // "chrome" | "safari" | "firefox"
+  os        String? // "windows" | "macos" | "ios" | "android"
+  userAgent String? @db.Text
+
   // Location (from IP)
-  ipHash     String?  // Hashed IP for privacy
-  country    String?  // "US" | "UK" | "EG"
-  city       String?  // "Cairo" | "London"
-  
+  ipHash  String? // Hashed IP for privacy
+  country String? // "US" | "UK" | "EG"
+  city    String? // "Cairo" | "London"
+
   // Engagement
-  timeOnPage Int?     // Seconds spent on page
-  scrollDepth Int?    // Percentage scrolled (0-100)
-  
+  timeOnPage  Int? // Seconds spent on page
+  scrollDepth Int? // Percentage scrolled (0-100)
+
   // Session data
   isNewSession Boolean @default(false)
   isBounce     Boolean @default(false)
-  
-  createdAt  DateTime @default(now())
+
+  createdAt DateTime @default(now())
 
   @@index([sessionId])
   @@index([path])
@@ -988,4 +1092,227 @@ model PageView {
   @@index([referrer])
   @@index([utmSource])
   @@map("page_views")
+}
+
+
+// ==================================================
+// TRANSLATION
+// ==================================================
+
+model FooterTranslation {
+
+  id              String   @id @default(cuid())
+  lang            EnumLang
+  copyrightText   String
+
+  footer          Footer   @relation( "footer_translation_rel", fields: [footerId], references: [id], onDelete: Cascade)
+  footerId        String
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([lang])
+  @@unique([footerId, lang])
+  @@map("footer_translation")
+}
+
+model FooterColumnTranslation {
+  id        String   @id @default(cuid())
+  lang      EnumLang
+  title     String
+
+  column    FooterColumn @relation( "footer_column_translation_rel", fields: [columnId], references: [id], onDelete: Cascade)
+  columnId  String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([lang])
+
+  @@unique([columnId, lang])
+  @@map("footer_column_translation")
+}
+
+model FooterLinkTranslation {
+  id        String   @id @default(cuid())
+  lang      EnumLang
+  label     String
+
+  link      FooterLink @relation( "footer_link_translation", fields: [linkId], references: [id], onDelete: Cascade)
+  linkId    String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([lang])
+
+  @@unique([linkId, lang])
+  @@map("footer_link_translation")
+}
+
+model HeaderNavItemTranslation {
+  id        String   @id @default(cuid())
+  lang      EnumLang
+  label     String
+
+  navItemId String 
+  navItem   HeaderNavItem @relation( "header_nav_item_translation_rel",fields: [navItemId], references: [id], onDelete: Cascade)
+ 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([lang])
+
+  @@unique([navItemId, lang])
+  @@map("header_nav_item_translation")
+}
+
+model ProjectTranslation {
+  id               String   @id @default(cuid())
+  lang             EnumLang
+  title            String
+  description      String?
+  richDescription  String?  @db.Text
+
+  project          Project  @relation( "project_translation_rel", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId        String
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([lang])
+
+  @@unique([projectId, lang])
+  @@map("project_translation")
+}
+
+model TechnologyTranslation {
+  id           String     @id @default(cuid())
+  lang         EnumLang
+  name         String
+  category     String?
+
+  technology   Technology @relation( "technology_translation_rel", fields: [technologyId], references: [id], onDelete: Cascade)
+  technologyId String
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([lang])
+
+  @@unique([technologyId, lang])
+  @@map("technology_translation")
+}
+
+model TeamMemberTranslation {
+  id        String      @id @default(cuid())
+  lang      EnumLang
+  name      String
+  position  String
+  bio       String?     @db.Text
+
+  member    TeamMember  @relation( "team_member_translation_rel", fields: [memberId], references: [id], onDelete: Cascade)
+  memberId  String
+
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([lang])
+
+  @@unique([memberId, lang])
+  @@map("team_member_translation")
+}
+
+model ClientTranslation {
+  id               String   @id @default(cuid())
+  lang             EnumLang
+  name             String
+  description      String?
+  richDescription  String?  @db.Text
+  industry         String?
+
+  client           Client   @relation( "client_translation_rel" , fields: [clientId], references: [id], onDelete: Cascade)
+  clientId         String
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([clientId, lang])
+  @@index([lang])
+
+  @@map("client_translation")
+}
+
+model TestimonialTranslation {
+  id              String       @id @default(cuid())
+  lang            EnumLang
+  clientName      String
+  clientPosition  String?
+  clientCompany   String?
+  content         String       @db.Text
+
+  testimonial     Testimonial  @relation("testimonial_translation_rel" ,fields: [testimonialId], references: [id], onDelete: Cascade)
+  testimonialId   String
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([testimonialId, lang])
+  @@index([lang])
+
+  @@map("testimonial_translation")
+}
+
+model BlogTranslation {
+  id               String     @id @default(cuid())
+  lang             EnumLang
+  title            String
+  excerpt          String?
+  content          String     @db.Text
+  metaTitle        String?
+  metaDescription  String?
+  metaKeywords     String?
+
+  blog             Blog       @relation("blog_translation_rel" , fields: [blogId], references: [id], onDelete: Cascade)
+  blogId           String
+
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  @@unique([blogId, lang])
+  @@index([lang])
+
+  @@map("blog_translation")
+}
+
+model CategoryTranslation {
+  id         String   @id @default(cuid())
+  lang       EnumLang
+  name       String
+
+  category   Category @relation("category_translation_rel" ,fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId String
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([categoryId, lang])
+  @@index([lang])
+
+  @@map("category_translation")
+}
+
+model SlideShowTranslation {
+  id          String    @id @default(cuid())
+  lang        EnumLang
+  title       String
+  description String?
+
+  slideShow   SlideShow @relation("slideshow_translation_rel", fields: [slideShowId], references: [id], onDelete: Cascade)
+  slideShowId String
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([slideShowId, lang])
+  @@index([lang])
+  @@map("slideshow_translation")
 }

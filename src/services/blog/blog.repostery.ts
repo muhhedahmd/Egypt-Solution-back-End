@@ -512,14 +512,13 @@ export class blogRepository {
     });
   }
 
-  async incrementViews(id: string) {
-    return this.prisma.blog.update({
-      where: { id },
-      data: {
-        views: { increment: 1 },
-      },
-    });
-  }
+  //   return this.prisma.blog.update({
+  //     where: { id },
+  //     data: {
+  //       views: { increment: 1 },
+  //     },
+  //   });
+  // }
 
   async findCategoryById(
     id: string,

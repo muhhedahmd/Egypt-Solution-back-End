@@ -29,8 +29,7 @@ const slugify_1 = __importDefault(require("slugify"));
 const helpers_1 = require("../../lib/helpers");
 const services_error_1 = require("../../errors/services.error");
 class projectRepository {
-    constructor(prisma // private project : ServicesRepository
-    ) {
+    constructor(prisma) {
         this.prisma = prisma;
     }
     // reorder logic
@@ -93,8 +92,9 @@ class projectRepository {
             }
         });
     }
-    findMany(skip, take) {
-        return __awaiter(this, void 0, void 0, function* () {
+    findMany() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", skip, take) {
+            console.log(lang);
             return this.prisma.project.findMany({
                 include: {
                     image: true,
@@ -109,25 +109,42 @@ class projectRepository {
                             },
                         },
                     },
+                    ProjectTranslation: {
+                        select: {
+                            id: true,
+                            title: true,
+                            description: true,
+                            richDescription: true,
+                            lang: true,
+                        },
+                    },
                 },
                 skip: skip * take,
                 take: take,
             });
         });
     }
-    count() {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this.prisma.project.count();
-        });
-    }
-    findBySlugFull(id, prismaTouse) {
-        return __awaiter(this, void 0, void 0, function* () {
+    findBySlugFull() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", slug, prismaTouse) {
             try {
                 const project = yield (prismaTouse || this.prisma).project.findUnique({
                     where: {
-                        slug: id,
+                        slug: slug,
                     },
-                    include: {
+                    select: {
+                        id: true,
+                        createdAt: true,
+                        endDate: true,
+                        startDate: true,
+                        githubUrl: true,
+                        projectUrl: true,
+                        order: true,
+                        status: true,
+                        updatedAt: true,
+                        isFeatured: true,
+                        clientName: true,
+                        clientCompany: true,
+                        slug: true,
                         image: true,
                         technologies: {
                             select: {
@@ -147,11 +164,20 @@ class projectRepository {
                                 image: true,
                             },
                         },
+                        ProjectTranslation: {
+                            select: {
+                                id: true,
+                                title: true,
+                                description: true,
+                                richDescription: true,
+                                lang: true,
+                            },
+                        },
                     },
                 });
                 if (!project)
                     return null;
-                const { image, technologies, services } = project, rest = __rest(project, ["image", "technologies", "services"]);
+                const { image, technologies, services, ProjectTranslation } = project, rest = __rest(project, ["image", "technologies", "services", "ProjectTranslation"]);
                 return {
                     image,
                     servicesData: services.map((service) => {
@@ -161,8 +187,9 @@ class projectRepository {
                             service: rest,
                         };
                     }),
+                    translation: ProjectTranslation,
                     technologies: technologies.map((tech) => tech.technology),
-                    project: rest,
+                    project: Object.assign(Object.assign({}, rest), ProjectTranslation.find((t) => { var _a; return ((_a = t.lang) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === lang.toLowerCase(); })),
                 };
             }
             catch (error) {
@@ -171,10 +198,15 @@ class projectRepository {
             }
         });
     }
-    findById(id, prismaTouse) {
+    count() {
         return __awaiter(this, void 0, void 0, function* () {
+            return this.prisma.project.count();
+        });
+    }
+    findById(id_1) {
+        return __awaiter(this, arguments, void 0, function* (id, lang = "EN", prismaTouse) {
             try {
-                const project = (prismaTouse || this.prisma).project.findUnique({
+                const project = yield (prismaTouse || this.prisma).project.findUnique({
                     where: { id },
                     include: {
                         image: true,
@@ -189,9 +221,23 @@ class projectRepository {
                                 },
                             },
                         },
+                        ProjectTranslation: {
+                            where: {
+                                lang,
+                            },
+                            select: {
+                                title: true,
+                                description: true,
+                                richDescription: true,
+                                lang: true,
+                            },
+                        },
                     },
                 });
-                return project;
+                if (!project)
+                    return null;
+                const { ProjectTranslation } = project, rest = __rest(project, ["ProjectTranslation"]);
+                return Object.assign(Object.assign({}, rest), ProjectTranslation[0]);
             }
             catch (error) {
                 console.log(error);
@@ -199,7 +245,7 @@ class projectRepository {
             }
         });
     }
-    create(data, prismaTouse) {
+    create(lang, data, prismaTouse) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const transication = yield this.prisma.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
@@ -235,15 +281,31 @@ class projectRepository {
                     }
                     const { slug: _slug, image: _image } = data, CerateRest = __rest(data, ["slug", "image"]);
                     const project = yield tx.project.create({
-                        data: Object.assign(Object.assign({}, CerateRest), { 
-                            // imageId: imageToDB.id || null,
-                            order: data.order || 0, slug: slug }),
+                        data: Object.assign(Object.assign({}, CerateRest), { title: "", description: "", order: data.order || 0, slug: slug, ProjectTranslation: {
+                                create: {
+                                    title: data.title,
+                                    description: data.description,
+                                    richDescription: data.richDescription,
+                                    lang: lang,
+                                },
+                            } }),
                         include: {
                             image: true,
+                            ProjectTranslation: {
+                                select: {
+                                    title: true,
+                                    description: true,
+                                    richDescription: true,
+                                    lang: true,
+                                },
+                            },
                         },
                     });
-                    const { image } = project, rest = __rest(project, ["image"]);
-                    return { Image: image, project: rest };
+                    const { image, ProjectTranslation } = project, rest = __rest(project, ["image", "ProjectTranslation"]);
+                    return {
+                        Image: image,
+                        project: Object.assign(Object.assign({}, rest), ProjectTranslation[0]),
+                    };
                 }), {
                     timeout: 20000,
                     maxWait: 5000,
@@ -256,7 +318,7 @@ class projectRepository {
             }
         });
     }
-    createTransiaction(data, prismaTouse) {
+    createTransiaction(lang, data, prismaTouse) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const prismaTx = prismaTouse || this.prisma;
@@ -292,15 +354,31 @@ class projectRepository {
                 }
                 const { slug: _slug, image: _image } = data, CerateRest = __rest(data, ["slug", "image"]);
                 const project = yield prismaTx.project.create({
-                    data: Object.assign(Object.assign({}, CerateRest), { 
-                        // imageId: imageToDB.id || null,
-                        order: data.order || 0, slug: slug }),
+                    data: Object.assign(Object.assign({}, CerateRest), { title: "", description: "", clientCompany: "", clientName: "", richDescription: "", order: data.order || 0, slug: slug, ProjectTranslation: {
+                            create: {
+                                title: data.title,
+                                description: data.description,
+                                richDescription: data.richDescription,
+                                lang: lang,
+                            },
+                        } }),
                     include: {
                         image: true,
+                        ProjectTranslation: {
+                            select: {
+                                title: true,
+                                description: true,
+                                richDescription: true,
+                                lang: true,
+                            },
+                        },
                     },
                 });
-                const { image } = project, rest = __rest(project, ["image"]);
-                return { Image: image, project: rest };
+                const { image, ProjectTranslation } = project, rest = __rest(project, ["image", "ProjectTranslation"]);
+                return {
+                    Image: image,
+                    project: Object.assign(Object.assign({}, rest), ProjectTranslation[0]),
+                };
             }
             catch (error) {
                 console.log(error);
@@ -308,11 +386,11 @@ class projectRepository {
             }
         });
     }
-    CreateProjecAndAssignTechnologies(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ project, technologies, services, }) {
+    CreateProjecAndAssignTechnologies() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", { project, technologies, services, }) {
             const slug = (0, slugify_1.default)(project.title, { lower: true });
             const transaction = yield this.prisma.$transaction((prismaTx) => __awaiter(this, void 0, void 0, function* () {
-                const createdProject = yield this.createTransiaction(Object.assign(Object.assign({}, project), { slug }), prismaTx);
+                const createdProject = yield this.createTransiaction(lang, Object.assign(Object.assign({}, project), { slug }), prismaTx);
                 let projectTechnologies = [];
                 let projectServices = [];
                 if (technologies) {
@@ -357,14 +435,14 @@ class projectRepository {
             return transaction;
         });
     }
-    update(data) {
+    update(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const transaction = yield this.prisma.$transaction((prismaTx) => __awaiter(this, void 0, void 0, function* () {
                     let NewImageId = null;
                     if (!data.id)
                         throw new Error("no serviceId provided");
-                    const project = yield this.findById(data.id, prismaTx);
+                    const project = yield this.findById(data.id, lang, prismaTx);
                     if (!project)
                         throw new Error("project not found");
                     NewImageId = (project === null || project === void 0 ? void 0 : project.imageId) || null;
@@ -409,7 +487,6 @@ class projectRepository {
                         });
                         data.slug = slug;
                     }
-                    // console.log("project ID:", data.serviceId, NewImageId);
                     const isOrderChanged = data.order !== undefined && data.order != project.order;
                     if (isOrderChanged)
                         yield this.reorderUpdate({
@@ -421,8 +498,8 @@ class projectRepository {
                         where: { id: data.id },
                         data: {
                             slug: data.slug || project.slug,
-                            title: data.title || project.title,
-                            description: data.description || project.description,
+                            title: "",
+                            description: "",
                             richDescription: data.richDescription || project.richDescription,
                             imageId: NewImageId,
                             clientName: data.clientName || project.clientName || "",
@@ -433,10 +510,45 @@ class projectRepository {
                             isFeatured: data.isFeatured || project.isFeatured || false,
                             order: data.order || project.order || 0,
                         },
-                        include: { image: true },
+                        include: {
+                            image: true,
+                            ProjectTranslation: {
+                                select: {
+                                    title: true,
+                                    description: true,
+                                    richDescription: true,
+                                    lang: true,
+                                },
+                            },
+                        },
                     });
-                    const { image } = updatedService, rest = __rest(updatedService, ["image"]);
-                    return { Image: image, project: rest };
+                    // Update translation
+                    yield prismaTx.projectTranslation.upsert({
+                        where: {
+                            projectId_lang: {
+                                lang,
+                                projectId: data.id,
+                            },
+                        },
+                        update: {
+                            title: data.title || project.title,
+                            description: data.description || project.description,
+                            richDescription: data.richDescription || project.richDescription,
+                        },
+                        create: {
+                            projectId: data.id,
+                            title: data.title || project.title,
+                            description: data.description || project.description,
+                            richDescription: data.richDescription || project.richDescription,
+                            lang,
+                        },
+                    });
+                    const { image, ProjectTranslation } = updatedService, rest = __rest(updatedService, ["image", "ProjectTranslation"]);
+                    const translation = ProjectTranslation.find((t) => t.lang === lang);
+                    return {
+                        Image: image,
+                        project: Object.assign(Object.assign({}, rest), translation),
+                    };
                 }), {
                     timeout: 20000,
                     maxWait: 5000,
@@ -449,15 +561,14 @@ class projectRepository {
             }
         });
     }
-    // *** 
-    updateProjectWithTechsServices(data) {
-        return __awaiter(this, void 0, void 0, function* () {
+    // ***
+    updateProjectWithTechsServices(data_1) {
+        return __awaiter(this, arguments, void 0, function* (data, lang = "EN") {
             try {
                 const transaction = yield this.prisma.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
-                    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
-                    // 1. Update the project itself
+                    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
                     let imageId = null;
-                    const existingProject = yield this.findById(data.id, tx);
+                    const existingProject = yield this.findById(data.id, lang, tx);
                     if (!existingProject) {
                         throw new services_error_1.ServiceError("Project not found", 404, "PROJECT_NOT_FOUND");
                     }
@@ -496,7 +607,8 @@ class projectRepository {
                     }
                     // Generate new slug if title changed
                     let slug = existingProject.slug;
-                    if (data.projectData.title && data.projectData.title !== existingProject.title) {
+                    if (data.projectData.title &&
+                        data.projectData.title !== existingProject.title) {
                         slug = (0, slugify_1.default)(data.projectData.title + (0, crypto_1.randomUUID)().substring(0, 8), {
                             lower: true,
                         });
@@ -510,21 +622,21 @@ class projectRepository {
                         });
                     }
                     // Update project
-                    const updatedProject = yield tx.project.update({
+                    yield tx.project.update({
                         where: { id: data.id },
                         data: {
-                            title: (_a = data.projectData.title) !== null && _a !== void 0 ? _a : existingProject.title,
-                            description: (_b = data.projectData.description) !== null && _b !== void 0 ? _b : existingProject.description,
-                            richDescription: (_c = data.projectData.richDescription) !== null && _c !== void 0 ? _c : existingProject.richDescription,
-                            clientName: (_d = data.projectData.clientName) !== null && _d !== void 0 ? _d : existingProject.clientName,
-                            clientCompany: (_e = data.projectData.clientCompany) !== null && _e !== void 0 ? _e : existingProject.clientCompany,
-                            projectUrl: (_f = data.projectData.projectUrl) !== null && _f !== void 0 ? _f : existingProject.projectUrl,
-                            githubUrl: (_g = data.projectData.githubUrl) !== null && _g !== void 0 ? _g : existingProject.githubUrl,
-                            status: (_h = data.projectData.status) !== null && _h !== void 0 ? _h : existingProject.status,
-                            startDate: (_j = data.projectData.startDate) !== null && _j !== void 0 ? _j : existingProject.startDate,
-                            endDate: (_k = data.projectData.endDate) !== null && _k !== void 0 ? _k : existingProject.endDate,
-                            isFeatured: (_l = data.projectData.isFeatured) !== null && _l !== void 0 ? _l : existingProject.isFeatured,
-                            order: (_m = data.projectData.order) !== null && _m !== void 0 ? _m : existingProject.order,
+                            title: "",
+                            description: "",
+                            richDescription: "",
+                            clientCompany: (_a = data.projectData.clientCompany) !== null && _a !== void 0 ? _a : existingProject.clientCompany,
+                            clientName: (_b = data.projectData.clientName) !== null && _b !== void 0 ? _b : existingProject.clientName,
+                            projectUrl: (_c = data.projectData.projectUrl) !== null && _c !== void 0 ? _c : existingProject.projectUrl,
+                            githubUrl: (_d = data.projectData.githubUrl) !== null && _d !== void 0 ? _d : existingProject.githubUrl,
+                            status: (_e = data.projectData.status) !== null && _e !== void 0 ? _e : existingProject.status,
+                            startDate: (_f = data.projectData.startDate) !== null && _f !== void 0 ? _f : existingProject.startDate,
+                            endDate: (_g = data.projectData.endDate) !== null && _g !== void 0 ? _g : existingProject.endDate,
+                            isFeatured: (_h = data.projectData.isFeatured) !== null && _h !== void 0 ? _h : existingProject.isFeatured,
+                            order: (_j = data.projectData.order) !== null && _j !== void 0 ? _j : existingProject.order,
                             imageId,
                             slug,
                         },
@@ -532,7 +644,30 @@ class projectRepository {
                             image: true,
                         },
                     });
-                    // 2. Handle technology deletions
+                    // Update translation
+                    yield tx.projectTranslation.upsert({
+                        where: {
+                            projectId_lang: {
+                                lang,
+                                projectId: data.id,
+                            },
+                        },
+                        update: {
+                            title: data.projectData.title || existingProject.title,
+                            description: data.projectData.description || existingProject.description,
+                            richDescription: data.projectData.richDescription ||
+                                existingProject.richDescription,
+                        },
+                        create: {
+                            projectId: data.id,
+                            title: data.projectData.title || existingProject.title,
+                            description: data.projectData.description || existingProject.description,
+                            richDescription: data.projectData.richDescription ||
+                                existingProject.richDescription,
+                            lang,
+                        },
+                    });
+                    // Handle technology deletions
                     if (data.deletedTechIds.length > 0) {
                         yield tx.projectTechnology.deleteMany({
                             where: {
@@ -541,16 +676,14 @@ class projectRepository {
                             },
                         });
                     }
-                    // 3. Handle technology additions
+                    // Handle technology additions
                     if (data.newTechIds.length > 0) {
-                        // Check if technologies exist
                         const techs = yield tx.technology.findMany({
                             where: { id: { in: data.newTechIds } },
                         });
                         if (techs.length !== data.newTechIds.length) {
                             throw new services_error_1.ServiceError("One or more technologies not found", 404, "TECHNOLOGY_NOT_FOUND");
                         }
-                        // Create new relationships
                         yield tx.projectTechnology.createMany({
                             data: data.newTechIds.map((techId) => ({
                                 projectId: data.id,
@@ -559,7 +692,7 @@ class projectRepository {
                             skipDuplicates: true,
                         });
                     }
-                    // 4. Handle service deletions
+                    // Handle service deletions
                     if (data.deletedServiceIds.length > 0) {
                         yield tx.project.update({
                             where: { id: data.id },
@@ -570,9 +703,8 @@ class projectRepository {
                             },
                         });
                     }
-                    // 5. Handle service additions
+                    // Handle service additions
                     if (data.newServiceIds.length > 0) {
-                        // Check if services exist
                         const services = yield tx.service.findMany({
                             where: { id: { in: data.newServiceIds } },
                         });
@@ -588,7 +720,7 @@ class projectRepository {
                             },
                         });
                     }
-                    // 6. Fetch final state with all relationships
+                    // Fetch final state with all relationships
                     const finalProject = yield tx.project.findUnique({
                         where: { id: data.id },
                         include: {
@@ -599,13 +731,25 @@ class projectRepository {
                                 },
                             },
                             services: true,
+                            ProjectTranslation: {
+                                where: {
+                                    lang,
+                                },
+                                select: {
+                                    title: true,
+                                    description: true,
+                                    richDescription: true,
+                                    lang: true,
+                                },
+                            },
                         },
                     });
                     if (!finalProject) {
                         throw new services_error_1.ServiceError("Failed to retrieve updated project", 500, "PROJECT_RETRIEVAL_ERROR");
                     }
+                    const { ProjectTranslation } = finalProject, projectRest = __rest(finalProject, ["ProjectTranslation"]);
                     return {
-                        project: finalProject,
+                        project: Object.assign(Object.assign({}, projectRest), ProjectTranslation[0]),
                         image: finalProject.image,
                         technologies: finalProject.technologies.map((pt) => pt.technology),
                         services: finalProject.services,
@@ -775,14 +919,13 @@ class projectRepository {
             }
         });
     }
-    assignProjectToTechnolgy(data) {
-        return __awaiter(this, void 0, void 0, function* () {
+    assignProjectToTechnolgy() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", data) {
             try {
                 const transaction = yield this.prisma.$transaction((prismaTx) => __awaiter(this, void 0, void 0, function* () {
                     const promises = yield Promise.all(data.map((data) => __awaiter(this, void 0, void 0, function* () {
-                        yield this.findById(data.projectId, prismaTx);
+                        yield this.findById(data.projectId, lang, prismaTx);
                         yield this.findTechById(data.technologyId, prismaTx);
-                        console.log({ data });
                         const projectTechnology = yield prismaTx.projectTechnology.create({
                             data: {
                                 projectId: data.projectId,
@@ -805,12 +948,12 @@ class projectRepository {
             }
         });
     }
-    removeProjectToTechnolgy(data) {
-        return __awaiter(this, void 0, void 0, function* () {
+    removeProjectToTechnolgy() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", data) {
             try {
                 const transaction = yield this.prisma.$transaction((prismaTx) => __awaiter(this, void 0, void 0, function* () {
                     const promises = yield Promise.all(data.map((data) => __awaiter(this, void 0, void 0, function* () {
-                        yield this.findById(data.projectId, prismaTx);
+                        yield this.findById(data.projectId, lang, prismaTx);
                         yield this.findTechById(data.technologyId, prismaTx);
                         const projectTechnology = yield prismaTx.projectTechnology.delete({
                             where: {
@@ -835,8 +978,8 @@ class projectRepository {
             }
         });
     }
-    createTechnologyAndProject(data) {
-        return __awaiter(this, void 0, void 0, function* () {
+    createTechnologyAndProject() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", data) {
             try {
                 const transaction = yield this.prisma.$transaction((prismaTx) => __awaiter(this, void 0, void 0, function* () {
                     const technology = yield this.createTechnology({
@@ -844,14 +987,14 @@ class projectRepository {
                         name: data.CreateTechnology.name,
                         category: data.CreateTechnology.category,
                     }, prismaTx);
-                    const projectIds = (yield Promise.all(data.CreateProject.map((project) => this.create(project, prismaTx)))).map((project) => project.project.id);
+                    const projectIds = (yield Promise.all(data.CreateProject.map((project) => this.create(lang, project, prismaTx)))).map((project) => project.project.id);
                     console.log(projectIds, technology.id);
                     const dataToAssign = projectIds.map((projectId) => ({
                         projectId,
                         technologyId: technology.id,
                     }));
                     const projectWithTechnology = yield Promise.all(dataToAssign.map((data) => __awaiter(this, void 0, void 0, function* () {
-                        yield this.findById(data.projectId, prismaTx);
+                        yield this.findById(data.projectId, lang, prismaTx);
                         yield this.findTechById(data.technologyId, prismaTx);
                         const projectTechnology = yield prismaTx.projectTechnology.create({
                             data: {
@@ -880,10 +1023,10 @@ class projectRepository {
         });
     }
     createProjectAndTechnologies(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ project, technologies, }) {
+        return __awaiter(this, arguments, void 0, function* ({ lang = "EN", project, technologies, }) {
             try {
                 const transaction = yield this.prisma.$transaction((prismaTx) => __awaiter(this, void 0, void 0, function* () {
-                    const createdProject = yield this.create(project, prismaTx);
+                    const createdProject = yield this.create(lang, project, prismaTx);
                     const createdTechnologies = yield Promise.all(technologies.map((tech) => this.createTechnology(tech, prismaTx)));
                     const projectTechnologies = yield Promise.all(createdTechnologies.map((tech) => __awaiter(this, void 0, void 0, function* () {
                         return yield prismaTx.projectTechnology.create({

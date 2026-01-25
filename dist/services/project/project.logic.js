@@ -33,22 +33,23 @@ class projectLogic {
         this.repository = repository;
         this.validator = validator;
     }
-    getAllProjects(params) {
-        return __awaiter(this, void 0, void 0, function* () {
+    getAllProjects() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", params) {
             this.validator.validatePagination(params);
             const skip = params.skip || 0;
             const take = params.take || 10;
             const [projects, totalItems] = yield Promise.all([
-                this.repository.findMany(skip, take),
+                this.repository.findMany(lang, skip, take),
                 this.repository.count(),
             ]);
             const remainingItems = totalItems - (skip * take + projects.length);
             return {
                 data: projects.map((project) => {
-                    const { image, technologies } = project, rest = __rest(project, ["image", "technologies"]);
+                    const { image, technologies, ProjectTranslation } = project, rest = __rest(project, ["image", "technologies", "ProjectTranslation"]);
                     return {
                         project: rest,
                         image: image || null,
+                        translation: ProjectTranslation,
                         technologies: technologies.map((tech) => tech.technology) || [],
                     };
                 }),
@@ -63,22 +64,22 @@ class projectLogic {
             };
         });
     }
-    create(data) {
-        return __awaiter(this, void 0, void 0, function* () {
+    create() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", data) {
             const dataCreate = this.validator.validateCreate(data);
             const slug = (0, slugify_1.default)(dataCreate.title + (0, crypto_1.randomUUID)().substring(0, 6), {
                 lower: true,
             });
-            const project = yield this.repository.create(Object.assign(Object.assign({}, dataCreate), { slug }));
+            const project = yield this.repository.create(lang, Object.assign(Object.assign({}, dataCreate), { slug }));
             if (!project)
                 throw new services_error_1.ServiceError("error create project", 400, "PROJECT_CREATION_ERROR");
             return project;
         });
     }
-    update(data) {
-        return __awaiter(this, void 0, void 0, function* () {
+    update() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", data) {
             const dataUpdate = this.validator.validateUpdate(data);
-            const updateProject = yield this.repository.update(dataUpdate);
+            const updateProject = yield this.repository.update(lang, dataUpdate);
             return updateProject;
         });
     }
@@ -96,10 +97,10 @@ class projectLogic {
             return findProject;
         });
     }
-    findBySlugFull(id) {
+    findBySlugFull(lang, slug) {
         return __awaiter(this, void 0, void 0, function* () {
             // const validId = this.validator.validateSlug(id);
-            const findProject = yield this.repository.findBySlugFull(id);
+            const findProject = yield this.repository.findBySlugFull(lang, slug);
             return findProject;
         });
     }
@@ -113,10 +114,10 @@ class projectLogic {
             return technology;
         });
     }
-    createProjectAndAssignTechnology(data) {
+    createProjectAndAssignTechnology(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             const validData = this.validator.validateCreateProjectAndAssignTechsAndServices(data);
-            const ProjectWithTechs = yield this.repository.CreateProjecAndAssignTechnologies(validData);
+            const ProjectWithTechs = yield this.repository.CreateProjecAndAssignTechnologies(lang, validData);
             if (!ProjectWithTechs)
                 throw new services_error_1.ServiceError("error create technology", 400, "TECHNOLOGY_CREATION_ERROR");
             return ProjectWithTechs;
@@ -130,24 +131,24 @@ class projectLogic {
         });
     }
     // Project-Technology relationship methods
-    assignProjectToTechnology(data) {
-        return __awaiter(this, void 0, void 0, function* () {
+    assignProjectToTechnology() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", data) {
             const validData = this.validator.validateBulkAssign(data);
-            const assigned = yield this.repository.assignProjectToTechnolgy(validData.items);
+            const assigned = yield this.repository.assignProjectToTechnolgy(lang, validData.items);
             return assigned;
         });
     }
-    removeProjectFromTechnology(data) {
-        return __awaiter(this, void 0, void 0, function* () {
+    removeProjectFromTechnology() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", data) {
             const validData = this.validator.validateBulkRemove(data);
-            const removed = yield this.repository.removeProjectToTechnolgy(validData.items);
+            const removed = yield this.repository.removeProjectToTechnolgy(lang, validData.items);
             return removed;
         });
     }
-    createTechnologyAndProject(data) {
-        return __awaiter(this, void 0, void 0, function* () {
+    createTechnologyAndProject() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", data) {
             const validData = this.validator.validateCreateTechWithProjects(data);
-            const result = yield this.repository.createTechnologyAndProject({
+            const result = yield this.repository.createTechnologyAndProject(lang, {
                 CreateTechnology: {
                     icon: validData.technology.icon || null,
                     name: validData.technology.name,
@@ -161,7 +162,7 @@ class projectLogic {
             return result;
         });
     }
-    createProjectAndTechnologies(data // : Promise<{ // createdProject: {
+    createProjectAndTechnologies(data // : Promise<{ // createdProject: { // project: Project; // Image: Image | null;
     ) {
         return __awaiter(this, void 0, void 0, function* () {
             // const validData =
@@ -358,8 +359,8 @@ class projectLogic {
             return technology;
         });
     }
-    updateProjectWithTechsServices(data) {
-        return __awaiter(this, void 0, void 0, function* () {
+    updateProjectWithTechsServices() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", data) {
             // Validate input
             const validatedData = this.validator.validateUpdateProjectWithTechsServices(data);
             // Extract project data and relationship changes
@@ -372,7 +373,7 @@ class projectLogic {
                 newTechIds,
                 deletedServiceIds,
                 newServiceIds,
-            });
+            }, lang);
             return result;
         });
     }

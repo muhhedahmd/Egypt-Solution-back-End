@@ -1,9 +1,11 @@
-import { User } from "../../models/User"; // أو من Prisma لو بتستخدمها
+import { User } from "../../models/User";
 
 declare global {
   namespace Express {
     interface Request {
-      user?: UserPayload; // أو النوع اللي بتستعمله في الـ token
+      lang?: string;
+      isRTL?: boolean;
+      user?: UserPayload;
     }
   }
 }
@@ -12,7 +14,6 @@ export interface UserPayload {
   id: string;
   email: string;
   role: string;
-  profileComplete?: boolean; 
-  profileId: string
-
+  profileComplete?: boolean;
+  profileId: string;
 }

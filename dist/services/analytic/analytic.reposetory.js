@@ -95,7 +95,6 @@ class AnalyticsRepository {
                     referralVisitors,
                 },
             });
-            console.log(`✅ Aggregated ${uniqueVisitors} visitors for ${startOfDay.toISOString().split("T")[0]} `, analytics);
         });
     }
     createSession(data) {

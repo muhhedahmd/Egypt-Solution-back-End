@@ -484,16 +484,13 @@ class blogRepository {
             });
         });
     }
-    incrementViews(id) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this.prisma.blog.update({
-                where: { id },
-                data: {
-                    views: { increment: 1 },
-                },
-            });
-        });
-    }
+    //   return this.prisma.blog.update({
+    //     where: { id },
+    //     data: {
+    //       views: { increment: 1 },
+    //     },
+    //   });
+    // }
     findCategoryById(id, tx) {
         return __awaiter(this, void 0, void 0, function* () {
             try {

@@ -39,7 +39,6 @@ class userService {
                 if (!name || !email || !password) {
                     return "All fields are required";
                 }
-                // console.log("email", email)
                 if (yield prisma_1.default.user.findUnique({
                     where: {
                         email: email,

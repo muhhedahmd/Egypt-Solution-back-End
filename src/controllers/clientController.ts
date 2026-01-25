@@ -1,6 +1,7 @@
-import { NextFunction, Response, Request } from 'express';
-import { ClientLogic } from '../services/client/client.logic';
-import { ClientError, ClientNotFoundError } from '../errors/client.error';
+import { NextFunction, Response, Request } from "express";
+import { ClientLogic } from "../services/client/client.logic";
+import { ClientError, ClientNotFoundError } from "../errors/client.error";
+import { ClientTranslation } from "@prisma/client";
 
 export class ClientController {
   private clientLogic: ClientLogic;
@@ -18,12 +19,12 @@ export class ClientController {
         take: Number(take) || 10,
       });
 
-      if (!clients) throw new ClientNotFoundError('error get clients');
+      if (!clients) throw new ClientNotFoundError("error get clients");
 
       return res.json({
-         ...clients,
-        message: 'clients fetched successfully',
-        success: true
+        ...clients,
+        message: "clients fetched successfully",
+        success: true,
       });
     } catch (error) {
       next(error);
@@ -33,14 +34,14 @@ export class ClientController {
   async getClientById(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      if (!id) throw new ClientNotFoundError('id is required');
+      if (!id) throw new ClientNotFoundError("id is required");
 
       const client = await this.clientLogic.getClientById(id);
 
       return res.json({
         data: client,
-        message: 'client fetched successfully',
-        success: true
+        message: "client fetched successfully",
+        success: true,
       });
     } catch (error) {
       next(error);
@@ -54,8 +55,8 @@ export class ClientController {
 
       return res.json({
         data: client,
-        message: 'client fetched successfully',
-        success: true
+        message: "client fetched successfully",
+        success: true,
       });
     } catch (error) {
       next(error);
@@ -65,8 +66,8 @@ export class ClientController {
   async isValidOrder(req: Request, res: Response, next: NextFunction) {
     try {
       const { order } = req.query;
-      if (typeof Number(order) !== 'number' || isNaN(Number(order)))
-        throw new ClientNotFoundError('order is not valid');
+      if (typeof Number(order) !== "number" || isNaN(Number(order)))
+        throw new ClientNotFoundError("order is not valid");
 
       const isValidOrder = await this.clientLogic.isValidOrder({
         order: Number(order),
@@ -77,8 +78,8 @@ export class ClientController {
           isValid: isValidOrder.isValid,
           takenBy: isValidOrder.takenby,
         },
-        message: 'checked order successfully',
-        success: true
+        message: "checked order successfully",
+        success: true,
       });
     } catch (error) {
       next(error);
@@ -88,41 +89,27 @@ export class ClientController {
   async createClient(req: Request, res: Response, next: NextFunction) {
     try {
       const data = req.body;
+      const lang = (req.lang as "AR" | "EN") || "EN";
 
-      console.log({
+      const newClient = await this.clientLogic.createClient(lang, {
         ...data,
-        isActive: data.isActive === 'true' ? true : false,
-        isFeatured: data.isFeatured === 'true' ? true : false,
+        isActive: data.isActive === "true" ? true : false,
+        isFeatured: data.isFeatured === "true" ? true : false,
         order: Number(data.order) || 0,
         image:
           Array.isArray(req.files) && req.files.length > 0
-            ? req.files.find((f) => f.fieldname === 'image')?.buffer
+            ? req.files.find((f) => f.fieldname === "image")?.buffer
             : null,
         logo:
           Array.isArray(req.files) && req.files.length > 0
-            ? req.files.find((f) => f.fieldname === 'logo')?.buffer
-            : null,
-      });
-
-      const newClient = await this.clientLogic.createClient({
-        ...data,
-        isActive: data.isActive === 'true' ? true : false,
-        isFeatured: data.isFeatured === 'true' ? true : false,
-        order: Number(data.order) || 0,
-        image:
-          Array.isArray(req.files) && req.files.length > 0
-            ? req.files.find((f) => f.fieldname === 'image')?.buffer
-            : null,
-        logo:
-          Array.isArray(req.files) && req.files.length > 0
-            ? req.files.find((f) => f.fieldname === 'logo')?.buffer
+            ? req.files.find((f) => f.fieldname === "logo")?.buffer
             : null,
       });
 
       return res.status(201).json({
         data: newClient,
-        message: 'client created successfully',
-        success: true
+        message: "client created successfully",
+        success: true,
       });
     } catch (error) {
       next(error);
@@ -135,41 +122,52 @@ export class ClientController {
       const clientData = req.body;
 
       const files = req.files as Express.Multer.File[] | undefined;
+      const lang = (req.lang as "AR" | "EN") || "EN";
 
       const data = {
         ...clientData,
         clientId: id,
         image:
           Array.isArray(files) && files.length > 0
-            ? files.find((f) => f.fieldname === 'image')?.buffer
+            ? files.find((f) => f.fieldname === "image")?.buffer
             : undefined,
         logo:
           Array.isArray(files) && files.length > 0
-            ? files.find((f) => f.fieldname === 'logo')?.buffer
+            ? files.find((f) => f.fieldname === "logo")?.buffer
             : undefined,
         imageState: clientData?.imageState as
-          | 'KEEP'
-          | 'REMOVE'
-          | 'UPDATE'
+          | "KEEP"
+          | "REMOVE"
+          | "UPDATE"
           | undefined,
         logoState: clientData?.logoState as
-          | 'KEEP'
-          | 'REMOVE'
-          | 'UPDATE'
-          | undefined,  
+          | "KEEP"
+          | "REMOVE"
+          | "UPDATE"
+          | undefined,
       };
 
-      const updatedClient = await this.clientLogic.updateClient({
+      const updatedClient = await this.clientLogic.updateClient(lang, {
         ...data,
-        isActive: data.isActive === 'true' ? true : data.isActive === 'false' ? false : undefined,
-        isFeatured: data.isFeatured === 'true' ? true : data.isFeatured === 'false' ? false : undefined,
+        isActive:
+          data.isActive === "true"
+            ? true
+            : data.isActive === "false"
+              ? false
+              : undefined,
+        isFeatured:
+          data.isFeatured === "true"
+            ? true
+            : data.isFeatured === "false"
+              ? false
+              : undefined,
         order: data.order ? Number(data.order) : undefined,
       });
 
       return res.json({
         data: updatedClient,
-        message: 'client updated successfully',
-        success: true
+        message: "client updated successfully",
+        success: true,
       });
     } catch (error) {
       next(error);
@@ -179,16 +177,16 @@ export class ClientController {
   async deleteClient(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      if (!id) throw new ClientNotFoundError('id is required');
+      if (!id) throw new ClientNotFoundError("id is required");
 
       const deletedClient = await this.clientLogic.deleteClient(id);
       if (!deletedClient)
-        throw new ClientNotFoundError('error deleting client');
+        throw new ClientNotFoundError("error deleting client");
 
       return res.json({
         data: deletedClient,
-        message: 'client deleted successfully',
-        success: true
+        message: "client deleted successfully",
+        success: true,
       });
     } catch (error) {
       next(error);
@@ -198,20 +196,22 @@ export class ClientController {
   async SearchClients(req: Request, res: Response, next: NextFunction) {
     try {
       const { q } = req.query;
-      if (!q || typeof q !== 'string')
+      const lang = (req.lang as "AR" | "EN") || "EN";
+
+      if (!q || typeof q !== "string")
         throw new ClientError(
-          'search query is required',
+          "search query is required",
           400,
-          'SEARCH_QUERY_REQUIRED'
+          "SEARCH_QUERY_REQUIRED",
         );
 
-      const clients = await this.clientLogic.Search(q);
-      if (!clients) throw new ClientNotFoundError('error searching clients');
+      const clients = await this.clientLogic.Search(lang, q);
+      if (!clients) throw new ClientNotFoundError("error searching clients");
 
       return res.json({
         data: clients,
-        message: 'clients searched successfully',
-        success: true
+        message: "clients searched successfully",
+        success: true,
       });
     } catch (error) {
       next(error);

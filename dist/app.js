@@ -26,32 +26,37 @@ const contact_module_1 = require("./services/contact/contact.module");
 const settingsModule_1 = require("./services/companyInfo/settingsModule");
 const hero_modules_1 = require("./services/hero/hero.modules");
 const analytic_module_1 = require("./services/analytic/analytic.module");
+const lang_middleware_1 = require("./middlewares/lang.middleware");
 const app = (0, express_1.default)();
 app.use((0, cookie_parser_1.default)());
 // 1. CORS first
 app.use((0, cors_1.default)({
-    origin: [process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: [
+        process.env.FRONTEND_URL || "http://localhost:3000",
         "http://localhost:3001",
         "https://end-user-landing-manager.vercel.app",
-        "https://end-user-landing-manager-grodjgoj6.vercel.app"
+        "https://end-user-landing-manager-grodjgoj6.vercel.app",
     ],
     credentials: true,
 }));
-// 2. Configure multer properly
+//  Configure multer properly
 const storage = multer_1.default.memoryStorage();
 const upload = (0, multer_1.default)({ storage });
 app.use(upload.any()); // Accept any file uploads
-// 3. Body parsing middleware for non-multipart requests
+// Body parsing middleware for non-multipart requests
 app.use(express_1.default.json({ limit: "10mb" }));
 app.use(body_parser_1.default.urlencoded({ limit: "10mb", extended: true }));
-// 4. UploadThing route
+//UploadThing route
 app.use("/api/uploadthing", (0, express_2.createRouteHandler)({
     router: uploadthing_1.uploadRouter,
     config: {
         isDev: true,
     },
 }));
-// 5. Auth routes (no files)
+const asyncHandler = (fn) => (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+};
+app.use(asyncHandler(lang_middleware_1.i18nMiddleware));
 app.use("/api/auth", authRoutes_1.default);
 app.use("/api", profileRoute_1.default);
 // Mount modules
@@ -75,11 +80,9 @@ const CompanyInfoModule = new settingsModule_1.CompanyInfoModule(prisma_1.defaul
 app.use("/api/company-info", CompanyInfoModule.getRoutes());
 const HeroModule = new hero_modules_1.HeroModule(prisma_1.default);
 app.use("/api/hero", HeroModule.getRoutes());
-// *** 
 const AnalyticModule = new analytic_module_1.AnalyticModule(prisma_1.default);
 app.use("/api/analytics", AnalyticModule.getRoutes());
 app.use(errorHandler_1.errorHandler);
-// 7. Error handling middleware1
 app.use((err, req, res, next) => {
     var _a;
     console.error("=== ERROR HANDLER ===");

@@ -1,7 +1,8 @@
 import { NextFunction, Response, Request } from 'express';
 import { TestimonialLogic } from '../services/testtimonials/testimonial.logic';
 import { TestimonialError, TestimonialNotFoundError } from '../errors/testimonal.error';
-
+      
+import  {TestimonialTranslation} from '@prisma/client';
 
 export class TestimonialController {
   private testimonialLogic: TestimonialLogic;
@@ -71,20 +72,10 @@ export class TestimonialController {
   async createTestimonial(req: Request, res: Response, next: NextFunction) {
     try {
       const data = req.body;
+      const lang = req.lang as 'EN' | 'AR';
+      
 
-      console.log({
-        ...data,
-        isActive: data.isActive === 'true' ? true : false,
-        isFeatured: data.isFeatured === 'true' ? true : false,
-        rating: Number(data.rating) || 5,
-        order: Number(data.order) || 0,
-        avatar:
-          Array.isArray(req.files) && req.files.length > 0
-            ? req.files.find((f) => f.fieldname === 'avatar')?.buffer
-            : null,
-      });
-
-      const newTestimonial = await this.testimonialLogic.createTestimonial({
+      const newTestimonial = await this.testimonialLogic.createTestimonial( lang, {
         ...data,
         isActive: data.isActive === 'true' ? true : false,
         isFeatured: data.isFeatured === 'true' ? true : false,
@@ -109,6 +100,8 @@ export class TestimonialController {
     try {
       const { id } = req.params;
       const testimonialData = req.body;
+      const lang = req.lang as 'EN' | 'AR';
+
 
       const files = req.files as Express.Multer.File[] | undefined;
 
@@ -126,7 +119,7 @@ export class TestimonialController {
           | undefined,
       };
 
-      const updatedTestimonial = await this.testimonialLogic.updateTestimonial({
+      const updatedTestimonial = await this.testimonialLogic.updateTestimonial( lang , {
         ...data,
         isActive: data.isActive === 'true' ? true : data.isActive === 'false' ? false : undefined,
         isFeatured: data.isFeatured === 'true' ? true : data.isFeatured === 'false' ? false : undefined,
@@ -163,6 +156,7 @@ export class TestimonialController {
 
   async SearchTestimonials(req: Request, res: Response, next: NextFunction) {
     try {
+      const lang = req.lang as 'EN' | 'AR';
       const { q } = req.query;
       if (!q || typeof q !== 'string')
         throw new TestimonialError(
@@ -171,7 +165,7 @@ export class TestimonialController {
           'SEARCH_QUERY_REQUIRED'
         );
 
-      const testimonials = await this.testimonialLogic.Search(q);
+      const testimonials = await this.testimonialLogic.Search( lang ,q);
       if (!testimonials) 
         throw new TestimonialNotFoundError('error searching testimonials');
 

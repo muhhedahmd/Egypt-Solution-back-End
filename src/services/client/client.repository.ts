@@ -9,7 +9,6 @@ import {
 import {
   CreateClientDTO,
   UpdateClient,
-  InterFaceSearchClient,
 } from "../../types/client";
 import { ClientError } from "../../errors/client.error";
 
@@ -18,10 +17,19 @@ export class ClientRepository {
 
   async findMany(skip: number, take: number) {
     try {
-      const clients = this.prisma.client.findMany({
+      const clients = await this.prisma.client.findMany({
         include: {
           image: true,
           logo: true,
+          ClientTranslation: {
+            select: {
+              name: true,
+              description: true,
+              richDescription: true,
+              industry: true,
+              lang: true,
+            },
+          },
         },
         skip: skip * take,
         take: take,
@@ -29,12 +37,14 @@ export class ClientRepository {
           order: "asc",
         },
       });
-      return (await clients).map((client) => {
-        const { image, logo, ...rest } = client;
+
+      return clients.map((client) => {
+        const { image, logo, ClientTranslation, ...rest } = client;
         return {
-          client: rest,
+          client: { ...rest },
           image: image || null,
           logo: logo || null,
+          translation: ClientTranslation,
         };
       });
     } catch (error) {
@@ -68,13 +78,32 @@ export class ClientRepository {
 
   async findById(id: string) {
     try {
-      return this.prisma.client.findUnique({
+      const client = await this.prisma.client.findUnique({
         where: { id },
         include: {
           image: true,
           logo: true,
+          ClientTranslation: {
+            select: {
+              name: true,
+              description: true,
+              richDescription: true,
+              industry: true,
+              lang: true,
+            },
+          },
         },
       });
+
+      if (!client) return null;
+
+      const { image, logo, ClientTranslation, ...rest } = client;
+      return {
+        client: { ...rest },
+        image: image || null,
+        logo: logo || null,
+        translation: ClientTranslation,
+      };
     } catch (error) {
       console.error(error);
       throw new Error("Error finding client by ID");
@@ -88,6 +117,15 @@ export class ClientRepository {
         include: {
           image: true,
           logo: true,
+          ClientTranslation: {
+            select: {
+              name: true,
+              description: true,
+              richDescription: true,
+              industry: true,
+              lang: true,
+            },
+          },
         },
       });
 
@@ -95,11 +133,12 @@ export class ClientRepository {
         return null;
       }
 
-      const { image, logo, ...rest } = findedClient;
+      const { image, logo, ClientTranslation, ...rest } = findedClient;
       return {
         image: image || null,
         logo: logo || null,
-        client: rest,
+        client: { ...rest },
+        translation: ClientTranslation,
       };
     } catch (error) {
       console.error(error);
@@ -107,37 +146,64 @@ export class ClientRepository {
     }
   }
 
-  async SearchClient(searchTerm: string, skip: number, take: number) {
+  async SearchClient(
+    lang: "EN" | "AR",
+    searchTerm: string,
+    skip: number,
+    take: number
+  ) {
     try {
       const clients = await this.prisma.client.findMany({
         where: {
           OR: [
             {
-              name: {
-                contains: searchTerm,
-                mode: "insensitive",
+              ClientTranslation: {
+                some: {
+                  name: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
               },
             },
             {
-              description: {
-                contains: searchTerm,
-                mode: "insensitive",
+              ClientTranslation: {
+                some: {
+                  description: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
               },
             },
             {
-              richDescription: {
-                contains: searchTerm,
-                mode: "insensitive",
+              ClientTranslation: {
+                some: {
+                  richDescription: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
               },
             },
             {
-              industry: {
-                contains: searchTerm,
-                mode: "insensitive",
+              ClientTranslation: {
+                some: {
+                  industry: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
               },
             },
             {
               slug: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+            {
+              website: {
                 contains: searchTerm,
                 mode: "insensitive",
               },
@@ -147,6 +213,16 @@ export class ClientRepository {
         include: {
           image: true,
           logo: true,
+          ClientTranslation: {
+            where: { lang },
+            select: {
+              name: true,
+              description: true,
+              richDescription: true,
+              industry: true,
+              lang: true,
+            },
+          },
         },
         skip: skip * take,
         take,
@@ -156,11 +232,12 @@ export class ClientRepository {
       });
 
       return clients.map((client) => {
-        const { image, logo, ...rest } = client;
+        const { image, logo, ClientTranslation, ...rest } = client;
         return {
-          client: rest,
+          client: { ...rest },
           image: image || null,
           logo: logo || null,
+          translation: ClientTranslation,
         };
       });
     } catch (error) {
@@ -173,7 +250,7 @@ export class ClientRepository {
     }
   }
 
-  async create(data: CreateClientDTO & { slug: string }) {
+  async create(lang: "EN" | "AR", data: CreateClientDTO & { slug: string }) {
     try {
       const transaction = await this.prisma.$transaction(
         async (tx) => {
@@ -228,26 +305,47 @@ export class ClientRepository {
 
           const client = await tx.client.create({
             data: {
+              name:"",
               slug: slug,
-              name: data.name,
-              description: data.description,
-              richDescription: data.richDescription,
               website: data.website,
-              industry: data.industry,
               imageId: imageId,
               logoId: logoId,
               isActive: data.isActive || false,
               isFeatured: data.isFeatured || false,
               order: data.order || 0,
+              ClientTranslation: {
+                create: {
+                  name: data.name,
+                  description: data.description,
+                  richDescription: data.richDescription,
+                  industry: data.industry,
+                  lang: lang,
+                },
+              },
             },
             include: {
               image: true,
               logo: true,
+              ClientTranslation: {
+                where: { lang },
+                select: {
+                  name: true,
+                  description: true,
+                  richDescription: true,
+                  industry: true,
+                  lang: true,
+                },
+              },
             },
           });
 
-          const { image, logo, ...rest } = client;
-          return { Image: image, Logo: logo, client: rest };
+          const { image, logo, ClientTranslation, ...rest } = client;
+          return {
+            Image: image,
+            Logo: logo,
+            translation: ClientTranslation,
+            client: { ...rest },
+          };
         },
         {
           timeout: 20000,
@@ -262,7 +360,7 @@ export class ClientRepository {
     }
   }
 
-  async update(data: UpdateClient) {
+  async update(lang: "EN" | "AR", data: UpdateClient) {
     try {
       const transaction = await this.prisma.$transaction(
         async (prismaTx) => {
@@ -371,7 +469,7 @@ export class ClientRepository {
           }
 
           // Generate new slug if name changed
-          if (data.name && data.name !== client.name) {
+          if (data.name) {
             const slug = slugify(data.name + randomUUID().substring(0, 8), {
               lower: true,
             });
@@ -383,22 +481,50 @@ export class ClientRepository {
             where: { id: data.clientId },
             data: {
               slug: data.slug || client.slug,
-              name: data.name || client.name,
-              description: data.description || client.description,
-              richDescription: data.richDescription || client.richDescription,
               website: data.website || client.website,
-              industry: data.industry || client.industry,
               imageId: NewImageId,
               logoId: NewLogoId,
               isActive: data.isActive ?? client.isActive,
               isFeatured: data.isFeatured ?? client.isFeatured,
               order: data.order ?? client.order,
             },
-            include: { image: true, logo: true },
+            include: {
+              image: true,
+              logo: true,
+            },
+          });
+
+          // Update or create translation
+          const t = await prismaTx.clientTranslation.upsert({
+            where: {
+              clientId_lang: {
+                clientId: data.clientId,
+                lang: lang,
+              },
+            },
+            update: {
+              name: data.name,
+              description: data.description,
+              richDescription: data.richDescription,
+              industry: data.industry,
+            },
+            create: {
+              clientId: data.clientId,
+              name: data.name || "Client",
+              description: data.description,
+              richDescription: data.richDescription,
+              industry: data.industry,
+              lang: lang,
+            },
           });
 
           const { image, logo, ...rest } = updatedClient;
-          return { Image: image, Logo: logo, client: rest };
+          return {
+            Image: image,
+            Logo: logo,
+            translation: t,
+            client: { ...rest },
+          };
         },
         {
           timeout: 20000,

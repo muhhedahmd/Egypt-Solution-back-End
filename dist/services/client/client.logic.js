@@ -67,12 +67,7 @@ class ClientLogic {
             if (!client) {
                 throw new client_error_1.ClientNotFoundError(id);
             }
-            const { image, logo } = client, rest = __rest(client, ["image", "logo"]);
-            return {
-                image: image,
-                logo: logo,
-                client: rest,
-            };
+            return client;
         });
     }
     getClientBySlug(slug) {
@@ -85,13 +80,13 @@ class ClientLogic {
             return client;
         });
     }
-    createClient(data) {
+    createClient(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             const valid = this.validator.validateCreate(data);
             const slug = (0, slugify_1.default)(data.name + (0, crypto_1.randomUUID)().substring(0, 8), {
                 lower: true,
             });
-            const client = yield this.repository.create(Object.assign(Object.assign({}, valid), { slug: slug }));
+            const client = yield this.repository.create(lang, Object.assign(Object.assign({}, valid), { slug: slug }));
             if (!client)
                 throw new Error('error create client');
             return client;
@@ -114,20 +109,20 @@ class ClientLogic {
             }
         });
     }
-    Search(q) {
+    Search(lang, q) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!q)
                 throw new client_error_1.ClientError('search query is required', 400, 'SEARCH_QUERY_REQUIRED');
-            const clients = yield this.repository.SearchClient(q, 0, 10);
+            const clients = yield this.repository.SearchClient(lang, q, 0, 10);
             if (!clients)
                 throw new client_error_1.ClientError('error searching clients', 400, 'ERROR_SEARCHING_CLIENTS');
             return clients;
         });
     }
-    updateClient(data) {
+    updateClient(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             this.validator.validateUpdate(data);
-            const updatedClient = yield this.repository.update(data);
+            const updatedClient = yield this.repository.update(lang, data);
             if (!updatedClient)
                 throw new client_error_1.ClientError('error updating client', 400, 'ERROR_UPDATING_CLIENT');
             const { Image, Logo } = updatedClient, rest = __rest(updatedClient, ["Image", "Logo"]);

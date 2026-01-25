@@ -7,7 +7,7 @@ const settingsLogic_1 = require("./settingsLogic");
 const companyInfoRoutes_1 = require("../../routes/companyInfoRoutes");
 class CompanyInfoModule {
     constructor(prisma) {
-        this.repository = new SettingsRepostery_1.CompanyInfoRepostery(prisma);
+        this.repository = new SettingsRepostery_1.CompanyInfoRepository(prisma);
         // this.validator = new CompanyInfoValidator();
         this.logic = new settingsLogic_1.CompanyInfoLogic(this.repository);
         this.controller = new settingsController_1.companyInfoController(this.logic);

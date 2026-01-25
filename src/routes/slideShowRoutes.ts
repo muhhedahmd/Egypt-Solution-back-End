@@ -8,94 +8,106 @@ export class slideShowRoutes {
     this.initializeRoutes();
   }
   initializeRoutes() {
-    const asyncHandler = (fn: any) => (req: any, res: any, next: any) => {
-      Promise.resolve(fn(req, res, next)).catch(next);
-    };
-    
     this.router.post(
-        "/get-paginated-slides/:id",
-        asyncHandler(this.controller.getPaginatedSlides.bind(this.controller))
+      "/get-paginated-slides/:id",
+
+      this.controller.getPaginatedSlides.bind(this.controller),
     );
+
+    // 💀💀💀💀  30s res
+    // this.router.post(
+    //     "/with-slides",
+    // requireAuthv2,
+    //
+    //     this.controller.getSlideShowWithSlides.bind(this.controller)
+    //
+
     this.router.get(
       "/",
-      asyncHandler(this.controller.getAllSlideShows.bind(this.controller))
+      this.controller.getAllSlideShows.bind(this.controller),
     );
     this.router.get(
       "/all-minimal",
-      asyncHandler(this.controller.getAllSlideShowsMinmal.bind(this.controller))
+      requireAuthv2,
+
+      this.controller.getAllSlideShowsMinmal.bind(this.controller),
     );
     // *** & ####
 
     this.router.post(
-  "/bulk-operations/:id",
-  asyncHandler(requireAuthv2),
-  asyncHandler(this.controller.bulkSlideOperations.bind(this.controller))
-);
+      "/bulk-operations/:id",
+      requireAuthv2,
+      this.controller.bulkSlideOperations.bind(this.controller),
+    );
     // ***
     this.router.post(
       "/create-attach-many",
-      asyncHandler(requireAuthv2),
-      asyncHandler(this.controller.CreateAndAttachMany.bind(this.controller))
+      requireAuthv2,
+      this.controller.CreateAndAttachMany.bind(this.controller),
     );
     // ***
     this.router.post(
       "/update-attach-many",
-      asyncHandler(requireAuthv2),
-      asyncHandler(this.controller.UpdateAndAttachMany.bind(this.controller))
+      requireAuthv2,
+      this.controller.UpdateAndAttachMany.bind(this.controller),
     );
-    
+
     this.router.post(
       "/",
-      asyncHandler(requireAuthv2),
-      asyncHandler(this.controller.createSlideShow.bind(this.controller))
+      requireAuthv2,
+      this.controller.createSlideShow.bind(this.controller),
     );
-   
+
     this.router.post(
       "/attach-many",
-      asyncHandler(requireAuthv2),
-      asyncHandler(this.controller.attachMany.bind(this.controller))
+      requireAuthv2,
+      this.controller.attachMany.bind(this.controller),
     );
     this.router.get(
       "/grouped-type/:id",
-      asyncHandler(requireAuthv2),
-      asyncHandler(this.controller.getAttachedsGrouped.bind(this.controller))
+      requireAuthv2,
+      this.controller.getAttachedsGrouped.bind(this.controller),
     );
     this.router.get(
       "/by-type",
-      asyncHandler(this.controller.getSlideShowsByType.bind(this.controller))
+      requireAuthv2,
+
+      this.controller.getSlideShowsByType.bind(this.controller),
     );
     this.router.get(
       "/attaches-by-type/:id",
-      asyncHandler(this.controller.getAttachesByType.bind(this.controller))
+      requireAuthv2,
+
+      this.controller.getAttachesByType.bind(this.controller),
     );
     this.router.delete(
       "/detach-many",
-      asyncHandler(requireAuthv2),
-      asyncHandler(this.controller.deAttachMany.bind(this.controller))
+      requireAuthv2,
+      this.controller.deAttachMany.bind(this.controller),
     );
-     this.router.put(
+    this.router.put(
       "/reorder-bulk",
-      asyncHandler(requireAuthv2),
-      asyncHandler(this.controller.reorderBulkSlideShow.bind(this.controller))
+      requireAuthv2,
+      this.controller.reorderBulkSlideShow.bind(this.controller),
     );
-     this.router.get(
+    this.router.get(
       "/:id",
-      asyncHandler(this.controller.getSlideShowById.bind(this.controller))
+      this.controller.getSlideShowById.bind(this.controller),
     );
 
     this.router.delete(
-        "/:id",
-        asyncHandler(requireAuthv2),
-        asyncHandler(this.controller.deleteSlideShow.bind(this.controller))
+      "/:id",
+      requireAuthv2,
+
+      this.controller.deleteSlideShow.bind(this.controller),
     );
     this.router.put(
       "/:id",
-      asyncHandler(requireAuthv2),
-      asyncHandler(this.controller.updateSlideShow.bind(this.controller))
+      requireAuthv2,
+      this.controller.updateSlideShow.bind(this.controller),
     );
 
-    // reorderBulkSlideShow 
-   
+    // reorderBulkSlideShow
   }
   getRoutes(): Router {
     return this.router;

@@ -21,7 +21,10 @@ export class projectLogic {
     private validator: ProjectsValidator
   ) {}
 
-  async getAllProjects(params: PaginationParams): Promise<
+  async getAllProjects(
+    lang: "EN" | "AR" = "EN",
+    params: PaginationParams
+  ): Promise<
     PaginatedResponse<{
       project: Project;
       image: Image | null;
@@ -33,7 +36,7 @@ export class projectLogic {
     const take = params.take || 10;
 
     const [projects, totalItems] = await Promise.all([
-      this.repository.findMany(skip, take),
+      this.repository.findMany(lang, skip, take),
       this.repository.count(),
     ]);
 
@@ -41,11 +44,11 @@ export class projectLogic {
 
     return {
       data: projects.map((project) => {
-        const { image, technologies, ...rest } = project;
-
+        const { image, technologies, ProjectTranslation, ...rest } = project;
         return {
           project: rest,
           image: image || null,
+          translation: ProjectTranslation,
           technologies: technologies.map((tech) => tech.technology) || [],
         };
       }),
@@ -60,13 +63,16 @@ export class projectLogic {
     };
   }
 
-  async create(data: unknown): Promise<{ project: Project; Image: any }> {
+  async create(
+    lang: "EN" | "AR" = "EN",
+    data: unknown
+  ): Promise<{ project: Project; Image: any }> {
     const dataCreate = this.validator.validateCreate(data);
     const slug = slugify(dataCreate.title + randomUUID().substring(0, 6), {
       lower: true,
     });
 
-    const project = await this.repository.create({ ...dataCreate, slug });
+    const project = await this.repository.create(lang, { ...dataCreate, slug });
     if (!project)
       throw new ServiceError(
         "error create project",
@@ -77,9 +83,12 @@ export class projectLogic {
     return project;
   }
 
-  async update(data: unknown): Promise<{ project: Project; Image: any }> {
+  async update(
+    lang: "EN" | "AR" = "EN",
+    data: unknown
+  ): Promise<{ project: Project; Image: any }> {
     const dataUpdate = this.validator.validateUpdate(data);
-    const updateProject = await this.repository.update(dataUpdate);
+    const updateProject = await this.repository.update(lang, dataUpdate);
     return updateProject;
   }
 
@@ -95,10 +104,11 @@ export class projectLogic {
     return findProject;
   }
   async findBySlugFull(
-    id: string
+    lang: "EN" | "AR",
+    slug: string
   ): Promise<Awaited<ReturnType<typeof this.repository.findBySlugFull>>> {
     // const validId = this.validator.validateSlug(id);
-    const findProject = await this.repository.findBySlugFull(id);
+    const findProject = await this.repository.findBySlugFull(lang, slug);
     return findProject;
   }
 
@@ -116,6 +126,7 @@ export class projectLogic {
   }
 
   async createProjectAndAssignTechnology(
+    lang: "EN" | "AR",
     data: unknown
   ): Promise<
     Awaited<
@@ -126,7 +137,7 @@ export class projectLogic {
       this.validator.validateCreateProjectAndAssignTechsAndServices(data);
 
     const ProjectWithTechs =
-      await this.repository.CreateProjecAndAssignTechnologies(validData);
+      await this.repository.CreateProjecAndAssignTechnologies(lang, validData);
 
     if (!ProjectWithTechs)
       throw new ServiceError(
@@ -145,31 +156,40 @@ export class projectLogic {
   }
 
   // Project-Technology relationship methods
-  async assignProjectToTechnology(data: unknown): Promise<ProjectTechnology[]> {
+  async assignProjectToTechnology(
+    lang: "EN" | "AR" = "EN",
+    data: unknown
+  ): Promise<ProjectTechnology[]> {
     const validData = this.validator.validateBulkAssign(data);
     const assigned = await this.repository.assignProjectToTechnolgy(
+      lang,
       validData.items
     );
     return assigned;
   }
 
   async removeProjectFromTechnology(
+    lang: "EN" | "AR" = "EN",
     data: unknown
   ): Promise<ProjectTechnology[]> {
     const validData = this.validator.validateBulkRemove(data);
     const removed = await this.repository.removeProjectToTechnolgy(
+      lang,
       validData.items
     );
     return removed;
   }
 
-  async createTechnologyAndProject(data: unknown): Promise<{
+  async createTechnologyAndProject(
+    lang: "EN" | "AR" = "EN",
+    data: unknown
+  ): Promise<{
     technology: Technology;
     projects: Project[];
   }> {
     const validData = this.validator.validateCreateTechWithProjects(data);
 
-    const result = await this.repository.createTechnologyAndProject({
+    const result = await this.repository.createTechnologyAndProject(lang, {
       CreateTechnology: {
         icon: validData.technology.icon || null,
         name: validData.technology.name,
@@ -192,10 +212,8 @@ export class projectLogic {
   }
 
   async createProjectAndTechnologies(
-    data: unknown // : Promise<{ // createdProject: {
-  ) // project: Project;
-  // Image: Image | null;
-  // };
+    data: unknown // : Promise<{ // createdProject: { // project: Project; // Image: Image | null;
+  ) // };
   // createdTechnologies: Technology[];
   // }>
   {
@@ -446,7 +464,10 @@ export class projectLogic {
     return technology;
   }
 
-  async updateProjectWithTechsServices(data: unknown): Promise<{
+  async updateProjectWithTechsServices(
+    lang: "EN" | "AR" = "EN",
+    data: unknown
+  ): Promise<{
     project: Project;
     image: Image | null;
     technologies: Technology[];
@@ -467,14 +488,14 @@ export class projectLogic {
     } = validatedData;
 
     // Call repository method
-    const result = await this.repository.updateProjectWithTechsServices({
+    const result = await this.repository.updateProjectWithTechsServices( {
       id,
       projectData: projectData as UpdateProjectDTO,
       deletedTechIds,
       newTechIds,
       deletedServiceIds,
       newServiceIds,
-    });
+    } , lang);
 
     return result;
   }

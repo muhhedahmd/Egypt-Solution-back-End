@@ -18,14 +18,15 @@ class HeroController {
     getAllHeroes(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
+                const lang = req.lang || "EN";
                 const { skip, take } = req.query;
-                const heroes = yield this.heroLogic.getAllHeroes({
+                const heroes = yield this.heroLogic.getAllHeroes(lang, {
                     skip: Number(skip) || 0,
                     take: Number(take) || 10,
                 });
                 if (!heroes)
-                    throw new hero_error_1.HeroNotFoundError('error get heroes');
-                return res.json(Object.assign(Object.assign({}, heroes), { message: 'heroes fetched successfully', success: true }));
+                    throw new hero_error_1.HeroNotFoundError("error get heroes");
+                return res.json(Object.assign(Object.assign({}, heroes), { message: "heroes fetched successfully", success: true }));
             }
             catch (error) {
                 next(error);
@@ -36,12 +37,13 @@ class HeroController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const { id } = req.params;
+                const lang = req.lang || "EN";
                 if (!id)
-                    throw new hero_error_1.HeroNotFoundError('id is required');
-                const hero = yield this.heroLogic.getHeroById(id);
+                    throw new hero_error_1.HeroNotFoundError("id is required");
+                const hero = yield this.heroLogic.getHeroById(lang, id);
                 return res.json({
                     data: hero,
-                    message: 'hero fetched successfully',
+                    message: "hero fetched successfully",
                     success: true,
                 });
             }
@@ -53,10 +55,13 @@ class HeroController {
     getActiveHero(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const hero = yield this.heroLogic.getActiveHero();
+                const lang = req.lang || "EN";
+                const hero = yield this.heroLogic.getActiveHero({
+                    lang
+                });
                 return res.json({
                     data: hero,
-                    message: 'active hero fetched successfully',
+                    message: "active hero fetched successfully",
                     success: true,
                 });
             }
@@ -70,38 +75,21 @@ class HeroController {
             var _a;
             try {
                 const data = req.body;
-                // Parse JSON fields
                 let styleOverrides = null;
-                // if (data.styleOverrides) {
-                //   try {
-                //     styleOverrides = JSON.parse(data.styleOverrides);
-                //   } catch (e) {
-                //     console.error('Error parsing styleOverrides:', e);
-                //   }
-                // }
-                // console.log({
-                //   ...data,
-                //   isActive: data.isActive === 'true' ? true : false,
-                //   showScrollIndicator:
-                //     data.showScrollIndicator === 'true' ? true : false,
-                //   overlayOpacity: data.overlayOpacity
-                //     ? parseFloat(data.overlayOpacity)
-                //     : undefined,
-                //   minHeight: data.minHeight ? Number(data.minHeight) : undefined,
-                //   styleOverrides: styleOverrides,
-                //   backgroundImage:
-                //     Array.isArray(req.files) && req.files.length > 0
-                //       ? req.files.find((f) => f.fieldname === 'backgroundImage')?.buffer
-                //       : null,
-                // })
-                const newHero = yield this.heroLogic.createHero(Object.assign(Object.assign({}, data), { isActive: data.isActive === 'true' ? true : false, showScrollIndicator: data.showScrollIndicator === 'true' ? true : false, overlayOpacity: data.overlayOpacity
+                const lang = req.lang || "EN";
+                if (!lang)
+                    return;
+                console.log({
+                    lang,
+                });
+                const newHero = yield this.heroLogic.createHero(lang, Object.assign(Object.assign({}, data), { isActive: data.isActive === "true" ? true : false, showScrollIndicator: data.showScrollIndicator === "true" ? true : false, overlayOpacity: data.overlayOpacity
                         ? parseFloat(data.overlayOpacity)
                         : undefined, minHeight: data.minHeight ? Number(data.minHeight) : undefined, styleOverrides: styleOverrides, backgroundImage: Array.isArray(req.files) && req.files.length > 0
-                        ? (_a = req.files.find((f) => f.fieldname === 'backgroundImage')) === null || _a === void 0 ? void 0 : _a.buffer
+                        ? (_a = req.files.find((f) => f.fieldname === "backgroundImage")) === null || _a === void 0 ? void 0 : _a.buffer
                         : undefined }));
                 return res.status(201).json({
                     data: newHero,
-                    message: 'hero created successfully',
+                    message: "hero created successfully",
                     success: true,
                 });
             }
@@ -124,26 +112,44 @@ class HeroController {
                         styleOverrides = JSON.parse(heroData.styleOverrides);
                     }
                     catch (e) {
-                        console.error('Error parsing styleOverrides:', e);
+                        console.error("Error parsing styleOverrides:", e);
                     }
                 }
                 const data = Object.assign(Object.assign({}, heroData), { heroId: id, backgroundImage: Array.isArray(files) && files.length > 0
-                        ? (_a = files.find((f) => f.fieldname === 'backgroundImage')) === null || _a === void 0 ? void 0 : _a.buffer
+                        ? (_a = files.find((f) => f.fieldname === "backgroundImage")) === null || _a === void 0 ? void 0 : _a.buffer
                         : undefined, imageState: heroData === null || heroData === void 0 ? void 0 : heroData.imageState });
-                const updatedHero = yield this.heroLogic.updateHero(Object.assign(Object.assign({}, data), { isActive: data.isActive === 'true'
+                const lang = req.lang || "EN";
+                const updatedHero = yield this.heroLogic.updateHero(lang, Object.assign(Object.assign({}, data), { isActive: data.isActive === "true"
                         ? true
-                        : data.isActive === 'false'
+                        : data.isActive === "false"
                             ? false
-                            : undefined, showScrollIndicator: data.showScrollIndicator === 'true'
+                            : undefined, showScrollIndicator: data.showScrollIndicator === "true"
                         ? true
-                        : data.showScrollIndicator === 'false'
+                        : data.showScrollIndicator === "false"
                             ? false
                             : undefined, overlayOpacity: data.overlayOpacity
                         ? parseFloat(data.overlayOpacity)
                         : undefined, minHeight: data.minHeight ? Number(data.minHeight) : undefined, styleOverrides: styleOverrides }));
                 return res.json({
                     data: updatedHero,
-                    message: 'hero updated successfully',
+                    message: "hero updated successfully",
+                    success: true,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    ToggleActive(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { id } = req.params;
+                // const heroData = req.body;
+                const toggle = yield this.heroLogic.ToggleActive(id);
+                return res.json({
+                    data: toggle,
+                    message: "hero updated successfully",
                     success: true,
                 });
             }
@@ -157,13 +163,13 @@ class HeroController {
             try {
                 const { id } = req.params;
                 if (!id)
-                    throw new hero_error_1.HeroNotFoundError('id is required');
+                    throw new hero_error_1.HeroNotFoundError("id is required");
                 const deletedHero = yield this.heroLogic.deleteHero(id);
                 if (!deletedHero)
-                    throw new hero_error_1.HeroNotFoundError('error deleting hero');
+                    throw new hero_error_1.HeroNotFoundError("error deleting hero");
                 return res.json({
                     data: deletedHero,
-                    message: 'hero deleted successfully',
+                    message: "hero deleted successfully",
                     success: true,
                 });
             }
@@ -176,14 +182,14 @@ class HeroController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const { q } = req.query;
-                if (!q || typeof q !== 'string')
-                    throw new hero_error_1.HeroError('search query is required', 400, 'SEARCH_QUERY_REQUIRED');
+                if (!q || typeof q !== "string")
+                    throw new hero_error_1.HeroError("search query is required", 400, "SEARCH_QUERY_REQUIRED");
                 const heroes = yield this.heroLogic.Search(q);
                 if (!heroes)
-                    throw new hero_error_1.HeroNotFoundError('error searching heroes');
+                    throw new hero_error_1.HeroNotFoundError("error searching heroes");
                 return res.json({
                     data: heroes,
-                    message: 'heroes searched successfully',
+                    message: "heroes searched successfully",
                     success: true,
                 });
             }

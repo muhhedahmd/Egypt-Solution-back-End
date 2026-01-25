@@ -24,8 +24,8 @@ class TeamController {
                     take: Number(take) || 10,
                 });
                 if (!teamMembers)
-                    throw new team_error_1.TeamNotFoundError('error get team members');
-                return res.json(Object.assign(Object.assign({}, teamMembers), { message: 'team members fetched successfully' }));
+                    throw new team_error_1.TeamNotFoundError("error get team members");
+                return res.json(Object.assign(Object.assign({}, teamMembers), { message: "team members fetched successfully" }));
             }
             catch (error) {
                 next(error);
@@ -39,11 +39,11 @@ class TeamController {
                 const teamMembers = yield this.teamLogic.getAllTeamMembersActive({
                     skip: Number(skip) || 0,
                     take: Number(take) || 10,
-                    isFeatured: isFeatured === 'true',
+                    isFeatured: isFeatured === "true",
                 });
                 if (!teamMembers)
-                    throw new team_error_1.TeamNotFoundError('error get team members');
-                return res.json(Object.assign(Object.assign({}, teamMembers), { message: 'team members fetched successfully' }));
+                    throw new team_error_1.TeamNotFoundError("error get team members");
+                return res.json(Object.assign(Object.assign({}, teamMembers), { message: "team members fetched successfully" }));
             }
             catch (error) {
                 next(error);
@@ -55,9 +55,12 @@ class TeamController {
             try {
                 const { id } = req.params;
                 if (!id)
-                    throw new team_error_1.TeamNotFoundError('id is required');
+                    throw new team_error_1.TeamNotFoundError("id is required");
                 const teamMember = yield this.teamLogic.getTeamMemberById(id);
-                return res.json(Object.assign(Object.assign({}, teamMember), { message: 'team member fetched successfully' }));
+                return res.json({
+                    data: teamMember,
+                    message: "team member fetched successfully",
+                });
             }
             catch (error) {
                 next(error);
@@ -71,7 +74,7 @@ class TeamController {
                 const teamMember = yield this.teamLogic.getTeamMemberBySlug(slug);
                 return res.json({
                     data: teamMember,
-                    message: 'team member fetched successfully',
+                    message: "team member fetched successfully",
                 });
             }
             catch (error) {
@@ -83,8 +86,8 @@ class TeamController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const { order } = req.query;
-                if (typeof Number(order) !== 'number' || isNaN(Number(order)))
-                    throw new team_error_1.TeamNotFoundError('order is not valid');
+                if (typeof Number(order) !== "number" || isNaN(Number(order)))
+                    throw new team_error_1.TeamNotFoundError("order is not valid");
                 const isValidOrder = yield this.teamLogic.isValidOrder({
                     order: Number(order),
                 });
@@ -93,7 +96,7 @@ class TeamController {
                         isValid: isValidOrder.isValid,
                         takenBy: isValidOrder.takenby,
                     },
-                    message: 'checked order successfully',
+                    message: "checked order successfully",
                 });
             }
             catch (error) {
@@ -103,18 +106,16 @@ class TeamController {
     }
     createTeamMember(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b;
+            var _a;
             try {
                 const data = req.body;
-                console.log(Object.assign(Object.assign({}, data), { isActive: data.isActive === 'true' ? true : false, isFeatured: data.isFeatured === 'true' ? true : false, order: Number(data.order) || 0, image: Array.isArray(req.files) && req.files.length > 0
-                        ? (_a = req.files.find((f) => f.fieldname === 'image')) === null || _a === void 0 ? void 0 : _a.buffer
-                        : null }));
-                const newTeamMember = yield this.teamLogic.createTeamMember(Object.assign(Object.assign({}, data), { isActive: data.isActive === 'true' ? true : false, isFeatured: data.isFeatured === 'true' ? true : false, order: Number(data.order) || 0, image: Array.isArray(req.files) && req.files.length > 0
-                        ? (_b = req.files.find((f) => f.fieldname === 'image')) === null || _b === void 0 ? void 0 : _b.buffer
+                const lang = req.lang || "EN";
+                const newTeamMember = yield this.teamLogic.createTeamMember(lang, Object.assign(Object.assign({}, data), { isActive: data.isActive === "true" ? true : false, isFeatured: data.isFeatured === "true" ? true : false, order: Number(data.order) || 0, image: Array.isArray(req.files) && req.files.length > 0
+                        ? (_a = req.files.find((f) => f.fieldname === "image")) === null || _a === void 0 ? void 0 : _a.buffer
                         : null }));
                 return res.status(201).json({
                     data: newTeamMember,
-                    message: 'team member created successfully',
+                    message: "team member created successfully",
                 });
             }
             catch (error) {
@@ -129,13 +130,22 @@ class TeamController {
                 const { id } = req.params;
                 const teamData = req.body;
                 const files = req.files;
+                const lang = req.lang || "EN";
                 const data = Object.assign(Object.assign({}, teamData), { teamId: id, image: Array.isArray(files) && files.length > 0
-                        ? (_a = files.find((f) => f.fieldname === 'image')) === null || _a === void 0 ? void 0 : _a.buffer
+                        ? (_a = files.find((f) => f.fieldname === "image")) === null || _a === void 0 ? void 0 : _a.buffer
                         : undefined, imageState: teamData === null || teamData === void 0 ? void 0 : teamData.imageState });
-                const updatedTeamMember = yield this.teamLogic.updateTeamMember(Object.assign(Object.assign({}, data), { isActive: data.isActive === 'true' ? true : data.isActive === 'false' ? false : undefined, isFeatured: data.isFeatured === 'true' ? true : data.isFeatured === 'false' ? false : undefined, order: data.order ? Number(data.order) : undefined }));
+                const updatedTeamMember = yield this.teamLogic.updateTeamMember(lang, Object.assign(Object.assign({}, data), { isActive: data.isActive === "true"
+                        ? true
+                        : data.isActive === "false"
+                            ? false
+                            : undefined, isFeatured: data.isFeatured === "true"
+                        ? true
+                        : data.isFeatured === "false"
+                            ? false
+                            : undefined, order: data.order ? Number(data.order) : undefined }));
                 return res.json({
                     data: updatedTeamMember,
-                    message: 'team member updated successfully',
+                    message: "team member updated successfully",
                 });
             }
             catch (error) {
@@ -148,13 +158,13 @@ class TeamController {
             try {
                 const { id } = req.params;
                 if (!id)
-                    throw new team_error_1.TeamNotFoundError('id is required');
+                    throw new team_error_1.TeamNotFoundError("id is required");
                 const deletedTeamMember = yield this.teamLogic.deleteTeamMember(id);
                 if (!deletedTeamMember)
-                    throw new team_error_1.TeamNotFoundError('error deleting team member');
+                    throw new team_error_1.TeamNotFoundError("error deleting team member");
                 return res.json({
                     data: deletedTeamMember,
-                    message: 'team member deleted successfully',
+                    message: "team member deleted successfully",
                 });
             }
             catch (error) {
@@ -165,15 +175,16 @@ class TeamController {
     SearchTeamMembers(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
+                const lang = req.lang || "EN";
                 const { q } = req.query;
-                if (!q || typeof q !== 'string')
-                    throw new team_error_1.TeamError('search query is required', 400, 'SEARCH_QUERY_REQUIRED');
-                const teamMembers = yield this.teamLogic.Search(q);
+                if (!q || typeof q !== "string")
+                    throw new team_error_1.TeamError("search query is required", 400, "SEARCH_QUERY_REQUIRED");
+                const teamMembers = yield this.teamLogic.Search(lang, q);
                 if (!teamMembers)
-                    throw new team_error_1.TeamNotFoundError('error searching team members');
+                    throw new team_error_1.TeamNotFoundError("error searching team members");
                 return res.json({
                     data: teamMembers,
-                    message: 'team members searched successfully',
+                    message: "team members searched successfully",
                 });
             }
             catch (error) {

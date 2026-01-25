@@ -113,7 +113,6 @@ class AuthController {
                     .cookie(isProd ? "__Secure-refreshToken" : "refreshToken", tokens.refreshToken, {
                     httpOnly: true,
                     secure: isProd,
-                    // domain: "admin-egypt-solution.vercel.app",
                     sameSite: isProd ? "none" : "lax",
                     path: "/",
                     maxAge: tokens.refreshExpiresIn * 1000,
@@ -131,6 +130,24 @@ class AuthController {
             }
             catch (error) {
                 console.log(error);
+                return res.status(500).json({ error: "Internal server error" });
+            }
+        });
+    }
+    static logOut(req, res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const refreshToken = req.cookies.refreshToken || req.cookies["__Secure-refreshToken"];
+                if (!refreshToken)
+                    return res.status(400).json({ error: "Refresh token is required" });
+                yield tokenService_1.TokenService.logout(refreshToken);
+                return res
+                    .clearCookie(isProd ? "__Secure-refreshToken" : "refreshToken")
+                    .clearCookie(isProd ? "__Secure-accessToken" : "accessToken")
+                    .status(200)
+                    .json({ success: true, message: "User logged out successfully" });
+            }
+            catch (error) {
                 return res.status(500).json({ error: "Internal server error" });
             }
         });
@@ -297,15 +314,6 @@ class AuthController {
                         message: "innvalid Data",
                     });
                 const avatar = (_c = req.file) === null || _c === void 0 ? void 0 : _c.buffer;
-                console.log("before", formData, {
-                    avatar: avatar || null,
-                    userId,
-                    bio: formData === null || formData === void 0 ? void 0 : formData.bio,
-                    role: formData === null || formData === void 0 ? void 0 : formData.role,
-                    dateOfBirth: formData === null || formData === void 0 ? void 0 : formData.dateOfBirth,
-                    gender: formData === null || formData === void 0 ? void 0 : formData.gender,
-                    phone: formData === null || formData === void 0 ? void 0 : formData.phone,
-                });
                 const response = yield userServics_1.userService.successGoogle({
                     avatar: avatar || null,
                     userId,

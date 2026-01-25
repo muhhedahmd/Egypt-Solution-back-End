@@ -10,12 +10,13 @@ export class projectController {
   async createProject(req: Request, res: Response, next: NextFunction) {
     try {
       const body = req.body;
+      const lang: "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
       const image =
         Array?.isArray(req.files) && req?.files?.length > 0
           ? req?.files[0]?.buffer
           : null;
 
-      const newProject = await this.logic.create({
+      const newProject = await this.logic.create(lang || "EN", {
         ...body,
         image: image,
         isFeatured: body.isFeatured === "true" ? true : false,
@@ -38,8 +39,9 @@ export class projectController {
   async getAllProjects(req: Request, res: Response, next: NextFunction) {
     try {
       const { skip, take } = req.query;
+      const lang: "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
 
-      const projects = await this.logic.getAllProjects({
+      const projects = await this.logic.getAllProjects(lang, {
         skip: Number(skip) || 0,
         take: Number(take) || 10,
       });
@@ -79,8 +81,9 @@ export class projectController {
   async getProjectBySlugFull(req: Request, res: Response, next: NextFunction) {
     try {
       const { slug } = req.params;
+      const lang: "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
 
-      const project = await this.logic.findBySlugFull(slug);
+      const project = await this.logic.findBySlugFull(lang, slug);
 
       if (!project) {
         return res.status(404).json({
@@ -104,8 +107,9 @@ export class projectController {
       const body = req.body;
       const id = req.params.id;
       const file = req.file; // From multer
+      const lang: "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
 
-      const updated = await this.logic.update({
+      const updated = await this.logic.update(lang, {
         ...body,
         id,
         image: file?.buffer,
@@ -126,36 +130,37 @@ export class projectController {
       next(error);
     }
   }
-async updateProjectWithTechsServices(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  try {
-    const id = req.params.id;
-    const file = req.file; // From multer
-    const body = req.body;
+  async updateProjectWithTechsServices(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const id = req.params.id;
+      const file = req.file; // From multer
+      const body = req.body;
+      const lang: "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
 
-    const updated = await this.logic.updateProjectWithTechsServices({
-      ...body,
-      id,
-      image: file?.buffer,
-    });
+      const updated = await this.logic.updateProjectWithTechsServices(lang, {
+        ...body,
+        id,
+        image: file?.buffer,
+      });
 
-    return res.status(200).json({
-      success: true,
-      message: "Project updated successfully with technologies and services",
-      data: {
-        project: updated.project,
-        image: updated.image,
-        technologies: updated.technologies,
-        services: updated.services,
-      },
-    });
-  } catch (error) {
-    next(error);
+      return res.status(200).json({
+        success: true,
+        message: "Project updated successfully with technologies and services",
+        data: {
+          project: updated.project,
+          image: updated.image,
+          technologies: updated.technologies,
+          services: updated.services,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
   }
-}
 
   async deleteProject(req: Request, res: Response, next: NextFunction) {
     try {
@@ -420,7 +425,6 @@ async updateProjectWithTechsServices(
   }
 
   // PROJECT-TECHNOLOGY RELATIONSHIP ENDPOINTS
-
   async assignProjectToTechnology(
     req: Request,
     res: Response,
@@ -428,7 +432,9 @@ async updateProjectWithTechsServices(
   ) {
     try {
       const body = req.body;
-      const assigned = await this.logic.assignProjectToTechnology(body);
+      const lang: "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
+
+      const assigned = await this.logic.assignProjectToTechnology(lang, body);
 
       return res.status(200).json({
         success: true,
@@ -446,11 +452,9 @@ async updateProjectWithTechsServices(
     next: NextFunction
   ) {
     try {
-      // const project = req.body.project;
-      // const technology = req.body.technologies;
       const { technologyIds, serviceIds, ...project } = req.body;
-
-      const created = await this.logic.createProjectAndAssignTechnology({
+      const lang: "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
+      const created = await this.logic.createProjectAndAssignTechnology(lang, {
         project: {
           ...project,
           image:
@@ -479,7 +483,8 @@ async updateProjectWithTechsServices(
   ) {
     try {
       const body = req.body;
-      const removed = await this.logic.removeProjectFromTechnology(body);
+      const lang: "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
+      const removed = await this.logic.removeProjectFromTechnology(lang, body);
 
       return res.status(200).json({
         success: true,
@@ -499,12 +504,12 @@ async updateProjectWithTechsServices(
     try {
       const technologyRaw = req.body.technology;
       const projectsRaw = req.body.projects;
+      const lang: "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
 
       // 🔹 Parse JSON text fields
       const technology = JSON.parse(technologyRaw);
       const projects = JSON.parse(projectsRaw);
 
-      console.log(req.files);
       const FixedBody = {
         technology: {
           name: technology.name,
@@ -522,7 +527,10 @@ async updateProjectWithTechsServices(
         }),
       };
 
-      const result = await this.logic.createTechnologyAndProject(FixedBody);
+      const result = await this.logic.createTechnologyAndProject(
+        lang,
+        FixedBody
+      );
 
       return res.status(201).json({
         success: true,

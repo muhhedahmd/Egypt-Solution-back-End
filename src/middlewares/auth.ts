@@ -76,7 +76,7 @@ export const requireAuthv2 = async (
       return res.status(401).json({ error: "Unauthorized" });
     }
     
-    if(findUser.role !== "ADMIN") return res.status(401).json({ error: "you do not have permission" });
+    if(findUser.role !== "ADMIN" ) return res.status(401).json({ error: "you do not have permission" });
 
     req.user = {
       email: decoded.email,

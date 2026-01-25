@@ -1,5 +1,5 @@
-import { TestimonialRepository } from './testimonial.repostery';
-import { TestimonialValidator } from '../../errors/schema/testimonal.validation.schema';
+import { TestimonialRepository } from "./testimonial.repostery";
+import { TestimonialValidator } from "../../errors/schema/testimonal.validation.schema";
 import {
   CreateTestimonialDTO,
   ITestimonial,
@@ -7,16 +7,16 @@ import {
   PaginatedResponse,
   PaginationParams,
   UpdateTestimonial,
-} from '../../types/testimonal';
+} from "../../types/testimonal";
 import {
   TestimonialError,
   TestimonialNotFoundError,
-} from '../../errors/testimonal.error';
+} from "../../errors/testimonal.error";
 
 export class TestimonialLogic {
   constructor(
     private repository: TestimonialRepository,
-    private validator: TestimonialValidator
+    private validator: TestimonialValidator,
   ) {}
 
   async isValidOrder({ order }: { order: number }) {
@@ -25,7 +25,7 @@ export class TestimonialLogic {
   }
 
   async getAllTestimonials(
-    params: PaginationParams
+    params: PaginationParams,
   ): Promise<PaginatedResponse<ITestimonial>> {
     const skip = params.skip || 0;
     const take = params.take || 10;
@@ -56,60 +56,63 @@ export class TestimonialLogic {
     if (!testimonial) {
       throw new TestimonialNotFoundError(id);
     }
-    const { avatar, ...rest } = testimonial;
-    return {
-      Avatar: avatar,
-      testimonial: rest,
-    };
+    // const  = testimonial;
+    return  testimonial
   }
 
   async createTestimonial(
-    data: CreateTestimonialDTO
+    lang: "EN" | "AR",
+    data: CreateTestimonialDTO,
   ): Promise<ITestimonialRepositoryCreateResponse> {
     const valid = this.validator.validateCreate(data);
-    const testimonial = await this.repository.create(valid);
-    if (!testimonial) throw new Error('error create testimonial');
+    const testimonial = await this.repository.create(lang, valid);
+    if (!testimonial) throw new Error("error create testimonial");
     return testimonial;
   }
 
   async deleteTestimonial(testimonialId: string) {
     try {
-      if (!testimonialId) throw new Error('id is required');
+      if (!testimonialId) throw new Error("id is required");
       this.validator.validateId(testimonialId);
       const deletedTestimonial = await this.repository.delete(testimonialId);
-      if (!deletedTestimonial) throw new Error('error deleting testimonial');
+      if (!deletedTestimonial) throw new Error("error deleting testimonial");
       return deletedTestimonial;
     } catch (error) {
       console.error(error);
-      throw new Error('Error deleting testimonial');
+      throw new Error("Error deleting testimonial");
     }
   }
 
-  async Search(q: string) {
+  async Search(lang: "EN" | "AR", q: string) {
     if (!q)
       throw new TestimonialError(
-        'search query is required',
+        "search query is required",
         400,
-        'SEARCH_QUERY_REQUIRED'
+        "SEARCH_QUERY_REQUIRED",
       );
-    const testimonials = await this.repository.SearchTestimonial(q, 0, 10);
+    const testimonials = await this.repository.SearchTestimonial(
+      lang,
+      q,
+      0,
+      10,
+    );
     if (!testimonials)
       throw new TestimonialError(
-        'error searching testimonials',
+        "error searching testimonials",
         400,
-        'ERROR_SEARCHING_TESTIMONIALS'
+        "ERROR_SEARCHING_TESTIMONIALS",
       );
     return testimonials;
   }
 
-  async updateTestimonial(data: UpdateTestimonial) {
+  async updateTestimonial(lang: "EN" | "AR", data: UpdateTestimonial) {
     this.validator.validateUpdate(data);
-    const updatedTestimonial = await this.repository.update(data);
+    const updatedTestimonial = await this.repository.update(lang, data);
     if (!updatedTestimonial)
       throw new TestimonialError(
-        'error updating testimonial',
+        "error updating testimonial",
         400,
-        'ERROR_UPDATING_TESTIMONIAL'
+        "ERROR_UPDATING_TESTIMONIAL",
       );
     const { Avatar, ...rest } = updatedTestimonial;
     return { Avatar, ...rest };

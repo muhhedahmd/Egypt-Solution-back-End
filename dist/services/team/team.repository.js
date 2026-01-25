@@ -34,9 +34,17 @@ class TeamRepository {
     }
     findMany(skip, take) {
         return __awaiter(this, void 0, void 0, function* () {
-            return this.prisma.teamMember.findMany({
+            const teamMembers = yield this.prisma.teamMember.findMany({
                 include: {
                     image: true,
+                    TeamMemberTranslation: {
+                        select: {
+                            name: true,
+                            position: true,
+                            bio: true,
+                            lang: true,
+                        },
+                    },
                     slideShows: {
                         include: {
                             slideShow: true,
@@ -48,6 +56,15 @@ class TeamRepository {
                 orderBy: {
                     order: "asc",
                 },
+            });
+            return teamMembers.map((member) => {
+                const { image, TeamMemberTranslation, slideShows } = member, rest = __rest(member, ["image", "TeamMemberTranslation", "slideShows"]);
+                return {
+                    teamMember: Object.assign({}, rest),
+                    image: image || null,
+                    translation: TeamMemberTranslation,
+                    slideShows,
+                };
             });
         });
     }
@@ -63,19 +80,35 @@ class TeamRepository {
     }
     findManyActive(skip, take, isFeatured) {
         return __awaiter(this, void 0, void 0, function* () {
-            return this.prisma.teamMember.findMany({
+            const teamMembers = yield this.prisma.teamMember.findMany({
                 where: {
                     isActive: true,
                     isFeatured: isFeatured || false,
                 },
                 include: {
                     image: true,
+                    TeamMemberTranslation: {
+                        select: {
+                            name: true,
+                            position: true,
+                            bio: true,
+                            lang: true,
+                        },
+                    },
                 },
                 skip: skip * take,
                 take: take,
                 orderBy: {
                     order: "asc",
                 },
+            });
+            return teamMembers.map((member) => {
+                const { image, TeamMemberTranslation } = member, rest = __rest(member, ["image", "TeamMemberTranslation"]);
+                return {
+                    teamMember: Object.assign({}, rest),
+                    image: image || null,
+                    translation: TeamMemberTranslation,
+                };
             });
         });
     }
@@ -104,10 +137,18 @@ class TeamRepository {
     findById(id) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                return this.prisma.teamMember.findUnique({
+                const member = yield this.prisma.teamMember.findUnique({
                     where: { id },
                     include: {
                         image: true,
+                        TeamMemberTranslation: {
+                            select: {
+                                name: true,
+                                position: true,
+                                bio: true,
+                                lang: true,
+                            },
+                        },
                         slideShows: {
                             include: {
                                 slideShow: true,
@@ -115,6 +156,15 @@ class TeamRepository {
                         },
                     },
                 });
+                if (!member)
+                    return null;
+                const { image, TeamMemberTranslation, slideShows } = member, rest = __rest(member, ["image", "TeamMemberTranslation", "slideShows"]);
+                return {
+                    teamMember: Object.assign({}, rest),
+                    image: image || null,
+                    translation: TeamMemberTranslation,
+                    slideShows,
+                };
             }
             catch (error) {
                 console.error(error);
@@ -129,6 +179,14 @@ class TeamRepository {
                     where: { slug },
                     include: {
                         image: true,
+                        TeamMemberTranslation: {
+                            select: {
+                                name: true,
+                                position: true,
+                                bio: true,
+                                lang: true,
+                            },
+                        },
                         slideShows: {
                             include: {
                                 slideShow: true,
@@ -142,7 +200,7 @@ class TeamRepository {
                 if (!findedTeamMember) {
                     return null;
                 }
-                const { image, slideShows } = findedTeamMember, rest = __rest(findedTeamMember, ["image", "slideShows"]);
+                const { image, TeamMemberTranslation, slideShows } = findedTeamMember, rest = __rest(findedTeamMember, ["image", "TeamMemberTranslation", "slideShows"]);
                 return {
                     image: image || null,
                     slideShows: slideShows.map((ss) => ({
@@ -153,7 +211,8 @@ class TeamRepository {
                         createdAt: ss.createdAt,
                         updatedAt: ss.updatedAt,
                     })),
-                    teamMember: rest,
+                    teamMember: Object.assign({}, rest),
+                    translation: TeamMemberTranslation,
                 };
             }
             catch (error) {
@@ -162,28 +221,40 @@ class TeamRepository {
             }
         });
     }
-    SearchTeamMember(searchTerm, skip, take) {
+    SearchTeamMember(lang, searchTerm, skip, take) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const teamMembers = yield this.prisma.teamMember.findMany({
                     where: {
                         OR: [
                             {
-                                name: {
-                                    contains: searchTerm,
-                                    mode: "insensitive",
+                                TeamMemberTranslation: {
+                                    some: {
+                                        name: {
+                                            contains: searchTerm,
+                                            mode: "insensitive",
+                                        },
+                                    },
                                 },
                             },
                             {
-                                position: {
-                                    contains: searchTerm,
-                                    mode: "insensitive",
+                                TeamMemberTranslation: {
+                                    some: {
+                                        position: {
+                                            contains: searchTerm,
+                                            mode: "insensitive",
+                                        },
+                                    },
                                 },
                             },
                             {
-                                bio: {
-                                    contains: searchTerm,
-                                    mode: "insensitive",
+                                TeamMemberTranslation: {
+                                    some: {
+                                        bio: {
+                                            contains: searchTerm,
+                                            mode: "insensitive",
+                                        },
+                                    },
                                 },
                             },
                             {
@@ -202,6 +273,15 @@ class TeamRepository {
                     },
                     include: {
                         image: true,
+                        TeamMemberTranslation: {
+                            where: { lang },
+                            select: {
+                                name: true,
+                                position: true,
+                                bio: true,
+                                lang: true,
+                            },
+                        },
                     },
                     skip: skip * take,
                     take,
@@ -209,7 +289,10 @@ class TeamRepository {
                         createdAt: "desc",
                     },
                 });
-                return teamMembers;
+                return teamMembers.map((member) => {
+                    const { image, TeamMemberTranslation } = member, rest = __rest(member, ["image", "TeamMemberTranslation"]);
+                    return Object.assign(Object.assign({}, rest), { translation: TeamMemberTranslation, image });
+                });
             }
             catch (error) {
                 console.error(error);
@@ -217,7 +300,7 @@ class TeamRepository {
             }
         });
     }
-    create(data) {
+    create(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const transaction = yield this.prisma.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
@@ -246,9 +329,6 @@ class TeamRepository {
                     const teamMember = yield tx.teamMember.create({
                         data: {
                             slug: slug,
-                            name: data.name,
-                            position: data.position,
-                            bio: data.bio,
                             email: data.email,
                             phone: data.phone,
                             linkedin: data.linkedin,
@@ -258,16 +338,38 @@ class TeamRepository {
                             isActive: data.isActive || false,
                             isFeatured: data.isFeatured || false,
                             order: data.order || 0,
+                            name: "",
+                            position: "",
+                            TeamMemberTranslation: {
+                                create: {
+                                    name: data.name,
+                                    position: data.position,
+                                    bio: data.bio,
+                                    lang: lang,
+                                },
+                            },
                         },
                         include: {
                             image: true,
+                            TeamMemberTranslation: {
+                                where: { lang },
+                                select: {
+                                    name: true,
+                                    position: true,
+                                    bio: true,
+                                    lang: true,
+                                },
+                            },
                         },
                     });
-                    const { image } = teamMember, rest = __rest(teamMember, ["image"]);
-                    return { Image: image, teamMember: rest };
+                    const { image, TeamMemberTranslation } = teamMember, rest = __rest(teamMember, ["image", "TeamMemberTranslation"]);
+                    return {
+                        Image: image,
+                        translation: TeamMemberTranslation,
+                        teamMember: Object.assign({}, rest),
+                    };
                 }), {
                     timeout: 20000,
-                    isolationLevel: "Serializable",
                     maxWait: 5000,
                 });
                 return transaction;
@@ -278,7 +380,7 @@ class TeamRepository {
             }
         });
     }
-    update(data) {
+    update(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const transaction = yield this.prisma.$transaction((prismaTx) => __awaiter(this, void 0, void 0, function* () {
@@ -328,7 +430,7 @@ class TeamRepository {
                         NewImageId = imageToDB.id;
                     }
                     // Generate new slug if name changed
-                    if (data.name && data.name !== teamMember.name) {
+                    if (data.name) {
                         const slug = (0, slugify_1.default)(data.name + (0, crypto_1.randomUUID)().substring(0, 8), {
                             lower: true,
                         });
@@ -339,9 +441,6 @@ class TeamRepository {
                         where: { id: data.teamId },
                         data: {
                             slug: data.slug || teamMember.slug,
-                            name: data.name || teamMember.name,
-                            position: data.position || teamMember.position,
-                            bio: data.bio || teamMember.bio,
                             email: data.email || teamMember.email,
                             phone: data.phone || teamMember.phone,
                             linkedin: data.linkedin || teamMember.linkedin,
@@ -352,10 +451,38 @@ class TeamRepository {
                             isFeatured: (_b = data.isFeatured) !== null && _b !== void 0 ? _b : teamMember.isFeatured,
                             order: (_c = data.order) !== null && _c !== void 0 ? _c : teamMember.order,
                         },
-                        include: { image: true },
+                        include: {
+                            image: true,
+                        },
+                    });
+                    // Update or create translation
+                    const t = yield prismaTx.teamMemberTranslation.upsert({
+                        where: {
+                            memberId_lang: {
+                                memberId: data.teamId,
+                                lang: lang,
+                            },
+                        },
+                        update: {
+                            name: data.name,
+                            position: data.position,
+                            bio: data.bio,
+                        },
+                        create: {
+                            memberId: data.teamId,
+                            name: data.name || "Team Member",
+                            position: data.position || "Position",
+                            bio: data.bio,
+                            lang: lang,
+                        },
                     });
                     const { image } = updatedTeamMember, rest = __rest(updatedTeamMember, ["image"]);
-                    return { Image: image, teamMember: rest };
+                    // const translation = translations.find((t) => t.lang === lang);
+                    return {
+                        Image: image,
+                        translation: t,
+                        teamMember: Object.assign({}, rest),
+                    };
                 }), {
                     timeout: 20000,
                     maxWait: 5000,

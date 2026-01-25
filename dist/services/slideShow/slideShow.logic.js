@@ -27,22 +27,30 @@ exports.slideShowLogic = void 0;
 const crypto_1 = require("crypto");
 const slugify_1 = __importDefault(require("slugify"));
 const services_error_1 = require("../../errors/services.error");
+const redis_1 = require("../../config/redis");
+const keys_1 = require("../../config/keys");
 class slideShowLogic {
     constructor(repository, validator) {
         this.repository = repository;
         this.validator = validator;
     }
-    getAllServices(params) {
+    getAllServices(lang, params) {
         return __awaiter(this, void 0, void 0, function* () {
             this.validator.validatePagination(params);
             const skip = params.skip || 0;
             const take = params.take || 10;
+            const redis = yield (0, redis_1.getRedisClient)();
+            const key = (0, keys_1.slideShowsKey)(`${skip.toString()}-${take.toString()}`);
+            const hashData = yield redis.get(key);
+            if (hashData) {
+                return JSON.parse(hashData);
+            }
             const [slideShows, totalItems] = yield Promise.all([
-                this.repository.findMany({ skip, take }),
+                this.repository.findMany(lang, { skip, take }),
                 this.repository.count(),
             ]);
             const remainingItems = totalItems - (skip * take + slideShows.length);
-            return {
+            const data = {
                 data: slideShows,
                 pagination: {
                     totalItems,
@@ -53,11 +61,15 @@ class slideShowLogic {
                     pageSize: take,
                 },
             };
+            if (!(slideShows === null || slideShows === void 0 ? void 0 : slideShows.length))
+                return data;
+            yield redis.setEx(key, 120, JSON.stringify(data));
+            return data;
         });
     }
-    getAllSlideShowsMinmal() {
+    getAllSlideShowsMinmal(lang) {
         return __awaiter(this, void 0, void 0, function* () {
-            const slideShows = yield this.repository.findManyMinimal();
+            const slideShows = yield this.repository.findManyMinimal(lang);
             return slideShows;
         });
     }
@@ -73,10 +85,10 @@ class slideShowLogic {
             return slideShow;
         });
     }
-    update(data) {
+    update(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             const dataUpdate = this.validator.validateUpdate(data);
-            const updateSlideShow = yield this.repository.update(dataUpdate);
+            const updateSlideShow = yield this.repository.update(lang, dataUpdate);
             return updateSlideShow;
         });
     }
@@ -90,8 +102,24 @@ class slideShowLogic {
     findById(id) {
         return __awaiter(this, void 0, void 0, function* () {
             const validId = this.validator.validateId(id);
-            const findSlideShow = yield this.repository.findById(validId);
-            return findSlideShow;
+            const redis = yield (0, redis_1.getRedisClient)();
+            const key = (0, keys_1.slideShowKeyById)(validId);
+            const hashData = yield redis.get(key);
+            if (hashData) {
+                return JSON.parse(hashData);
+            }
+            else {
+                const findSlideShow = yield this.repository.findById(validId);
+                if (!findSlideShow)
+                    return null;
+                try {
+                    yield redis.setEx(key, 10, JSON.stringify(findSlideShow));
+                    return findSlideShow;
+                }
+                catch (error) {
+                    console.log(error);
+                }
+            }
         });
     }
     attach(data) {
@@ -109,13 +137,13 @@ class slideShowLogic {
         });
     }
     // ***
-    createAndAttachMany(data) {
+    createAndAttachMany(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             const valid = this.validator.validCreateAndAttachManySchema(data);
             if (!valid)
                 throw new services_error_1.ServiceError("Invalid data for create and attach many", 400, "SLIDESHOW_CREATE_ATTACH_MANY_ERROR");
             const { slides } = valid, rest = __rest(valid, ["slides"]);
-            const createdAndAttached = yield this.repository.createAndAttachMany(Object.assign({ slides: slides.map((slide) => ({
+            const createdAndAttached = yield this.repository.createAndAttachMany(lang, Object.assign({ slides: slides.map((slide) => ({
                     id: slide.attachId,
                     type: slide.attachType,
                     order: slide.order,
@@ -127,13 +155,13 @@ class slideShowLogic {
         });
     }
     //*** */
-    bulkSlideOperations(data) {
+    bulkSlideOperations(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             const valid = this.validator.validateBulkSlideOperations(data);
             if (!valid) {
                 throw new services_error_1.ServiceError("Invalid data for bulk slide operations", 400, "INVALID_BULK_OPERATIONS_DATA");
             }
-            const result = yield this.repository.bulkSlideOperations(valid);
+            const result = yield this.repository.bulkSlideOperations(lang, valid);
             return {
                 success: true,
                 message: "Bulk operations completed successfully",
@@ -172,6 +200,21 @@ class slideShowLogic {
             return slides;
         });
     }
+    getSlideShowWithSlides(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ skip, take, page, pagesPerType, perPage, }) {
+            // const { skip, take } = this.validator.validatePagination(params);
+            const slides = yield this.repository.getSlideShowsWithSlidesPaged({
+                skip,
+                take,
+            }, {
+                page,
+                pagesPerType,
+                perPage,
+            });
+            return slides;
+        });
+    }
+    // ***
     attachMany(data) {
         return __awaiter(this, void 0, void 0, function* () {
             const valid = this.validator.validateBulkAttach(data);

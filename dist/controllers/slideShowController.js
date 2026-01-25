@@ -35,9 +35,8 @@ class slideShowController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const { skip, take } = req.query;
-                // const skip = Number(page) - 1;
-                // const take = Number(limit);
-                const slideShows = yield this.logic.getAllServices({
+                const lang = req.lang || "EN";
+                const slideShows = yield this.logic.getAllServices(lang, {
                     skip: Number(skip) || 0,
                     take: Number(take) || 10,
                 });
@@ -53,7 +52,8 @@ class slideShowController {
             try {
                 // const skip = Number(page) - 1;
                 // const take = Number(limit);
-                const slideShows = yield this.logic.getAllSlideShowsMinmal();
+                const lang = req.lang || "EN";
+                const slideShows = yield this.logic.getAllSlideShowsMinmal(lang);
                 return res.status(200).json({
                     success: true,
                     message: "Slideshows fetched successfully",
@@ -92,8 +92,8 @@ class slideShowController {
             try {
                 const body = req.body;
                 const id = req.params.id;
-                // if(!id) throw new ServiceError("id is required" , 400 , "ID_NOT_FOUND");
-                const updated = yield this.logic.update(Object.assign(Object.assign({}, body), { slideShowId: id, isActive: body.isActive === "true" ? true : false, isFeatured: body.isFeatured === "true" ? true : false, order: Number(body.order) || 0, interval: Number(body.interval) || 5000, autoPlay: body.autoPlay === "true" ? true : false, icon: body.icon || "" }));
+                const lang = req.lang || "EN";
+                const updated = yield this.logic.update(lang, Object.assign(Object.assign({}, body), { slideShowId: id, isActive: body.isActive === "true" ? true : false, isFeatured: body.isFeatured === "true" ? true : false, order: Number(body.order) || 0, interval: Number(body.interval) || 5000, autoPlay: body.autoPlay === "true" ? true : false, icon: body.icon || "" }));
                 return res.status(200).json({
                     success: true,
                     message: "Slideshow updated successfully",
@@ -142,7 +142,8 @@ class slideShowController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const body = req.body;
-                const created = yield this.logic.createAndAttachMany(body);
+                const lang = req.lang || "EN";
+                const created = yield this.logic.createAndAttachMany(lang, body);
                 return res.status(200).json({
                     success: true,
                     message: "Slideshow created and attached successfully",
@@ -160,7 +161,8 @@ class slideShowController {
             try {
                 const { id } = req.params; // slideShowId from URL
                 const body = req.body;
-                const result = yield this.logic.bulkSlideOperations(Object.assign({ slideShowId: id }, body));
+                const lang = req.lang || "EN";
+                const result = yield this.logic.bulkSlideOperations(lang, Object.assign({ slideShowId: id }, body));
                 return res.status(200).json(result);
             }
             catch (error) {
@@ -173,6 +175,7 @@ class slideShowController {
             try {
                 const body = req.body;
                 const { id } = req.params;
+                const lang = req.lang || "EN";
                 if (!id)
                     throw new services_error_1.ServiceError("id is required", 400, "ID_NOT_FOUND");
                 const updated = yield this.logic.updateAndAttachMany(Object.assign(Object.assign({}, body), { id }));
@@ -192,8 +195,58 @@ class slideShowController {
             try {
                 const { page, perPage, pagesPerType } = req.body;
                 const { id } = req.params;
+                const lang = req.lang || "EN";
                 const data = yield this.logic.getSlidesInSlideShow({
                     id,
+                    page: Number(page) || 1,
+                    pagesPerType: {
+                        clients: pagesPerType &&
+                            typeof pagesPerType === "object" &&
+                            "clients" in pagesPerType
+                            ? Number(pagesPerType["clients"])
+                            : undefined,
+                        projects: pagesPerType &&
+                            typeof pagesPerType === "object" &&
+                            "projects" in pagesPerType
+                            ? Number(pagesPerType["projects"])
+                            : undefined,
+                        services: pagesPerType &&
+                            typeof pagesPerType === "object" &&
+                            "services" in pagesPerType
+                            ? Number(pagesPerType["services"])
+                            : undefined,
+                        team: pagesPerType &&
+                            typeof pagesPerType === "object" &&
+                            "team" in pagesPerType
+                            ? Number(pagesPerType["team"])
+                            : undefined,
+                        testimonials: pagesPerType &&
+                            typeof pagesPerType === "object" &&
+                            "testimonials" in pagesPerType
+                            ? Number(pagesPerType["testimonials"])
+                            : undefined,
+                    },
+                    perPage: perPage ? Number(perPage) : 10,
+                });
+                return res.status(200).json({
+                    success: true,
+                    message: "Slideshows fetched successfully",
+                    data,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    getSlideShowWithSlides(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { skip, take } = req.params;
+                const { page, perPage, pagesPerType } = req.body;
+                const data = yield this.logic.getSlideShowWithSlides({
+                    skip: Number(skip) || 0,
+                    take: Number(take) || 10,
                     page: Number(page) || 1,
                     pagesPerType: {
                         clients: pagesPerType &&

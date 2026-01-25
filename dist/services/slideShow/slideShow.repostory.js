@@ -28,8 +28,7 @@ const slugify_1 = __importDefault(require("slugify"));
 const services_error_1 = require("../../errors/services.error");
 const crypto_1 = require("crypto");
 class slideShowRepository {
-    constructor(prisma // private service : ServicesRepository
-    ) {
+    constructor(prisma) {
         this.prisma = prisma;
     }
     modelMap(prismaToUse) {
@@ -50,7 +49,7 @@ class slideShowRepository {
             testimonial: prismaToUse.testimonialSlideShow,
         };
     }
-    findManyMinimal(prismaTouse) {
+    findManyMinimal(lang, prismaTouse) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const findMany = yield (prismaTouse || this.prisma).slideShow.findMany({
@@ -60,15 +59,24 @@ class slideShowRepository {
                         order: true,
                         slug: true,
                         type: true,
+                        SlideShowTranslation: {
+                            where: {
+                                lang,
+                            },
+                            select: {
+                                title: true,
+                            },
+                        },
                     },
                     orderBy: {
                         order: "asc",
                     },
                 });
                 return findMany.map((slideShow) => {
+                    var _a, _b;
                     return {
                         id: slideShow.id,
-                        title: slideShow.title,
+                        title: ((_b = (_a = slideShow === null || slideShow === void 0 ? void 0 : slideShow.SlideShowTranslation) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.title) || "",
                         order: slideShow.order,
                         slug: slideShow.slug,
                         type: slideShow.type,
@@ -88,8 +96,17 @@ class slideShowRepository {
                     where: {
                         id,
                     },
+                    omit: {
+                        title: true,
+                        description: true,
+                    },
                 });
-                return find;
+                const findTranslation = yield (prismaTouse || this.prisma).slideShowTranslation.findMany({
+                    where: {
+                        slideShowId: id,
+                    },
+                });
+                return { slideShow: find, translation: findTranslation };
             }
             catch (error) {
                 throw new services_error_1.ServiceError("slideShow not found id: " + id, 404, "id not found in DB");
@@ -164,9 +181,7 @@ class slideShowRepository {
             }
         });
     }
-    findAttachTable(id, attachType, prismaTouse
-    // modelMap: modelMap
-    ) {
+    findAttachTable(id, attachType, prismaTouse) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!this.modelMap(prismaTouse || this.prisma)[attachType])
                 throw new services_error_1.ServiceError("slideShow attach + " + attachType + " not found id: " + id, 404, "id not found in DB");
@@ -194,15 +209,29 @@ class slideShowRepository {
         });
     }
     // crud
-    findMany(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ skip, take }) {
+    findMany(lang_1, _a) {
+        return __awaiter(this, arguments, void 0, function* (lang, { skip, take }) {
             try {
-                return yield this.prisma.slideShow.findMany({
+                const slideShows = yield this.prisma.slideShow.findMany({
                     skip: skip * take,
                     take,
                     orderBy: {
                         order: "asc",
                     },
+                    include: {
+                        SlideShowTranslation: {
+                            select: {
+                                lang: true,
+                                title: true,
+                                description: true,
+                            },
+                        },
+                    },
+                });
+                return slideShows === null || slideShows === void 0 ? void 0 : slideShows.map((slideshow) => {
+                    const { SlideShowTranslation } = slideshow, rest = __rest(slideshow, ["SlideShowTranslation"]);
+                    const currentTranslation = SlideShowTranslation.find((el) => el.lang === lang);
+                    return Object.assign(Object.assign(Object.assign({}, rest), currentTranslation), { translations: SlideShowTranslation });
                 });
             }
             catch (error) {
@@ -251,16 +280,17 @@ class slideShowRepository {
             }
         });
     }
-    update(data) {
+    update(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log("commingOrder", data.order);
             try {
                 const transaction = yield this.prisma.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
-                    const find = yield this.findById(data.slideShowId, tx);
+                    const _find = yield this.findById(data.slideShowId, tx);
+                    const find = _find.slideShow;
+                    const enTranslation = _find.translation.find((l) => l.lang === "EN");
                     if (!find)
                         throw new services_error_1.ServiceError("slideShow not found id: " + data.slideShowId, 404, "id not found in DB");
                     let slug = find.slug;
-                    if (data.title && data.title != find.title) {
+                    if (data.title && data.title != (enTranslation === null || enTranslation === void 0 ? void 0 : enTranslation.title)) {
                         slug = (0, slugify_1.default)(data.title + (0, crypto_1.randomUUID)().substring(0, 6), {
                             lower: true,
                         });
@@ -282,16 +312,42 @@ class slideShowRepository {
                             type: data.type || find.type,
                             composition: data.composition || find.composition,
                             slug,
-                            title: data.title || find.title,
+                            title: "",
                             order: data.order === undefined ? find.order : data.order,
                             isActive: data.isActive || find.isActive,
-                            description: data.description || find.description,
+                            description: "",
                             interval: data.interval || find.interval,
                             background: data.background || find.background,
                             autoPlay: data.autoPlay || find.autoPlay,
                         },
                     });
-                    return updateSlideShow;
+                    const findTheCurrentTranslation = yield tx.slideShowTranslation.findUnique({
+                        where: {
+                            slideShowId_lang: {
+                                lang,
+                                slideShowId: data.slideShowId,
+                            },
+                        },
+                    });
+                    const projectTranslation = yield tx.slideShowTranslation.upsert({
+                        where: {
+                            slideShowId_lang: {
+                                lang,
+                                slideShowId: data.slideShowId,
+                            },
+                        },
+                        update: {
+                            title: data.title || (findTheCurrentTranslation === null || findTheCurrentTranslation === void 0 ? void 0 : findTheCurrentTranslation.title),
+                            description: data.description || (findTheCurrentTranslation === null || findTheCurrentTranslation === void 0 ? void 0 : findTheCurrentTranslation.description),
+                        },
+                        create: {
+                            slideShowId: data.slideShowId,
+                            lang,
+                            title: data.title || "",
+                            description: data.description || "",
+                        },
+                    });
+                    return { SlideShow: updateSlideShow, translation: projectTranslation };
                 }));
                 return transaction;
             }
@@ -439,10 +495,10 @@ class slideShowRepository {
             }
         });
     }
-    getSlidesPaged(slideShowId, opts) {
+    getSlidesPaged(slideShowId, opts, tx) {
         return __awaiter(this, void 0, void 0, function* () {
             var _a, _b, _c, _d, _e, _f, _g;
-            console.log("test");
+            const prismaToUse = tx || this.prisma;
             yield this.findById(slideShowId);
             const perPageDefault = Math.min(Math.max((_a = opts === null || opts === void 0 ? void 0 : opts.perPage) !== null && _a !== void 0 ? _a : 10, 1), 100);
             const pageDefault = Math.max((_b = opts === null || opts === void 0 ? void 0 : opts.page) !== null && _b !== void 0 ? _b : 1, 1);
@@ -456,7 +512,7 @@ class slideShowRepository {
             const tst = getSkipTake((_f = opts === null || opts === void 0 ? void 0 : opts.pagesPerType) === null || _f === void 0 ? void 0 : _f.testimonials);
             const tm = getSkipTake((_g = opts === null || opts === void 0 ? void 0 : opts.pagesPerType) === null || _g === void 0 ? void 0 : _g.team);
             const [rawSvc, rawPrj, rawCli, rawTst, rawTm] = yield Promise.all([
-                this.prisma.serviceSlideShow.findMany({
+                prismaToUse.serviceSlideShow.findMany({
                     where: { slideShowId },
                     orderBy: { order: "asc" },
                     skip: svc.skip,
@@ -465,11 +521,12 @@ class slideShowRepository {
                         service: {
                             include: {
                                 image: true,
+                                serviceTranslation: true,
                             },
                         },
                     },
                 }),
-                this.prisma.projectSlideShow.findMany({
+                prismaToUse.projectSlideShow.findMany({
                     where: { slideShowId },
                     orderBy: { order: "asc" },
                     skip: prj.skip,
@@ -478,11 +535,12 @@ class slideShowRepository {
                         project: {
                             include: {
                                 image: true,
+                                ProjectTranslation: true,
                                 services: {
                                     select: {
                                         name: true,
-                                        icon: true
-                                    }
+                                        icon: true,
+                                    },
                                 },
                                 technologies: {
                                     select: {
@@ -494,12 +552,12 @@ class slideShowRepository {
                                             },
                                         },
                                     },
-                                }
+                                },
                             },
                         },
                     },
                 }),
-                this.prisma.clientSlideShow.findMany({
+                prismaToUse.clientSlideShow.findMany({
                     where: { slideShowId },
                     orderBy: { order: "asc" },
                     skip: cli.skip,
@@ -509,11 +567,12 @@ class slideShowRepository {
                             include: {
                                 image: true,
                                 logo: true,
+                                ClientTranslation: true,
                             },
                         },
                     },
                 }),
-                this.prisma.testimonialSlideShow.findMany({
+                prismaToUse.testimonialSlideShow.findMany({
                     where: { slideShowId },
                     orderBy: { order: "asc" },
                     skip: tst.skip,
@@ -522,11 +581,12 @@ class slideShowRepository {
                         testimonial: {
                             include: {
                                 avatar: true,
+                                TestimonialTranslation: true,
                             },
                         },
                     },
                 }),
-                this.prisma.teamSlideShow.findMany({
+                prismaToUse.teamSlideShow.findMany({
                     where: { slideShowId },
                     orderBy: { order: "asc" },
                     skip: tm.skip,
@@ -535,6 +595,7 @@ class slideShowRepository {
                         team: {
                             include: {
                                 image: true,
+                                TeamMemberTranslation: true,
                             },
                         },
                     },
@@ -557,10 +618,10 @@ class slideShowRepository {
                 const entity = (_a = r[dataKey]) !== null && _a !== void 0 ? _a : null;
                 const order = typeof r.order === "number" && r.order !== 0
                     ? r.order
-                    : (_b = entity === null || entity === void 0 ? void 0 : entity.order) !== null && _b !== void 0 ? _b : 1000;
+                    : ((_b = entity === null || entity === void 0 ? void 0 : entity.order) !== null && _b !== void 0 ? _b : 1000);
                 const isVisible = typeof r.isVisible === "boolean"
                     ? r.isVisible
-                    : (_c = entity === null || entity === void 0 ? void 0 : entity.isActive) !== null && _c !== void 0 ? _c : true;
+                    : ((_c = entity === null || entity === void 0 ? void 0 : entity.isActive) !== null && _c !== void 0 ? _c : true);
                 return {
                     type,
                     // slide id should be pivot id (the slideshow item id), data.id is resource id
@@ -568,6 +629,12 @@ class slideShowRepository {
                     order,
                     isVisible,
                     data: entity,
+                    translation: (entity === null || entity === void 0 ? void 0 : entity.TeamMemberTranslation) ||
+                        (entity === null || entity === void 0 ? void 0 : entity.TestimonialTranslation) ||
+                        (entity === null || entity === void 0 ? void 0 : entity.ClientTranslation) ||
+                        (entity === null || entity === void 0 ? void 0 : entity.serviceTranslation) ||
+                        (entity === null || entity === void 0 ? void 0 : entity.ProjectTranslation) ||
+                        [],
                     // copy any custom fields from pivot if exist
                     customDesc: (_d = r.customDesc) !== null && _d !== void 0 ? _d : null,
                     customTitle: (_e = r.customTitle) !== null && _e !== void 0 ? _e : null,
@@ -607,6 +674,45 @@ class slideShowRepository {
                 slides,
                 slidesCount: yield this.slideShowSlidesCount(slideShowId),
             };
+        });
+    }
+    getSlideShowsWithSlidesPaged(_a, opts_1) {
+        return __awaiter(this, arguments, void 0, function* (
+        // slideShowId: string,
+        { skip, take }, opts) {
+            try {
+                const transaction = this.prisma.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
+                    const slideShows = yield tx.slideShow.findMany({
+                        where: {
+                            isActive: true,
+                        },
+                        orderBy: {
+                            order: "asc",
+                        },
+                        skip: skip * take,
+                        take: take,
+                    });
+                    if (slideShows.length) {
+                        const slideShowWithSlides = slideShows.map((slideShow) => __awaiter(this, void 0, void 0, function* () {
+                            return {
+                                slideShow,
+                                slides: yield this.getSlidesPaged(slideShow.id, opts, tx),
+                            };
+                        }));
+                        const slides = yield Promise.all(slideShowWithSlides);
+                        return slides;
+                    }
+                    return null;
+                    // return await this.getSlideShowsWithSlidesPaged(tx, opts);
+                }), {
+                    maxWait: 10000,
+                    timeout: 20000,
+                });
+                return transaction;
+            }
+            catch (error) {
+                throw new services_error_1.ServiceError("error getting slide shows", 400, "SLIDESHOW_ERROR");
+            }
         });
     }
     // attaches
@@ -794,7 +900,7 @@ class slideShowRepository {
         });
     }
     // ***
-    createAndAttachMany(_a) {
+    createAndAttachMany(lang, _a) {
         return __awaiter(this, void 0, void 0, function* () {
             var { slides } = _a, rest = __rest(_a, ["slides"]);
             try {
@@ -815,7 +921,15 @@ class slideShowRepository {
                         rest.order = lastOrder + 1;
                     }
                     const slideShow = yield tx.slideShow.create({
-                        data: Object.assign(Object.assign({}, rest), { slug }),
+                        data: Object.assign(Object.assign({}, rest), { title: "", description: "", slug }),
+                    });
+                    const translation = yield tx.slideShowTranslation.create({
+                        data: {
+                            slideShowId: slideShow.id,
+                            lang,
+                            title: rest.title,
+                            description: rest.title,
+                        },
                     });
                     const cerated = Promise.all(slides.map((att) => {
                         return this.attach({
@@ -830,7 +944,11 @@ class slideShowRepository {
                             tx,
                         });
                     }));
-                    return { slideShow, attacheds: yield cerated };
+                    return {
+                        slideShow: Object.assign(Object.assign({}, slideShow), { title: translation.title, description: translation.description }),
+                        translation,
+                        attacheds: yield cerated,
+                    };
                 }), {
                     maxWait: 5000,
                     timeout: 20000,
@@ -864,8 +982,11 @@ class slideShowRepository {
                     let cerated;
                     if (newSlides) {
                         cerated = Promise.all(newSlides.map((att) => {
+                            var _a;
+                            if (!((_a = find === null || find === void 0 ? void 0 : find.slideShow) === null || _a === void 0 ? void 0 : _a.id))
+                                return;
                             return this.attach({
-                                slideShowId: find.id,
+                                slideShowId: find.slideShow.id,
                                 attachType: att.type,
                                 attachId: att.id,
                                 order: att.order || 1,
@@ -880,8 +1001,11 @@ class slideShowRepository {
                     let deleted;
                     if (deleteArr) {
                         deleted = Promise.all(deleteArr.map((id) => {
+                            var _a, _b;
+                            if (!((_a = find === null || find === void 0 ? void 0 : find.slideShow) === null || _a === void 0 ? void 0 : _a.id))
+                                return;
                             return this.Deattach({
-                                slideShowId: find.id,
+                                slideShowId: (_b = find === null || find === void 0 ? void 0 : find.slideShow) === null || _b === void 0 ? void 0 : _b.id,
                                 type: id.type,
                                 id: id.id,
                                 isMany: true,
@@ -1060,8 +1184,8 @@ class slideShowRepository {
         });
     }
     // ***
-    bulkSlideOperations(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ slideShowId, newSlides = [], updateSlides = [], deletedSlides = [], updatedOrder = [], }) {
+    bulkSlideOperations(lang_1, _a) {
+        return __awaiter(this, arguments, void 0, function* (lang, { slideShowId, newSlides = [], updateSlides = [], deletedSlides = [], updatedOrder = [], }) {
             try {
                 const transaction = yield this.prisma.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
                     // Verify slideshow exists
@@ -1069,7 +1193,6 @@ class slideShowRepository {
                     if (!slideShow) {
                         throw new services_error_1.ServiceError(`Slideshow not found with id: ${slideShowId}`, 404, "SLIDESHOW_NOT_FOUND");
                     }
-                    // 1. DELETE SLIDES
                     const deleted = yield Promise.all(deletedSlides.map((item) => {
                         return this.DeatchWithJoinTableId({
                             tx,
@@ -1079,7 +1202,6 @@ class slideShowRepository {
                             slideShowId: slideShowId,
                         });
                     }));
-                    // 2. CREATE NEW SLIDES
                     const created = yield Promise.all(newSlides.map((slide) => {
                         return this.attach({
                             slideShowId,
@@ -1098,7 +1220,7 @@ class slideShowRepository {
                     const updated = yield Promise.all(updateSlides.map((slide) => __awaiter(this, void 0, void 0, function* () {
                         const updateData = {};
                         console.log({
-                            slide
+                            slide,
                         }, "customDescription");
                         if (slide.isVisible !== undefined) {
                             updateData.isVisible = slide.isVisible;

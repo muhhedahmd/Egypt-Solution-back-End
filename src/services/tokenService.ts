@@ -168,7 +168,6 @@ export class TokenService {
     }
   }
 
-  // 🚪 Logout (invalidate tokens)
   static async logout(refreshToken: string) {
     try {
       await prisma.session.updateMany({
@@ -178,7 +177,7 @@ export class TokenService {
       return { success: true }
     } catch (error) {
       console.error("Logout error:", error)
-      return { error: "Failed to logout" }
+      throw new Error("Failed to logout")
     }
   }
 

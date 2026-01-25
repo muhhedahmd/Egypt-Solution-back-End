@@ -168,7 +168,6 @@ class TokenService {
             }
         });
     }
-    // 🚪 Logout (invalidate tokens)
     static logout(refreshToken) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
@@ -180,7 +179,7 @@ class TokenService {
             }
             catch (error) {
                 console.error("Logout error:", error);
-                return { error: "Failed to logout" };
+                throw new Error("Failed to logout");
             }
         });
     }

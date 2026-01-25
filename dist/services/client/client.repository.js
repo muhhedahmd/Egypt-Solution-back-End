@@ -35,10 +35,19 @@ class ClientRepository {
     findMany(skip, take) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const clients = this.prisma.client.findMany({
+                const clients = yield this.prisma.client.findMany({
                     include: {
                         image: true,
                         logo: true,
+                        ClientTranslation: {
+                            select: {
+                                name: true,
+                                description: true,
+                                richDescription: true,
+                                industry: true,
+                                lang: true,
+                            },
+                        },
                     },
                     skip: skip * take,
                     take: take,
@@ -46,12 +55,13 @@ class ClientRepository {
                         order: "asc",
                     },
                 });
-                return (yield clients).map((client) => {
-                    const { image, logo } = client, rest = __rest(client, ["image", "logo"]);
+                return clients.map((client) => {
+                    const { image, logo, ClientTranslation } = client, rest = __rest(client, ["image", "logo", "ClientTranslation"]);
                     return {
-                        client: rest,
+                        client: Object.assign({}, rest),
                         image: image || null,
                         logo: logo || null,
+                        translation: ClientTranslation,
                     };
                 });
             }
@@ -86,13 +96,31 @@ class ClientRepository {
     findById(id) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                return this.prisma.client.findUnique({
+                const client = yield this.prisma.client.findUnique({
                     where: { id },
                     include: {
                         image: true,
                         logo: true,
+                        ClientTranslation: {
+                            select: {
+                                name: true,
+                                description: true,
+                                richDescription: true,
+                                industry: true,
+                                lang: true,
+                            },
+                        },
                     },
                 });
+                if (!client)
+                    return null;
+                const { image, logo, ClientTranslation } = client, rest = __rest(client, ["image", "logo", "ClientTranslation"]);
+                return {
+                    client: Object.assign({}, rest),
+                    image: image || null,
+                    logo: logo || null,
+                    translation: ClientTranslation,
+                };
             }
             catch (error) {
                 console.error(error);
@@ -108,16 +136,26 @@ class ClientRepository {
                     include: {
                         image: true,
                         logo: true,
+                        ClientTranslation: {
+                            select: {
+                                name: true,
+                                description: true,
+                                richDescription: true,
+                                industry: true,
+                                lang: true,
+                            },
+                        },
                     },
                 });
                 if (!findedClient) {
                     return null;
                 }
-                const { image, logo } = findedClient, rest = __rest(findedClient, ["image", "logo"]);
+                const { image, logo, ClientTranslation } = findedClient, rest = __rest(findedClient, ["image", "logo", "ClientTranslation"]);
                 return {
                     image: image || null,
                     logo: logo || null,
-                    client: rest,
+                    client: Object.assign({}, rest),
+                    translation: ClientTranslation,
                 };
             }
             catch (error) {
@@ -126,38 +164,60 @@ class ClientRepository {
             }
         });
     }
-    SearchClient(searchTerm, skip, take) {
+    SearchClient(lang, searchTerm, skip, take) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const clients = yield this.prisma.client.findMany({
                     where: {
                         OR: [
                             {
-                                name: {
-                                    contains: searchTerm,
-                                    mode: "insensitive",
+                                ClientTranslation: {
+                                    some: {
+                                        name: {
+                                            contains: searchTerm,
+                                            mode: "insensitive",
+                                        },
+                                    },
                                 },
                             },
                             {
-                                description: {
-                                    contains: searchTerm,
-                                    mode: "insensitive",
+                                ClientTranslation: {
+                                    some: {
+                                        description: {
+                                            contains: searchTerm,
+                                            mode: "insensitive",
+                                        },
+                                    },
                                 },
                             },
                             {
-                                richDescription: {
-                                    contains: searchTerm,
-                                    mode: "insensitive",
+                                ClientTranslation: {
+                                    some: {
+                                        richDescription: {
+                                            contains: searchTerm,
+                                            mode: "insensitive",
+                                        },
+                                    },
                                 },
                             },
                             {
-                                industry: {
-                                    contains: searchTerm,
-                                    mode: "insensitive",
+                                ClientTranslation: {
+                                    some: {
+                                        industry: {
+                                            contains: searchTerm,
+                                            mode: "insensitive",
+                                        },
+                                    },
                                 },
                             },
                             {
                                 slug: {
+                                    contains: searchTerm,
+                                    mode: "insensitive",
+                                },
+                            },
+                            {
+                                website: {
                                     contains: searchTerm,
                                     mode: "insensitive",
                                 },
@@ -167,6 +227,16 @@ class ClientRepository {
                     include: {
                         image: true,
                         logo: true,
+                        ClientTranslation: {
+                            where: { lang },
+                            select: {
+                                name: true,
+                                description: true,
+                                richDescription: true,
+                                industry: true,
+                                lang: true,
+                            },
+                        },
                     },
                     skip: skip * take,
                     take,
@@ -175,11 +245,12 @@ class ClientRepository {
                     },
                 });
                 return clients.map((client) => {
-                    const { image, logo } = client, rest = __rest(client, ["image", "logo"]);
+                    const { image, logo, ClientTranslation } = client, rest = __rest(client, ["image", "logo", "ClientTranslation"]);
                     return {
-                        client: rest,
+                        client: Object.assign({}, rest),
                         image: image || null,
                         logo: logo || null,
+                        translation: ClientTranslation,
                     };
                 });
             }
@@ -189,7 +260,7 @@ class ClientRepository {
             }
         });
     }
-    create(data) {
+    create(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const transaction = yield this.prisma.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
@@ -234,25 +305,46 @@ class ClientRepository {
                     }
                     const client = yield tx.client.create({
                         data: {
+                            name: "",
                             slug: slug,
-                            name: data.name,
-                            description: data.description,
-                            richDescription: data.richDescription,
                             website: data.website,
-                            industry: data.industry,
                             imageId: imageId,
                             logoId: logoId,
                             isActive: data.isActive || false,
                             isFeatured: data.isFeatured || false,
                             order: data.order || 0,
+                            ClientTranslation: {
+                                create: {
+                                    name: data.name,
+                                    description: data.description,
+                                    richDescription: data.richDescription,
+                                    industry: data.industry,
+                                    lang: lang,
+                                },
+                            },
                         },
                         include: {
                             image: true,
                             logo: true,
+                            ClientTranslation: {
+                                where: { lang },
+                                select: {
+                                    name: true,
+                                    description: true,
+                                    richDescription: true,
+                                    industry: true,
+                                    lang: true,
+                                },
+                            },
                         },
                     });
-                    const { image, logo } = client, rest = __rest(client, ["image", "logo"]);
-                    return { Image: image, Logo: logo, client: rest };
+                    const { image, logo, ClientTranslation } = client, rest = __rest(client, ["image", "logo", "ClientTranslation"]);
+                    return {
+                        Image: image,
+                        Logo: logo,
+                        translation: ClientTranslation,
+                        client: Object.assign({}, rest),
+                    };
                 }), {
                     timeout: 20000,
                     isolationLevel: "Serializable",
@@ -266,7 +358,7 @@ class ClientRepository {
             }
         });
     }
-    update(data) {
+    update(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const transaction = yield this.prisma.$transaction((prismaTx) => __awaiter(this, void 0, void 0, function* () {
@@ -353,7 +445,7 @@ class ClientRepository {
                         NewLogoId = logoToDB.id;
                     }
                     // Generate new slug if name changed
-                    if (data.name && data.name !== client.name) {
+                    if (data.name) {
                         const slug = (0, slugify_1.default)(data.name + (0, crypto_1.randomUUID)().substring(0, 8), {
                             lower: true,
                         });
@@ -364,21 +456,48 @@ class ClientRepository {
                         where: { id: data.clientId },
                         data: {
                             slug: data.slug || client.slug,
-                            name: data.name || client.name,
-                            description: data.description || client.description,
-                            richDescription: data.richDescription || client.richDescription,
                             website: data.website || client.website,
-                            industry: data.industry || client.industry,
                             imageId: NewImageId,
                             logoId: NewLogoId,
                             isActive: (_a = data.isActive) !== null && _a !== void 0 ? _a : client.isActive,
                             isFeatured: (_b = data.isFeatured) !== null && _b !== void 0 ? _b : client.isFeatured,
                             order: (_c = data.order) !== null && _c !== void 0 ? _c : client.order,
                         },
-                        include: { image: true, logo: true },
+                        include: {
+                            image: true,
+                            logo: true,
+                        },
+                    });
+                    // Update or create translation
+                    const t = yield prismaTx.clientTranslation.upsert({
+                        where: {
+                            clientId_lang: {
+                                clientId: data.clientId,
+                                lang: lang,
+                            },
+                        },
+                        update: {
+                            name: data.name,
+                            description: data.description,
+                            richDescription: data.richDescription,
+                            industry: data.industry,
+                        },
+                        create: {
+                            clientId: data.clientId,
+                            name: data.name || "Client",
+                            description: data.description,
+                            richDescription: data.richDescription,
+                            industry: data.industry,
+                            lang: lang,
+                        },
                     });
                     const { image, logo } = updatedClient, rest = __rest(updatedClient, ["image", "logo"]);
-                    return { Image: image, Logo: logo, client: rest };
+                    return {
+                        Image: image,
+                        Logo: logo,
+                        translation: t,
+                        client: Object.assign({}, rest),
+                    };
                 }), {
                     timeout: 20000,
                     maxWait: 5000,

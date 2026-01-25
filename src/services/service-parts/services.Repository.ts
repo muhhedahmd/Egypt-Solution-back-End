@@ -8,6 +8,7 @@ import {
   updateService,
   interFaceSearchService,
 } from "../../types/services";
+
 import { PrismaClientConfig } from "../../config/prisma";
 import { AssignImageToDBImage } from "../../lib/helpers";
 import slugify from "slugify";
@@ -18,35 +19,66 @@ export class ServicesRepository {
   constructor(private prisma: PrismaClientConfig) {}
 
   async findMany(
+    lang: "AR" | "EN" = "EN",
     skip: number,
     take: number,
     Active: boolean,
     isFeatured: boolean
   ) {
-    if (Active) {
-      return this.prisma.service.findMany({
-        where: { isActive: true },
-        include: { image: true },
-
-        skip: skip * take,
-        take: take,
-      });
-    }
+    const _Where: Record<string, boolean> = {};
+    if (Active) _Where.isActive = true;
     if (Active && isFeatured) {
-      return this.prisma.service.findMany({
-        where: { isActive: true, isFeatured: true },
-        include: { image: true },
+      _Where.isActive = true;
+      _Where.isFeatured = true;
+    }
 
-        skip: skip * take,
-        take: take,
-      });
-    } else
-      return this.prisma.service.findMany({
-        include: { image: true },
+    const find = await this.prisma.service.findMany({
+      where: _Where,
+      select: {
+        id: true,
+        slug: true,
+        price: true,
+        isActive: true,
+        isFeatured: true,
+        createdAt: true,
+        updatedAt: true,
+        image: true,
+        serviceTranslation: {
+          where: {
+            lang,
+          },
+        },
+      },
 
-        skip: skip * take,
-        take: take,
-      });
+      skip: skip * take,
+      take: take,
+    });
+
+    const fixedReturn = find.map((s) => {
+      const {
+        image,
+        serviceTranslation,
+        createdAt,
+        id,
+        isActive,
+        isFeatured,
+        price,
+        slug,
+        updatedAt,
+      } = s;
+      return {
+        image,
+        ...serviceTranslation[0],
+        createdAt,
+        id,
+        isActive,
+        isFeatured,
+        price,
+        slug,
+        updatedAt,
+      };
+    });
+    return fixedReturn;
   }
 
   async isValidOrder({ order }: { order: number }) {
@@ -68,24 +100,62 @@ export class ServicesRepository {
     return this.prisma.service.count();
   }
 
-  async findById(id: string) {
+  async findById(lang: "EN" | "AR" = "EN", id: string) {
     try {
-      return this.prisma.service.findUnique({
+      const find = await this.prisma.service.findUnique({
         where: { id },
-        include: { image: true },
+        select: {
+          id: true,
+          slug: true,
+          price: true,
+          isActive: true,
+          isFeatured: true,
+          createdAt: true,
+          updatedAt: true,
+          image: true,
+          serviceTranslation: {
+            where: {
+              lang,
+            },
+          },
+        },
       });
+      if (!find) throw new Error("Error finding service by ID");
+
+      const {
+        image,
+        serviceTranslation,
+        createdAt,
+        isActive,
+        isFeatured,
+        price,
+        slug,
+        updatedAt,
+      } = find;
+      return {
+        image,
+        ...serviceTranslation[0],
+        createdAt,
+        id,
+        isActive,
+        isFeatured,
+        price,
+        slug,
+        updatedAt,
+      };
     } catch (error) {
       console.log(error);
       throw new Error("Error finding service by ID");
     }
   }
 
-  async findBySlug(slug: string) {
+  async findBySlug( slug: string) {
     try {
       const findedService = await this.prisma.service.findUnique({
         where: { slug },
         include: {
           image: true,
+          serviceTranslation:  true ,
           projects: {
             include: {
               image: true,
@@ -175,7 +245,7 @@ export class ServicesRepository {
       );
     }
   }
-  async create(data: CreateServiceDTO & { slug: string }) {
+  async create(lang: "EN" | "AR", data: CreateServiceDTO & { slug: string }) {
     try {
       const transication = await this.prisma.$transaction(
         async (tx) => {
@@ -211,27 +281,45 @@ export class ServicesRepository {
           const service = await tx.service.create({
             data: {
               slug: slug,
-              name: data.name,
-              description: data.description,
-              richDescription: data.richDescription,
+              name: "",
+
               imageId: imageToDB.id,
               icon: iconUrl || "",
               price: data.price || "",
               isActive: data.isActive || false,
               isFeatured: data.isFeatured || false,
               order: data.order || 0,
+              serviceTranslation: {
+                create: {
+                  name: data.name,
+                  description: data.description,
+                  richDescription: data.richDescription,
+                  lang: lang,
+                },
+              },
             },
-            include: {
+            select: {
+              id: true,
+              slug: true,
+              price: true,
+              isActive: true,
+              isFeatured: true,
+              createdAt: true,
+              updatedAt: true,
+              serviceTranslation: true,
               image: true,
             },
           });
-          const { image, ...rest } = service;
-          return { Image: image, service: rest };
+          const { image, serviceTranslation, ...rest } = service;
+          const translatedData = {
+            ...serviceTranslation[0],
+            serviceId: service.id,
+          };
+          return { Image: image, service: { ...rest, ...translatedData } };
         },
         {
-          timeout: 20000, // (milliseconds)
-          isolationLevel: "Serializable",
-          maxWait: 5000, // default: 2000
+          timeout: 20000,
+          maxWait: 5000,
         }
       );
       return transication;
@@ -240,7 +328,7 @@ export class ServicesRepository {
     }
   }
 
-  async update(data: updateService) {
+  async update(lang: "EN" | "AR", data: updateService) {
     try {
       const transaction = await this.prisma.$transaction(
         async (prismaTx) => {
@@ -312,16 +400,15 @@ export class ServicesRepository {
             data.slug = slug;
           }
 
-          console.log("Service ID:", data.serviceId, NewImageId);
+          // console.log("Service ID:", data.serviceId, NewImageId);
 
           // Update the service with new data
           const updatedService = await prismaTx.service.update({
             where: { id: data.serviceId },
             data: {
               slug: data.slug || service.slug,
-              name: data.name || service.name,
-              description: data.description || service.description,
-              richDescription: data.richDescription || service.richDescription,
+              name: "",
+
               imageId: NewImageId,
               icon: data.icon || service.icon || "",
               price: data.price || service.price || "",
@@ -329,11 +416,54 @@ export class ServicesRepository {
               isFeatured: data.isFeatured || service.isFeatured || false,
               order: data.order || service.order || 0,
             },
-            include: { image: true },
+            select: {
+              id: true,
+              slug: true,
+              price: true,
+              isActive: true,
+              isFeatured: true,
+              createdAt: true,
+              updatedAt: true,
+              image: true,
+            },
+          });
+
+          // update translation
+          const updateTranslation = await prismaTx.serviceTranslation.upsert({
+            where: {
+              serviceId_lang: {
+                lang,
+                serviceId: data.serviceId,
+              },
+            },
+            update: {
+              name: data.name || service.name || "",
+              description: data.description || service.description,
+              richDescription: data.richDescription || service.richDescription,
+            },
+            create: {
+              serviceId: data.serviceId,
+              name: data.name || service.name || "",
+              description: data.description || service.description,
+              richDescription: data.richDescription || service.richDescription,
+              lang,
+            },
+            // data: {
+
+            //   name: data.name || service.name,
+            //   description: data.description || service.description,
+            //   richDescription: data.richDescription || service.richDescription,
+            //   lang ,
+            // },
+            select: {
+              name: true,
+              description: true,
+              richDescription: true,
+            },
           });
 
           const { image, ...rest } = updatedService;
-          return { Image: image, service: rest };
+          return { Image: image, service: { ...rest, ...updateTranslation } };
         },
         {
           timeout: 20000,

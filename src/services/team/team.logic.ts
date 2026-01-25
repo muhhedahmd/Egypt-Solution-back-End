@@ -1,8 +1,7 @@
-
-import slugify from 'slugify';
-import { randomUUID } from 'crypto';
-import { TeamRepository } from './team.repository';
-import { TeamValidator } from '../../errors/schema/team.validation.schema';
+import slugify from "slugify";
+import { randomUUID } from "crypto";
+import { TeamRepository } from "./team.repository";
+import { TeamValidator } from "../../errors/schema/team.validation.schema";
 import {
   CreateTeamMemberDTO,
   ITeamMember,
@@ -10,11 +9,8 @@ import {
   PaginatedResponse,
   PaginationParams,
   UpdateTeamMember,
-} from '../../types/team';
-import {
-  TeamError,
-  TeamNotFoundError,
-} from '../../errors/team.error';
+} from "../../types/team";
+import { TeamError, TeamNotFoundError } from "../../errors/team.error";
 
 export class TeamLogic {
   constructor(
@@ -54,7 +50,11 @@ export class TeamLogic {
   }
   async getAllTeamMembersActive(
     params: PaginationParams & { isFeatured?: boolean }
-  ): Promise<PaginatedResponse<ITeamMember>> {
+  ): Promise<
+    PaginatedResponse<
+      Awaited<ReturnType<typeof this.repository.findManyActive>>
+    >
+  > {
     const skip = params.skip || 0;
     const take = params.take || 10;
     const isFeatured = params.isFeatured || false;
@@ -67,7 +67,7 @@ export class TeamLogic {
     const remainingItems = totalItems - (skip * take + teamMembers.length);
 
     return {
-      data: teamMembers ,
+      data: teamMembers as any,
       pagination: {
         totalItems,
         remainingItems,
@@ -85,11 +85,7 @@ export class TeamLogic {
     if (!teamMember) {
       throw new TeamNotFoundError(id);
     }
-    const { image, ...rest } = teamMember;
-    return {
-      Image: image,
-      teamMember: rest,
-    };
+    return teamMember
   }
 
   async getTeamMemberBySlug(
@@ -101,65 +97,66 @@ export class TeamLogic {
       throw new TeamError(
         `team member with slug not found ${slug}`,
         404,
-        'TEAM_NOT_FOUND'
+        "TEAM_NOT_FOUND"
       );
     }
     return teamMember;
   }
 
   async createTeamMember(
+    lang: "EN" | "AR",
     data: CreateTeamMemberDTO
   ): Promise<ITeamMemberRepositoryCreateResponse> {
     const valid = this.validator.validateCreate(data);
     const slug = slugify(data.name + randomUUID().substring(0, 8), {
       lower: true,
     });
-    const teamMember = await this.repository.create({
+    const teamMember = await this.repository.create( lang , {
       ...valid,
       slug: slug,
     });
-    if (!teamMember) throw new Error('error create team member');
+    if (!teamMember) throw new Error("error create team member");
     return teamMember;
   }
 
   async deleteTeamMember(teamId: string) {
     try {
-      if (!teamId) throw new Error('id is required');
+      if (!teamId) throw new Error("id is required");
       this.validator.validateId(teamId);
       const deletedTeamMember = await this.repository.delete(teamId);
-      if (!deletedTeamMember) throw new Error('error deleting team member');
+      if (!deletedTeamMember) throw new Error("error deleting team member");
       return deletedTeamMember;
     } catch (error) {
       console.error(error);
-      throw new Error('Error deleting team member');
+      throw new Error("Error deleting team member");
     }
   }
 
-  async Search(q: string) {
+  async Search(lang: "EN" | "AR", q: string) {
     if (!q)
       throw new TeamError(
-        'search query is required',
+        "search query is required",
         400,
-        'SEARCH_QUERY_REQUIRED'
+        "SEARCH_QUERY_REQUIRED"
       );
-    const teamMembers = await this.repository.SearchTeamMember(q, 0, 10);
+    const teamMembers = await this.repository.SearchTeamMember(lang, q, 0, 10);
     if (!teamMembers)
       throw new TeamError(
-        'error searching team members',
+        "error searching team members",
         400,
-        'ERROR_SEARCHING_TEAM_MEMBERS'
+        "ERROR_SEARCHING_TEAM_MEMBERS"
       );
     return teamMembers;
   }
 
-  async updateTeamMember(data: UpdateTeamMember) {
+  async updateTeamMember(lang: "EN" | "AR", data: UpdateTeamMember) {
     this.validator.validateUpdate(data);
-    const updatedTeamMember = await this.repository.update(data);
+    const updatedTeamMember = await this.repository.update(lang, data);
     if (!updatedTeamMember)
       throw new TeamError(
-        'error updating team member',
+        "error updating team member",
         400,
-        'ERROR_UPDATING_TEAM_MEMBER'
+        "ERROR_UPDATING_TEAM_MEMBER"
       );
     const { Image, ...rest } = updatedTeamMember;
     return { Image, ...rest };

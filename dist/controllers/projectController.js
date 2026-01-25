@@ -30,10 +30,11 @@ class projectController {
             var _a, _b;
             try {
                 const body = req.body;
+                const lang = req.lang || "EN";
                 const image = (Array === null || Array === void 0 ? void 0 : Array.isArray(req.files)) && ((_a = req === null || req === void 0 ? void 0 : req.files) === null || _a === void 0 ? void 0 : _a.length) > 0
                     ? (_b = req === null || req === void 0 ? void 0 : req.files[0]) === null || _b === void 0 ? void 0 : _b.buffer
                     : null;
-                const newProject = yield this.logic.create(Object.assign(Object.assign({}, body), { image: image, isFeatured: body.isFeatured === "true" ? true : false, order: Number(body.order) || 0, status: body.status || "COMPLETED", startDate: body.startDate ? new Date(body.startDate) : undefined, endDate: body.endDate ? new Date(body.endDate) : undefined }));
+                const newProject = yield this.logic.create(lang || "EN", Object.assign(Object.assign({}, body), { image: image, isFeatured: body.isFeatured === "true" ? true : false, order: Number(body.order) || 0, status: body.status || "COMPLETED", startDate: body.startDate ? new Date(body.startDate) : undefined, endDate: body.endDate ? new Date(body.endDate) : undefined }));
                 return res.status(201).json({
                     success: true,
                     message: "Project created successfully",
@@ -49,7 +50,8 @@ class projectController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const { skip, take } = req.query;
-                const projects = yield this.logic.getAllProjects({
+                const lang = req.lang || "EN";
+                const projects = yield this.logic.getAllProjects(lang, {
                     skip: Number(skip) || 0,
                     take: Number(take) || 10,
                 });
@@ -86,7 +88,8 @@ class projectController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const { slug } = req.params;
-                const project = yield this.logic.findBySlugFull(slug);
+                const lang = req.lang || "EN";
+                const project = yield this.logic.findBySlugFull(lang, slug);
                 if (!project) {
                     return res.status(404).json({
                         success: false,
@@ -110,7 +113,8 @@ class projectController {
                 const body = req.body;
                 const id = req.params.id;
                 const file = req.file; // From multer
-                const updated = yield this.logic.update(Object.assign(Object.assign({}, body), { id, image: file === null || file === void 0 ? void 0 : file.buffer, imageState: body.imageState || "KEEP", isFeatured: body.isFeatured === "true" ? true : false, order: Number(body.order) || undefined, status: body.status || undefined, startDate: body.startDate ? new Date(body.startDate) : undefined, endDate: body.endDate ? new Date(body.endDate) : undefined }));
+                const lang = req.lang || "EN";
+                const updated = yield this.logic.update(lang, Object.assign(Object.assign({}, body), { id, image: file === null || file === void 0 ? void 0 : file.buffer, imageState: body.imageState || "KEEP", isFeatured: body.isFeatured === "true" ? true : false, order: Number(body.order) || undefined, status: body.status || undefined, startDate: body.startDate ? new Date(body.startDate) : undefined, endDate: body.endDate ? new Date(body.endDate) : undefined }));
                 return res.status(200).json({
                     success: true,
                     message: "Project updated successfully",
@@ -128,7 +132,8 @@ class projectController {
                 const id = req.params.id;
                 const file = req.file; // From multer
                 const body = req.body;
-                const updated = yield this.logic.updateProjectWithTechsServices(Object.assign(Object.assign({}, body), { id, image: file === null || file === void 0 ? void 0 : file.buffer }));
+                const lang = req.lang || "EN";
+                const updated = yield this.logic.updateProjectWithTechsServices(lang, Object.assign(Object.assign({}, body), { id, image: file === null || file === void 0 ? void 0 : file.buffer }));
                 return res.status(200).json({
                     success: true,
                     message: "Project updated successfully with technologies and services",
@@ -379,7 +384,8 @@ class projectController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const body = req.body;
-                const assigned = yield this.logic.assignProjectToTechnology(body);
+                const lang = req.lang || "EN";
+                const assigned = yield this.logic.assignProjectToTechnology(lang, body);
                 return res.status(200).json({
                     success: true,
                     message: "Projects assigned to technology successfully",
@@ -395,10 +401,9 @@ class projectController {
         return __awaiter(this, void 0, void 0, function* () {
             var _a, _b;
             try {
-                // const project = req.body.project;
-                // const technology = req.body.technologies;
                 const _c = req.body, { technologyIds, serviceIds } = _c, project = __rest(_c, ["technologyIds", "serviceIds"]);
-                const created = yield this.logic.createProjectAndAssignTechnology({
+                const lang = req.lang || "EN";
+                const created = yield this.logic.createProjectAndAssignTechnology(lang, {
                     project: Object.assign(Object.assign({}, project), { image: (Array === null || Array === void 0 ? void 0 : Array.isArray(req === null || req === void 0 ? void 0 : req.files)) && (req === null || req === void 0 ? void 0 : req.files)
                             ? (_b = (_a = req === null || req === void 0 ? void 0 : req.files) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.buffer
                             : undefined, order: 0 }),
@@ -420,7 +425,8 @@ class projectController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const body = req.body;
-                const removed = yield this.logic.removeProjectFromTechnology(body);
+                const lang = req.lang || "EN";
+                const removed = yield this.logic.removeProjectFromTechnology(lang, body);
                 return res.status(200).json({
                     success: true,
                     message: "Projects removed from technology successfully",
@@ -437,10 +443,10 @@ class projectController {
             try {
                 const technologyRaw = req.body.technology;
                 const projectsRaw = req.body.projects;
+                const lang = req.lang || "EN";
                 // 🔹 Parse JSON text fields
                 const technology = JSON.parse(technologyRaw);
                 const projects = JSON.parse(projectsRaw);
-                console.log(req.files);
                 const FixedBody = {
                     technology: {
                         name: technology.name,
@@ -454,7 +460,7 @@ class projectController {
                                 : undefined });
                     }),
                 };
-                const result = yield this.logic.createTechnologyAndProject(FixedBody);
+                const result = yield this.logic.createTechnologyAndProject(lang, FixedBody);
                 return res.status(201).json({
                     success: true,
                     message: "Technology and projects created successfully",

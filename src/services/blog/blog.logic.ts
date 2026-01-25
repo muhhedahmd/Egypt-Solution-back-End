@@ -201,10 +201,10 @@ export class blogLogic {
     };
   }
 
-  async incrementViews(id: string): Promise<Blog> {
+  async incrementViews(id: string) {
     const validId = this.validator.validateId(id);
-    const blog = await this.repository.incrementViews(validId);
-    return blog;
+    // const blog = await this.repository.incrementViews(validId);
+    // return blog;
   }
 
   // CATEGORY METHODS

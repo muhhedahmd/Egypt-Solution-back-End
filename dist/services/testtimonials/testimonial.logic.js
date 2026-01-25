@@ -62,19 +62,16 @@ class TestimonialLogic {
             if (!testimonial) {
                 throw new testimonal_error_1.TestimonialNotFoundError(id);
             }
-            const { avatar } = testimonial, rest = __rest(testimonial, ["avatar"]);
-            return {
-                Avatar: avatar,
-                testimonial: rest,
-            };
+            // const  = testimonial;
+            return testimonial;
         });
     }
-    createTestimonial(data) {
+    createTestimonial(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             const valid = this.validator.validateCreate(data);
-            const testimonial = yield this.repository.create(valid);
+            const testimonial = yield this.repository.create(lang, valid);
             if (!testimonial)
-                throw new Error('error create testimonial');
+                throw new Error("error create testimonial");
             return testimonial;
         });
     }
@@ -82,35 +79,35 @@ class TestimonialLogic {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 if (!testimonialId)
-                    throw new Error('id is required');
+                    throw new Error("id is required");
                 this.validator.validateId(testimonialId);
                 const deletedTestimonial = yield this.repository.delete(testimonialId);
                 if (!deletedTestimonial)
-                    throw new Error('error deleting testimonial');
+                    throw new Error("error deleting testimonial");
                 return deletedTestimonial;
             }
             catch (error) {
                 console.error(error);
-                throw new Error('Error deleting testimonial');
+                throw new Error("Error deleting testimonial");
             }
         });
     }
-    Search(q) {
+    Search(lang, q) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!q)
-                throw new testimonal_error_1.TestimonialError('search query is required', 400, 'SEARCH_QUERY_REQUIRED');
-            const testimonials = yield this.repository.SearchTestimonial(q, 0, 10);
+                throw new testimonal_error_1.TestimonialError("search query is required", 400, "SEARCH_QUERY_REQUIRED");
+            const testimonials = yield this.repository.SearchTestimonial(lang, q, 0, 10);
             if (!testimonials)
-                throw new testimonal_error_1.TestimonialError('error searching testimonials', 400, 'ERROR_SEARCHING_TESTIMONIALS');
+                throw new testimonal_error_1.TestimonialError("error searching testimonials", 400, "ERROR_SEARCHING_TESTIMONIALS");
             return testimonials;
         });
     }
-    updateTestimonial(data) {
+    updateTestimonial(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             this.validator.validateUpdate(data);
-            const updatedTestimonial = yield this.repository.update(data);
+            const updatedTestimonial = yield this.repository.update(lang, data);
             if (!updatedTestimonial)
-                throw new testimonal_error_1.TestimonialError('error updating testimonial', 400, 'ERROR_UPDATING_TESTIMONIAL');
+                throw new testimonal_error_1.TestimonialError("error updating testimonial", 400, "ERROR_UPDATING_TESTIMONIAL");
             const { Avatar } = updatedTestimonial, rest = __rest(updatedTestimonial, ["Avatar"]);
             return Object.assign({ Avatar }, rest);
         });

@@ -90,11 +90,7 @@ class TeamLogic {
             if (!teamMember) {
                 throw new team_error_1.TeamNotFoundError(id);
             }
-            const { image } = teamMember, rest = __rest(teamMember, ["image"]);
-            return {
-                Image: image,
-                teamMember: rest,
-            };
+            return teamMember;
         });
     }
     getTeamMemberBySlug(slug) {
@@ -102,20 +98,20 @@ class TeamLogic {
             this.validator.validateSlug(slug);
             const teamMember = yield this.repository.findBySlug(slug);
             if (!teamMember) {
-                throw new team_error_1.TeamError(`team member with slug not found ${slug}`, 404, 'TEAM_NOT_FOUND');
+                throw new team_error_1.TeamError(`team member with slug not found ${slug}`, 404, "TEAM_NOT_FOUND");
             }
             return teamMember;
         });
     }
-    createTeamMember(data) {
+    createTeamMember(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             const valid = this.validator.validateCreate(data);
             const slug = (0, slugify_1.default)(data.name + (0, crypto_1.randomUUID)().substring(0, 8), {
                 lower: true,
             });
-            const teamMember = yield this.repository.create(Object.assign(Object.assign({}, valid), { slug: slug }));
+            const teamMember = yield this.repository.create(lang, Object.assign(Object.assign({}, valid), { slug: slug }));
             if (!teamMember)
-                throw new Error('error create team member');
+                throw new Error("error create team member");
             return teamMember;
         });
     }
@@ -123,35 +119,35 @@ class TeamLogic {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 if (!teamId)
-                    throw new Error('id is required');
+                    throw new Error("id is required");
                 this.validator.validateId(teamId);
                 const deletedTeamMember = yield this.repository.delete(teamId);
                 if (!deletedTeamMember)
-                    throw new Error('error deleting team member');
+                    throw new Error("error deleting team member");
                 return deletedTeamMember;
             }
             catch (error) {
                 console.error(error);
-                throw new Error('Error deleting team member');
+                throw new Error("Error deleting team member");
             }
         });
     }
-    Search(q) {
+    Search(lang, q) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!q)
-                throw new team_error_1.TeamError('search query is required', 400, 'SEARCH_QUERY_REQUIRED');
-            const teamMembers = yield this.repository.SearchTeamMember(q, 0, 10);
+                throw new team_error_1.TeamError("search query is required", 400, "SEARCH_QUERY_REQUIRED");
+            const teamMembers = yield this.repository.SearchTeamMember(lang, q, 0, 10);
             if (!teamMembers)
-                throw new team_error_1.TeamError('error searching team members', 400, 'ERROR_SEARCHING_TEAM_MEMBERS');
+                throw new team_error_1.TeamError("error searching team members", 400, "ERROR_SEARCHING_TEAM_MEMBERS");
             return teamMembers;
         });
     }
-    updateTeamMember(data) {
+    updateTeamMember(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             this.validator.validateUpdate(data);
-            const updatedTeamMember = yield this.repository.update(data);
+            const updatedTeamMember = yield this.repository.update(lang, data);
             if (!updatedTeamMember)
-                throw new team_error_1.TeamError('error updating team member', 400, 'ERROR_UPDATING_TEAM_MEMBER');
+                throw new team_error_1.TeamError("error updating team member", 400, "ERROR_UPDATING_TEAM_MEMBER");
             const { Image } = updatedTeamMember, rest = __rest(updatedTeamMember, ["Image"]);
             return Object.assign({ Image }, rest);
         });

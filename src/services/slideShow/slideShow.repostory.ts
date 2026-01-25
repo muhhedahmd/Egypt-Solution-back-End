@@ -27,7 +27,7 @@ import { txInstance } from "../../lib/helpers";
 
 export class slideShowRepository {
   constructor(
-    private prisma: PrismaClientConfig // private service : ServicesRepository
+    private prisma: PrismaClientConfig, // private service : ServicesRepository
   ) {}
   private modelMap(prismaToUse: txInstance | PrismaClientConfig) {
     return {
@@ -49,7 +49,7 @@ export class slideShowRepository {
     };
   }
 
-  async findManyMinimal(prismaTouse?: txInstance) {
+  async findManyMinimal(lang: "EN" | "AR", prismaTouse?: txInstance) {
     try {
       const findMany = await (prismaTouse || this.prisma).slideShow.findMany({
         select: {
@@ -58,7 +58,16 @@ export class slideShowRepository {
           order: true,
           slug: true,
           type: true,
+          SlideShowTranslation: {
+            where: {
+              lang,
+            },
+            select: {
+              title: true,
+            },
+          },
         },
+
         orderBy: {
           order: "asc",
         },
@@ -66,7 +75,7 @@ export class slideShowRepository {
       return findMany.map((slideShow) => {
         return {
           id: slideShow.id,
-          title: slideShow.title,
+          title: slideShow?.SlideShowTranslation?.[0]?.title || "",
           order: slideShow.order,
           slug: slideShow.slug,
           type: slideShow.type,
@@ -77,7 +86,7 @@ export class slideShowRepository {
       throw new ServiceError(
         "slideShow not found",
         404,
-        "Cannot find slideShow in DB"
+        "Cannot find slideShow in DB",
       );
     }
   }
@@ -87,13 +96,25 @@ export class slideShowRepository {
         where: {
           id,
         },
+        omit: {
+          title: true,
+          description: true,
+        },
       });
-      return find;
+      const findTranslation = await (
+        prismaTouse || this.prisma
+      ).slideShowTranslation.findMany({
+        where: {
+          slideShowId: id,
+        },
+      });
+
+      return { slideShow: find, translation: findTranslation };
     } catch (error) {
       throw new ServiceError(
         "slideShow not found id: " + id,
         404,
-        "id not found in DB"
+        "id not found in DB",
       );
     }
   }
@@ -157,7 +178,7 @@ export class slideShowRepository {
         throw new ServiceError(
           "slideShow not found  slug: " + slug,
           404,
-          "id not found in DB"
+          "id not found in DB",
         );
       }
       const { projects, services, clients, team, testimonials, ...rest } =
@@ -168,7 +189,7 @@ export class slideShowRepository {
       throw new ServiceError(
         "slideShow not found  slug: " + slug,
         404,
-        "id not found in DB"
+        "id not found in DB",
       );
     }
   }
@@ -176,7 +197,7 @@ export class slideShowRepository {
   async findAttachTable(
     id: string,
     attachType: "service" | "client" | "project" | "testimonial" | "teamMember",
-    prismaTouse?: txInstance | PrismaClientConfig
+    prismaTouse?: txInstance | PrismaClientConfig,
     // modelMap: modelMap
   ): Promise<
     | ServiceSlideShow
@@ -189,7 +210,7 @@ export class slideShowRepository {
       throw new ServiceError(
         "slideShow attach + " + attachType + " not found id: " + id,
         404,
-        "id not found in DB"
+        "id not found in DB",
       );
 
     const findAttached = await (
@@ -202,7 +223,7 @@ export class slideShowRepository {
       throw new ServiceError(
         "slideShow attach + " + attachType + " not found id: " + id,
         404,
-        "id not found in DB"
+        "id not found in DB",
       );
     return findAttached as any;
   }
@@ -219,21 +240,45 @@ export class slideShowRepository {
   }
 
   // crud
-  async findMany({ skip, take }: { skip: number; take: number }) {
+
+  async findMany(
+    lang: "EN" | "AR",
+    { skip, take }: { skip: number; take: number },
+  ) {
     try {
-      return await this.prisma.slideShow.findMany({
+      const slideShows = await this.prisma.slideShow.findMany({
         skip: skip * take,
         take,
         orderBy: {
           order: "asc",
         },
+        include: {
+          SlideShowTranslation: {
+            select: {
+              lang: true,
+              title: true,
+              description: true,
+            },
+          },
+        },
+      });
+      return slideShows?.map((slideshow) => {
+        const { SlideShowTranslation, ...rest } = slideshow;
+        const currentTranslation = SlideShowTranslation.find(
+          (el) => el.lang === lang,
+        );
+        return {
+          ...rest,
+          ...currentTranslation,
+          translations: SlideShowTranslation,
+        };
       });
     } catch (error) {
       console.error(error);
       throw new ServiceError(
         "error get slide shows",
         400,
-        "SLIDESHOWS_GET_ERROR"
+        "SLIDESHOWS_GET_ERROR",
       );
     }
   }
@@ -276,25 +321,26 @@ export class slideShowRepository {
       throw new ServiceError(
         "error creating a slideshow",
         400,
-        "SLIDESHOW_CREATION_ERROR"
+        "SLIDESHOW_CREATION_ERROR",
       );
     }
   }
 
-  async update(data: UpdateslideShowDTO) {
-    console.log("commingOrder", data.order);
-
+  async update(lang: "EN" | "AR", data: UpdateslideShowDTO) {
     try {
       const transaction = await this.prisma.$transaction(async (tx) => {
-        const find = await this.findById(data.slideShowId, tx);
+        const _find = await this.findById(data.slideShowId, tx);
+        const find = _find.slideShow;
+        const enTranslation = _find.translation.find((l) => l.lang === "EN");
+
         if (!find)
           throw new ServiceError(
             "slideShow not found id: " + data.slideShowId,
             404,
-            "id not found in DB"
+            "id not found in DB",
           );
         let slug = find.slug;
-        if (data.title && data.title != find.title) {
+        if (data.title && data.title != enTranslation?.title) {
           slug = slugify(data.title + randomUUID().substring(0, 6), {
             lower: true,
           });
@@ -318,17 +364,46 @@ export class slideShowRepository {
             type: data.type || find.type,
             composition: data.composition || find.composition,
             slug,
-            title: data.title || find.title,
+            title: "",
             order: data.order === undefined ? find.order : data.order,
             isActive: data.isActive || find.isActive,
-            description: data.description || find.description,
+            description: "",
             interval: data.interval || find.interval,
             background: data.background || find.background,
             autoPlay: data.autoPlay || find.autoPlay,
           },
         });
+        const findTheCurrentTranslation =
+          await tx.slideShowTranslation.findUnique({
+            where: {
+              slideShowId_lang: {
+                lang,
+                slideShowId: data.slideShowId,
+              },
+            },
+          });
 
-        return updateSlideShow;
+        const projectTranslation = await tx.slideShowTranslation.upsert({
+          where: {
+            slideShowId_lang: {
+              lang,
+              slideShowId: data.slideShowId,
+            },
+          },
+          update: {
+            title: data.title || findTheCurrentTranslation?.title,
+            description:
+              data.description || findTheCurrentTranslation?.description,
+          },
+          create: {
+            slideShowId: data.slideShowId,
+            lang,
+            title: data.title || "",
+            description: data.description || "",
+          },
+        });
+
+        return { SlideShow: updateSlideShow, translation: projectTranslation };
       });
       return transaction;
     } catch (error) {
@@ -336,7 +411,7 @@ export class slideShowRepository {
       throw new ServiceError(
         "error updating a slideshow",
         400,
-        "SLIDESHOW_UPDATE_ERROR"
+        "SLIDESHOW_UPDATE_ERROR",
       );
     }
   }
@@ -355,7 +430,7 @@ export class slideShowRepository {
       throw new ServiceError(
         "error deleting a slideshow",
         400,
-        "SLIDESHOW_DELETE_ERROR"
+        "SLIDESHOW_DELETE_ERROR",
       );
     }
   }
@@ -384,7 +459,7 @@ export class slideShowRepository {
               order: att.order - 1,
             },
           });
-        })
+        }),
       );
 
       return promises;
@@ -424,7 +499,7 @@ export class slideShowRepository {
       throw new ServiceError(
         "error updating a slideshow Reorder",
         400,
-        "SLIDESHOW_UPDATE_ERROR"
+        "SLIDESHOW_UPDATE_ERROR",
       );
     }
   }
@@ -467,7 +542,7 @@ export class slideShowRepository {
       throw new ServiceError(
         "Error updating slideshow reorder",
         400,
-        "SLIDESHOW_UPDATE_ERROR"
+        "SLIDESHOW_UPDATE_ERROR",
       );
     }
   }
@@ -501,7 +576,7 @@ export class slideShowRepository {
       throw new ServiceError(
         "error getting slide show slides count",
         400,
-        "SLIDESHOW_SLIDES_COUNT_ERROR"
+        "SLIDESHOW_SLIDES_COUNT_ERROR",
       );
     }
   }
@@ -516,9 +591,10 @@ export class slideShowRepository {
           number
         >
       >;
-    }
+    },
+    tx?: txInstance,
   ) {
-    console.log("test");
+    const prismaToUse = tx || this.prisma;
     await this.findById(slideShowId);
     const perPageDefault = Math.min(Math.max(opts?.perPage ?? 10, 1), 100);
     const pageDefault = Math.max(opts?.page ?? 1, 1);
@@ -533,7 +609,7 @@ export class slideShowRepository {
     const tst = getSkipTake(opts?.pagesPerType?.testimonials);
     const tm = getSkipTake(opts?.pagesPerType?.team);
     const [rawSvc, rawPrj, rawCli, rawTst, rawTm] = await Promise.all([
-      this.prisma.serviceSlideShow.findMany({
+      prismaToUse.serviceSlideShow.findMany({
         where: { slideShowId },
         orderBy: { order: "asc" },
         skip: svc.skip,
@@ -543,11 +619,12 @@ export class slideShowRepository {
           service: {
             include: {
               image: true,
+              serviceTranslation: true,
             },
           },
         },
       }),
-      this.prisma.projectSlideShow.findMany({
+      prismaToUse.projectSlideShow.findMany({
         where: { slideShowId },
         orderBy: { order: "asc" },
         skip: prj.skip,
@@ -556,11 +633,12 @@ export class slideShowRepository {
           project: {
             include: {
               image: true,
-              services : {
-                select : {
-                  name : true ,
-                  icon : true
-                }
+              ProjectTranslation: true,
+              services: {
+                select: {
+                  name: true,
+                  icon: true,
+                },
               },
               technologies: {
                 select: {
@@ -572,30 +650,29 @@ export class slideShowRepository {
                     },
                   },
                 },
-              }
-            
+              },
             },
           },
         },
       }),
 
-      this.prisma.clientSlideShow.findMany({
+      prismaToUse.clientSlideShow.findMany({
         where: { slideShowId },
         orderBy: { order: "asc" },
         skip: cli.skip,
         take: cli.take,
 
         include: {
-
           client: {
             include: {
               image: true,
               logo: true,
+              ClientTranslation: true,
             },
           },
         },
       }),
-      this.prisma.testimonialSlideShow.findMany({
+      prismaToUse.testimonialSlideShow.findMany({
         where: { slideShowId },
         orderBy: { order: "asc" },
         skip: tst.skip,
@@ -604,11 +681,12 @@ export class slideShowRepository {
           testimonial: {
             include: {
               avatar: true,
+              TestimonialTranslation: true,
             },
           },
         },
       }),
-      this.prisma.teamSlideShow.findMany({
+      prismaToUse.teamSlideShow.findMany({
         where: { slideShowId },
         orderBy: { order: "asc" },
         skip: tm.skip,
@@ -617,6 +695,7 @@ export class slideShowRepository {
           team: {
             include: {
               image: true,
+              TeamMemberTranslation: true,
             },
           },
         },
@@ -643,12 +722,12 @@ export class slideShowRepository {
         const order =
           typeof r.order === "number" && r.order !== 0
             ? r.order
-            : entity?.order ?? 1000;
+            : (entity?.order ?? 1000);
 
         const isVisible =
           typeof r.isVisible === "boolean"
             ? r.isVisible
-            : entity?.isActive ?? true;
+            : (entity?.isActive ?? true);
 
         return {
           type,
@@ -657,6 +736,14 @@ export class slideShowRepository {
           order,
           isVisible,
           data: entity,
+
+          translation:
+            entity?.TeamMemberTranslation ||
+            entity?.TestimonialTranslation ||
+            entity?.ClientTranslation ||
+            entity?.serviceTranslation ||
+            entity?.ProjectTranslation ||
+            [],
           // copy any custom fields from pivot if exist
           customDesc: r.customDesc ?? null,
           customTitle: r.customTitle ?? null,
@@ -699,6 +786,62 @@ export class slideShowRepository {
       slidesCount: await this.slideShowSlidesCount(slideShowId),
     };
   }
+  async getSlideShowsWithSlidesPaged(
+    // slideShowId: string,
+    { skip, take }: { skip: number; take: number },
+    opts?: {
+      perPage?: number;
+      page?: number;
+      pagesPerType?: Partial<
+        Record<
+          "services" | "projects" | "clients" | "testimonials" | "team",
+          number
+        >
+      >;
+    },
+  ) {
+    try {
+      const transaction = this.prisma.$transaction(
+        async (tx) => {
+          const slideShows = await tx.slideShow.findMany({
+            where: {
+              isActive: true,
+            },
+            orderBy: {
+              order: "asc",
+            },
+            skip: skip * take,
+            take: take,
+          });
+
+          if (slideShows.length) {
+            const slideShowWithSlides = slideShows.map(async (slideShow) => {
+              return {
+                slideShow,
+                slides: await this.getSlidesPaged(slideShow.id, opts, tx),
+              };
+            });
+            const slides = await Promise.all(slideShowWithSlides);
+            return slides;
+          }
+          return null;
+
+          // return await this.getSlideShowsWithSlidesPaged(tx, opts);
+        },
+        {
+          maxWait: 10000,
+          timeout: 20000,
+        },
+      );
+      return transaction;
+    } catch (error) {
+      throw new ServiceError(
+        "error getting slide shows",
+        400,
+        "SLIDESHOW_ERROR",
+      );
+    }
+  }
 
   // attaches
   async attach({
@@ -739,7 +882,7 @@ export class slideShowRepository {
         throw new ServiceError(
           "Attach entity not found id: " + attachId,
           404,
-          "id not found in DB"
+          "id not found in DB",
         );
       }
 
@@ -764,7 +907,6 @@ export class slideShowRepository {
           order = lastOrder + 1;
         }
         if (order && order > lastOrder) {
-
           order = lastOrder + 1;
         }
       }
@@ -798,8 +940,8 @@ export class slideShowRepository {
         });
       }
       return {
-        ...attach ,
-        _id : attach?.fieldName
+        ...attach,
+        _id: attach?.fieldName,
       } as
         | TestimonialSlideShow
         | TeamSlideShow
@@ -811,7 +953,7 @@ export class slideShowRepository {
       throw new ServiceError(
         "error attaching to slideshow",
         400,
-        "SLIDESHOW_ATTACH_ERROR"
+        "SLIDESHOW_ATTACH_ERROR",
       );
     }
   }
@@ -848,7 +990,7 @@ export class slideShowRepository {
               customDesc: att.customDesc || "",
               tx,
             });
-          })
+          }),
         );
         return promises;
       });
@@ -858,7 +1000,7 @@ export class slideShowRepository {
       throw new ServiceError(
         "error attaching to slideshow",
         400,
-        "SLIDESHOW_ATTACH_ERROR_MANY"
+        "SLIDESHOW_ATTACH_ERROR_MANY",
       );
     }
   }
@@ -880,7 +1022,7 @@ export class slideShowRepository {
       const findTheAttachedTable = await this.findAttachTable(
         attachId,
         attachType,
-        prismaTouse
+        prismaTouse,
       );
       console.log(findTheAttachedTable);
 
@@ -888,7 +1030,7 @@ export class slideShowRepository {
         throw new ServiceError(
           "Attach entity not found id: " + attachId,
           404,
-          "id not found in DB"
+          "id not found in DB",
         );
       }
 
@@ -918,7 +1060,7 @@ export class slideShowRepository {
       throw new ServiceError(
         "error attaching to slideshow",
         400,
-        "SLIDESHOW_ATTACH_ERROR"
+        "SLIDESHOW_ATTACH_ERROR",
       );
     }
   }
@@ -975,7 +1117,7 @@ export class slideShowRepository {
       throw new ServiceError(
         "error attaching to slideshow",
         400,
-        "SLIDESHOW_ATTACH_ERROR"
+        "SLIDESHOW_ATTACH_ERROR",
       );
     }
   }
@@ -992,7 +1134,7 @@ export class slideShowRepository {
               isMany: true,
               tx,
             });
-          })
+          }),
         );
         return promises;
       });
@@ -1002,13 +1144,16 @@ export class slideShowRepository {
       throw new ServiceError(
         "error attaching to slideshow",
         400,
-        "SLIDESHOW_ATTACH_ERROR_MANY"
+        "SLIDESHOW_ATTACH_ERROR_MANY",
       );
     }
   }
 
   // ***
-  async createAndAttachMany({ slides, ...rest }: CreateAndAttachMany) {
+  async createAndAttachMany(
+    lang: "EN" | "AR",
+    { slides, ...rest }: CreateAndAttachMany,
+  ) {
     try {
       const transiction = this.prisma.$transaction(
         async (tx) => {
@@ -1032,9 +1177,22 @@ export class slideShowRepository {
           const slideShow = await tx.slideShow.create({
             data: {
               ...rest,
+              title: "",
+              description: "",
               slug,
             },
           });
+
+          const translation = await tx.slideShowTranslation.create({
+            data: {
+              slideShowId: slideShow.id,
+
+              lang,
+              title: rest.title,
+              description: rest.title,
+            },
+          });
+
           const cerated = Promise.all(
             slides.map((att) => {
               return this.attach({
@@ -1048,15 +1206,23 @@ export class slideShowRepository {
                 customDesc: att.customDesc || "",
                 tx,
               });
-            })
+            }),
           );
 
-          return { slideShow, attacheds: await cerated };
+          return {
+            slideShow: {
+              ...slideShow,
+              title: translation.title,
+              description: translation.description,
+            },
+            translation,
+            attacheds: await cerated,
+          };
         },
         {
           maxWait: 5000,
           timeout: 20000,
-        }
+        },
       );
       console.log(transiction);
       return transiction;
@@ -1065,7 +1231,7 @@ export class slideShowRepository {
       throw new ServiceError(
         "error creating and attaching to slideshow",
         400,
-        "SLIDESHOW_CREATE_ATTACH_ERROR_MANY"
+        "SLIDESHOW_CREATE_ATTACH_ERROR_MANY",
       );
     }
   }
@@ -1085,7 +1251,7 @@ export class slideShowRepository {
           throw new ServiceError(
             "slideShow not found id: " + rest.id,
             404,
-            "id not found in DB"
+            "id not found in DB",
           );
         }
 
@@ -1102,8 +1268,10 @@ export class slideShowRepository {
         if (newSlides) {
           cerated = Promise.all(
             newSlides.map((att) => {
+              if (!find?.slideShow?.id) return;
+
               return this.attach({
-                slideShowId: find.id,
+                slideShowId: find.slideShow.id,
                 attachType: att.type,
                 attachId: att.id,
                 order: att.order || 1,
@@ -1113,21 +1281,22 @@ export class slideShowRepository {
                 customDesc: att.customDesc || "",
                 tx,
               });
-            })
+            }),
           );
         }
         let deleted;
         if (deleteArr) {
           deleted = Promise.all(
             deleteArr.map((id) => {
+              if (!find?.slideShow?.id) return;
               return this.Deattach({
-                slideShowId: find.id,
+                slideShowId: find?.slideShow?.id,
                 type: id.type,
                 id: id.id,
                 isMany: true,
                 tx,
               });
-            })
+            }),
           );
         }
 
@@ -1144,7 +1313,7 @@ export class slideShowRepository {
                 customDesc: up.customDesc || "",
                 tx,
               });
-            })
+            }),
           );
         }
 
@@ -1161,7 +1330,7 @@ export class slideShowRepository {
       throw new ServiceError(
         "error updating and attaching to slideshow",
         400,
-        "SLIDESHOW_UPDATE_ATTACH_ERROR_MANY"
+        "SLIDESHOW_UPDATE_ATTACH_ERROR_MANY",
       );
     }
   }
@@ -1199,7 +1368,7 @@ export class slideShowRepository {
         throw new ServiceError(
           `Attachment not found with id: ${attachId}`,
           404,
-          "ATTACHMENT_NOT_FOUND"
+          "ATTACHMENT_NOT_FOUND",
         );
       }
 
@@ -1241,7 +1410,7 @@ export class slideShowRepository {
       throw new ServiceError(
         "Error updating attachment in slideshow",
         400,
-        "SLIDESHOW_UPDATE_ATTACH_ERROR"
+        "SLIDESHOW_UPDATE_ATTACH_ERROR",
       );
     }
   }
@@ -1286,7 +1455,7 @@ export class slideShowRepository {
       throw new ServiceError(
         "error getting attacheds to slideshow Grouped by type",
         400,
-        "SLIDESHOW_ATTACH_ERROR_MANY"
+        "SLIDESHOW_ATTACH_ERROR_MANY",
       );
     }
   }
@@ -1330,7 +1499,7 @@ export class slideShowRepository {
       throw new ServiceError(
         "error getting attacheds to slideshow",
         400,
-        "SLIDESHOW_ATTACH_ERROR_MANY"
+        "SLIDESHOW_ATTACH_ERROR_MANY",
       );
     }
   }
@@ -1375,19 +1544,21 @@ export class slideShowRepository {
       throw new ServiceError(
         "error getting attacheds to slideshow",
         400,
-        "SLIDESHOW_ATTACH_ERROR_MANY"
+        "SLIDESHOW_ATTACH_ERROR_MANY",
       );
     }
   }
   // ***
-  async bulkSlideOperations({
-
-    slideShowId,
-    newSlides = [],
-    updateSlides = [],
-    deletedSlides = [],
-    updatedOrder = [],
-  }: BulkSlideOperationsDTO) {
+  async bulkSlideOperations(
+    lang: "EN" | "AR",
+    {
+      slideShowId,
+      newSlides = [],
+      updateSlides = [],
+      deletedSlides = [],
+      updatedOrder = [],
+    }: BulkSlideOperationsDTO,
+  ) {
     try {
       const transaction = await this.prisma.$transaction(
         async (tx) => {
@@ -1397,11 +1568,10 @@ export class slideShowRepository {
             throw new ServiceError(
               `Slideshow not found with id: ${slideShowId}`,
               404,
-              "SLIDESHOW_NOT_FOUND"
+              "SLIDESHOW_NOT_FOUND",
             );
           }
 
-          // 1. DELETE SLIDES
           const deleted = await Promise.all(
             deletedSlides.map((item) => {
               return this.DeatchWithJoinTableId({
@@ -1411,27 +1581,24 @@ export class slideShowRepository {
                 isMany: true,
                 slideShowId: slideShowId,
               });
-            })
+            }),
           );
 
-          // 2. CREATE NEW SLIDES
           const created = await Promise.all(
             newSlides.map((slide) => {
-
-              return  this.attach({
-                  slideShowId,
-                  attachType: slide.type ==="team" ? "teamMember" : slide.type,
-                  attachId: slide.id, // Resource ID
-                  order: slide.order,
-                  isVisible: slide.isVisible,
-                  customTitle: slide.customTitle || "",
-                  customDesc: (slide as any).customDescription || "",
-                  isMany: true,
-                  tx,
-                  skipOrder: true,
-                });
-             
-            })
+              return this.attach({
+                slideShowId,
+                attachType: slide.type === "team" ? "teamMember" : slide.type,
+                attachId: slide.id, // Resource ID
+                order: slide.order,
+                isVisible: slide.isVisible,
+                customTitle: slide.customTitle || "",
+                customDesc: (slide as any).customDescription || "",
+                isMany: true,
+                tx,
+                skipOrder: true,
+              });
+            }),
           );
 
           // 3. UPDATE SLIDES (metadata only, not order)
@@ -1439,9 +1606,12 @@ export class slideShowRepository {
             updateSlides.map(async (slide) => {
               const updateData: any = {};
 
-              console.log({
-                slide
-              } , "customDescription")
+              console.log(
+                {
+                  slide,
+                },
+                "customDescription",
+              );
 
               if (slide.isVisible !== undefined) {
                 updateData.isVisible = slide.isVisible;
@@ -1453,15 +1623,14 @@ export class slideShowRepository {
                   updateData.customTitle = slide.customTitle;
                 }
                 if ((slide as any).customDescription !== undefined) {
-
                   updateData.customDesc = (slide as any).customDescription;
                 }
               }
-              const attachType = (slide.type === "team" ? "teamMember" : slide.type) as keyof ReturnType<typeof this.modelAttachMap>;
+              const attachType = (
+                slide.type === "team" ? "teamMember" : slide.type
+              ) as keyof ReturnType<typeof this.modelAttachMap>;
 
-              return await (
-                this.modelAttachMap(tx)[attachType].update as any
-              )({
+              return await (this.modelAttachMap(tx)[attachType].update as any)({
                 where: {
                   id: slide.id,
                 },
@@ -1472,16 +1641,16 @@ export class slideShowRepository {
               //   where: { id: slide.id },
               //   data: updateData,
               // });
-            })
+            }),
           );
 
           // 4. UPDATE ORDER (separate from metadata updates)
           const reordered = await Promise.all(
             updatedOrder.map(async (slide) => {
-              const attachType = (slide.type === "team" ? "teamMember" : slide.type) as keyof ReturnType<typeof this.modelAttachMap>;
-              return await (
-                this.modelAttachMap(tx)[attachType].update as any
-              )({
+              const attachType = (
+                slide.type === "team" ? "teamMember" : slide.type
+              ) as keyof ReturnType<typeof this.modelAttachMap>;
+              return await (this.modelAttachMap(tx)[attachType].update as any)({
                 where: {
                   id: slide.id,
                 },
@@ -1489,7 +1658,7 @@ export class slideShowRepository {
                   order: slide.order,
                 },
               });
-            })
+            }),
           );
 
           return {
@@ -1503,7 +1672,7 @@ export class slideShowRepository {
         {
           timeout: 120000,
           maxWait: 120000,
-        }
+        },
       );
 
       return transaction;
@@ -1517,7 +1686,7 @@ export class slideShowRepository {
       throw new ServiceError(
         "Error performing bulk slide operations",
         400,
-        "BULK_SLIDE_OPERATIONS_ERROR"
+        "BULK_SLIDE_OPERATIONS_ERROR",
       );
     }
   }

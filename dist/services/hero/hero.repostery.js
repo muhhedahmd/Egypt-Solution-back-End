@@ -27,12 +27,24 @@ class HeroRepository {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    findMany(skip, take) {
-        return __awaiter(this, void 0, void 0, function* () {
+    findMany() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", skip, take) {
             try {
                 const heroes = yield this.prisma.hero.findMany({
                     include: {
                         backgroundImage: true,
+                        HeroTranslation: {
+                            select: {
+                                id: true,
+                                name: true,
+                                ctaText: true,
+                                description: true,
+                                secondaryCtaText: true,
+                                lang: true,
+                                subtitle: true,
+                                title: true,
+                            },
+                        },
                     },
                     skip: skip * take,
                     take: take,
@@ -41,9 +53,9 @@ class HeroRepository {
                     },
                 });
                 return heroes.map((hero) => {
-                    const { backgroundImage } = hero, rest = __rest(hero, ["backgroundImage"]);
+                    const { backgroundImage, HeroTranslation } = hero, rest = __rest(hero, ["backgroundImage", "HeroTranslation"]);
                     return {
-                        hero: rest,
+                        hero: Object.assign(Object.assign({}, rest), { HeroTranslation }),
                         backgroundImage: backgroundImage || null,
                     };
                 });
@@ -59,15 +71,36 @@ class HeroRepository {
             return this.prisma.hero.count();
         });
     }
-    findById(id) {
-        return __awaiter(this, void 0, void 0, function* () {
+    findById() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", id) {
             try {
-                return this.prisma.hero.findUnique({
+                const hero = yield this.prisma.hero.findUnique({
                     where: { id },
                     include: {
                         backgroundImage: true,
+                        HeroTranslation: {
+                            where: {
+                                lang,
+                            },
+                            select: {
+                                name: true,
+                                ctaText: true,
+                                description: true,
+                                secondaryCtaText: true,
+                                lang: true,
+                                subtitle: true,
+                                title: true,
+                            },
+                        },
                     },
                 });
+                if (!hero)
+                    return null;
+                const { backgroundImage, HeroTranslation } = hero, rest = __rest(hero, ["backgroundImage", "HeroTranslation"]);
+                return {
+                    hero: Object.assign(Object.assign({}, rest), HeroTranslation[0]),
+                    backgroundImage: backgroundImage || null,
+                };
             }
             catch (error) {
                 console.error(error);
@@ -75,13 +108,71 @@ class HeroRepository {
             }
         });
     }
-    findActiveHero() {
+    toggleActive(id) {
         return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const hero = yield this.prisma.hero.findUnique({
+                    where: { id },
+                    select: {
+                        isActive: true,
+                    },
+                });
+                if (!hero) {
+                    throw new hero_error_1.HeroError("Hero not found", 404, "HERO_NOT_FOUND");
+                }
+                const newActiveState = !hero.isActive;
+                if (newActiveState === true) {
+                    yield this.prisma.hero.updateMany({
+                        where: {
+                            id: {
+                                not: id,
+                            },
+                        },
+                        data: {
+                            isActive: false,
+                        },
+                    });
+                }
+                return yield this.prisma.hero.update({
+                    where: { id },
+                    data: {
+                        isActive: newActiveState,
+                    },
+                    select: {
+                        id: true,
+                        isActive: true,
+                    },
+                });
+            }
+            catch (error) {
+                if (error instanceof hero_error_1.HeroError)
+                    throw error;
+                throw new hero_error_1.HeroError("Error toggling active hero", 400, "HERO_TOGGLE_ERROR");
+            }
+        });
+    }
+    findActiveHero() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN") {
+            console.log(lang, "lang");
             try {
                 const hero = yield this.prisma.hero.findFirst({
                     where: { isActive: true },
                     include: {
                         backgroundImage: true,
+                        HeroTranslation: {
+                            where: {
+                                lang,
+                            },
+                            select: {
+                                name: true,
+                                ctaText: true,
+                                description: true,
+                                secondaryCtaText: true,
+                                lang: true,
+                                subtitle: true,
+                                title: true,
+                            },
+                        },
                     },
                     orderBy: {
                         updatedAt: "desc",
@@ -89,9 +180,9 @@ class HeroRepository {
                 });
                 if (!hero)
                     return null;
-                const { backgroundImage } = hero, rest = __rest(hero, ["backgroundImage"]);
+                const { backgroundImage, HeroTranslation } = hero, rest = __rest(hero, ["backgroundImage", "HeroTranslation"]);
                 return {
-                    hero: rest,
+                    hero: Object.assign(Object.assign({}, rest), HeroTranslation[0]),
                     backgroundImage: backgroundImage || null,
                 };
             }
@@ -108,33 +199,60 @@ class HeroRepository {
                     where: {
                         OR: [
                             {
-                                name: {
-                                    contains: searchTerm,
-                                    mode: "insensitive",
+                                HeroTranslation: {
+                                    some: {
+                                        name: {
+                                            contains: searchTerm,
+                                            mode: "insensitive",
+                                        },
+                                    },
                                 },
                             },
                             {
-                                title: {
-                                    contains: searchTerm,
-                                    mode: "insensitive",
+                                HeroTranslation: {
+                                    some: {
+                                        title: {
+                                            contains: searchTerm,
+                                            mode: "insensitive",
+                                        },
+                                    },
                                 },
                             },
                             {
-                                subtitle: {
-                                    contains: searchTerm,
-                                    mode: "insensitive",
+                                HeroTranslation: {
+                                    some: {
+                                        subtitle: {
+                                            contains: searchTerm,
+                                            mode: "insensitive",
+                                        },
+                                    },
                                 },
                             },
                             {
-                                description: {
-                                    contains: searchTerm,
-                                    mode: "insensitive",
+                                HeroTranslation: {
+                                    some: {
+                                        description: {
+                                            contains: searchTerm,
+                                            mode: "insensitive",
+                                        },
+                                    },
                                 },
                             },
                         ],
                     },
                     include: {
                         backgroundImage: true,
+                        HeroTranslation: {
+                            select: {
+                                name: true,
+                                ctaText: true,
+                                description: true,
+                                secondaryCtaText: true,
+                                lang: true,
+                                subtitle: true,
+                                title: true,
+                            },
+                        },
                     },
                     skip: skip * take,
                     take,
@@ -143,9 +261,9 @@ class HeroRepository {
                     },
                 });
                 return heroes.map((hero) => {
-                    const { backgroundImage } = hero, rest = __rest(hero, ["backgroundImage"]);
+                    const { backgroundImage, HeroTranslation } = hero, rest = __rest(hero, ["backgroundImage", "HeroTranslation"]);
                     return {
-                        hero: rest,
+                        hero: Object.assign(Object.assign({}, rest), { HeroTranslation }),
                         backgroundImage: backgroundImage || null,
                     };
                 });
@@ -156,7 +274,7 @@ class HeroRepository {
             }
         });
     }
-    create(data) {
+    create(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const transaction = yield this.prisma.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
@@ -197,19 +315,15 @@ class HeroRepository {
                     }
                     const hero = yield tx.hero.create({
                         data: {
-                            name: data.name || "Main Hero",
-                            title: data.title,
-                            subtitle: data.subtitle,
-                            description: data.description,
+                            name: "",
+                            title: "",
                             backgroundImageId: imageId,
                             backgroundColor: data.backgroundColor,
                             backgroundVideo: data.backgroundVideo,
                             overlayColor: data.overlayColor,
                             overlayOpacity: data.overlayOpacity,
-                            ctaText: data.ctaText,
                             ctaUrl: data.ctaUrl,
                             ctaVariant: data.ctaVariant,
-                            secondaryCtaText: data.secondaryCtaText,
                             secondaryCtaUrl: data.secondaryCtaUrl,
                             secondaryCtaVariant: data.secondaryCtaVariant,
                             alignment: data.alignment,
@@ -223,13 +337,38 @@ class HeroRepository {
                             customCSS: data.customCSS,
                             styleOverrides: data.styleOverrides,
                             isActive: (_a = data.isActive) !== null && _a !== void 0 ? _a : true,
+                            HeroTranslation: {
+                                create: {
+                                    name: data.name || "Main Hero",
+                                    title: data.title,
+                                    subtitle: data.subtitle,
+                                    description: data.description,
+                                    ctaText: data.ctaText,
+                                    secondaryCtaText: data.secondaryCtaText,
+                                    lang: lang,
+                                },
+                            },
                         },
                         include: {
                             backgroundImage: true,
+                            HeroTranslation: {
+                                select: {
+                                    name: true,
+                                    ctaText: true,
+                                    description: true,
+                                    secondaryCtaText: true,
+                                    lang: true,
+                                    subtitle: true,
+                                    title: true,
+                                },
+                            },
                         },
                     });
-                    const { backgroundImage } = hero, rest = __rest(hero, ["backgroundImage"]);
-                    return { hero: rest, backgroundImage: backgroundImage };
+                    const { backgroundImage, HeroTranslation } = hero, rest = __rest(hero, ["backgroundImage", "HeroTranslation"]);
+                    return {
+                        hero: Object.assign(Object.assign({}, rest), HeroTranslation[0]),
+                        backgroundImage: backgroundImage,
+                    };
                 }), {
                     timeout: 20000,
                     isolationLevel: "Serializable",
@@ -243,11 +382,11 @@ class HeroRepository {
             }
         });
     }
-    update(data) {
+    update(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const transaction = yield this.prisma.$transaction((prismaTx) => __awaiter(this, void 0, void 0, function* () {
-                    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0;
+                    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u;
                     let newImageId = null;
                     if (!data.heroId)
                         throw new Error("no heroId provided");
@@ -313,37 +452,86 @@ class HeroRepository {
                     const updatedHero = yield prismaTx.hero.update({
                         where: { id: data.heroId },
                         data: {
-                            name: (_a = data.name) !== null && _a !== void 0 ? _a : hero.name,
-                            title: (_b = data.title) !== null && _b !== void 0 ? _b : hero.title,
-                            subtitle: (_c = data.subtitle) !== null && _c !== void 0 ? _c : hero.subtitle,
-                            description: (_d = data.description) !== null && _d !== void 0 ? _d : hero.description,
+                            name: "",
+                            title: "",
                             backgroundImageId: newImageId,
-                            backgroundColor: (_e = data.backgroundColor) !== null && _e !== void 0 ? _e : hero.backgroundColor,
-                            backgroundVideo: (_f = data.backgroundVideo) !== null && _f !== void 0 ? _f : hero.backgroundVideo,
-                            overlayColor: (_g = data.overlayColor) !== null && _g !== void 0 ? _g : hero.overlayColor,
-                            overlayOpacity: (_h = data.overlayOpacity) !== null && _h !== void 0 ? _h : hero.overlayOpacity,
-                            ctaText: (_j = data.ctaText) !== null && _j !== void 0 ? _j : hero.ctaText,
-                            ctaUrl: (_k = data.ctaUrl) !== null && _k !== void 0 ? _k : hero.ctaUrl,
-                            ctaVariant: (_l = data.ctaVariant) !== null && _l !== void 0 ? _l : hero.ctaVariant,
-                            secondaryCtaText: (_m = data.secondaryCtaText) !== null && _m !== void 0 ? _m : hero.secondaryCtaText,
-                            secondaryCtaUrl: (_o = data.secondaryCtaUrl) !== null && _o !== void 0 ? _o : hero.secondaryCtaUrl,
-                            secondaryCtaVariant: (_p = data.secondaryCtaVariant) !== null && _p !== void 0 ? _p : hero.secondaryCtaVariant,
-                            alignment: (_q = data.alignment) !== null && _q !== void 0 ? _q : hero.alignment,
-                            variant: (_r = data.variant) !== null && _r !== void 0 ? _r : hero.variant,
-                            minHeight: (_s = data.minHeight) !== null && _s !== void 0 ? _s : hero.minHeight,
-                            titleSize: (_t = data.titleSize) !== null && _t !== void 0 ? _t : hero.titleSize,
-                            titleColor: (_u = data.titleColor) !== null && _u !== void 0 ? _u : hero.titleColor,
-                            subtitleColor: (_v = data.subtitleColor) !== null && _v !== void 0 ? _v : hero.subtitleColor,
-                            descriptionColor: (_w = data.descriptionColor) !== null && _w !== void 0 ? _w : hero.descriptionColor,
-                            showScrollIndicator: (_x = data.showScrollIndicator) !== null && _x !== void 0 ? _x : hero.showScrollIndicator,
-                            customCSS: (_y = data.customCSS) !== null && _y !== void 0 ? _y : hero.customCSS,
-                            styleOverrides: (_z = data.styleOverrides) !== null && _z !== void 0 ? _z : hero.styleOverrides,
-                            isActive: (_0 = data.isActive) !== null && _0 !== void 0 ? _0 : hero.isActive,
+                            backgroundColor: (_a = data.backgroundColor) !== null && _a !== void 0 ? _a : hero.backgroundColor,
+                            backgroundVideo: (_b = data.backgroundVideo) !== null && _b !== void 0 ? _b : hero.backgroundVideo,
+                            overlayColor: (_c = data.overlayColor) !== null && _c !== void 0 ? _c : hero.overlayColor,
+                            overlayOpacity: (_d = data.overlayOpacity) !== null && _d !== void 0 ? _d : hero.overlayOpacity,
+                            ctaUrl: (_e = data.ctaUrl) !== null && _e !== void 0 ? _e : hero.ctaUrl,
+                            ctaVariant: (_f = data.ctaVariant) !== null && _f !== void 0 ? _f : hero.ctaVariant,
+                            secondaryCtaUrl: (_g = data.secondaryCtaUrl) !== null && _g !== void 0 ? _g : hero.secondaryCtaUrl,
+                            secondaryCtaVariant: (_h = data.secondaryCtaVariant) !== null && _h !== void 0 ? _h : hero.secondaryCtaVariant,
+                            alignment: (_j = data.alignment) !== null && _j !== void 0 ? _j : hero.alignment,
+                            variant: (_k = data.variant) !== null && _k !== void 0 ? _k : hero.variant,
+                            minHeight: (_l = data.minHeight) !== null && _l !== void 0 ? _l : hero.minHeight,
+                            titleSize: (_m = data.titleSize) !== null && _m !== void 0 ? _m : hero.titleSize,
+                            titleColor: (_o = data.titleColor) !== null && _o !== void 0 ? _o : hero.titleColor,
+                            subtitleColor: (_p = data.subtitleColor) !== null && _p !== void 0 ? _p : hero.subtitleColor,
+                            descriptionColor: (_q = data.descriptionColor) !== null && _q !== void 0 ? _q : hero.descriptionColor,
+                            showScrollIndicator: (_r = data.showScrollIndicator) !== null && _r !== void 0 ? _r : hero.showScrollIndicator,
+                            customCSS: (_s = data.customCSS) !== null && _s !== void 0 ? _s : hero.customCSS,
+                            styleOverrides: (_t = data.styleOverrides) !== null && _t !== void 0 ? _t : hero.styleOverrides,
+                            isActive: (_u = data.isActive) !== null && _u !== void 0 ? _u : hero.isActive,
                         },
-                        include: { backgroundImage: true },
+                        include: {
+                            backgroundImage: true,
+                            HeroTranslation: {
+                                select: {
+                                    name: true,
+                                    ctaText: true,
+                                    description: true,
+                                    secondaryCtaText: true,
+                                    lang: true,
+                                    subtitle: true,
+                                    title: true,
+                                },
+                            },
+                        },
                     });
-                    const { backgroundImage } = updatedHero, rest = __rest(updatedHero, ["backgroundImage"]);
-                    return { hero: rest, backgroundImage: backgroundImage };
+                    // Update translation
+                    yield prismaTx.heroTranslation.upsert({
+                        where: {
+                            heroId_lang: {
+                                lang,
+                                heroId: data.heroId,
+                            },
+                        },
+                        update: {
+                            name: data.name || hero.name,
+                            title: data.title || hero.title,
+                            subtitle: data.subtitle || hero.subtitle,
+                            description: data.description || hero.description,
+                            ctaText: data.ctaText || hero.ctaText,
+                            secondaryCtaText: data.secondaryCtaText || hero.secondaryCtaText,
+                        },
+                        create: {
+                            heroId: data.heroId,
+                            name: data.name || hero.name,
+                            title: data.title || hero.title,
+                            subtitle: data.subtitle || hero.subtitle,
+                            description: data.description || hero.description,
+                            ctaText: data.ctaText || hero.ctaText,
+                            secondaryCtaText: data.secondaryCtaText || hero.secondaryCtaText,
+                            lang,
+                        },
+                        select: {
+                            name: true,
+                            ctaText: true,
+                            description: true,
+                            secondaryCtaText: true,
+                            lang: true,
+                            subtitle: true,
+                            title: true,
+                        },
+                    });
+                    const { backgroundImage, HeroTranslation } = updatedHero, rest = __rest(updatedHero, ["backgroundImage", "HeroTranslation"]);
+                    const translation = HeroTranslation.find((t) => t.lang === lang);
+                    return {
+                        hero: Object.assign(Object.assign({}, rest), translation),
+                        backgroundImage: backgroundImage,
+                    };
                 }), {
                     timeout: 20000,
                     maxWait: 5000,
@@ -381,10 +569,6 @@ class HeroRepository {
                 console.error(error);
                 throw new Error("Error deleting hero");
             }
-        });
-    }
-    filter(variant) {
-        return __awaiter(this, void 0, void 0, function* () {
         });
     }
 }

@@ -6,27 +6,34 @@ import { ServiceError } from "../../errors/services.error";
 import { PaginatedResponse, PaginationParams } from "../../types/services";
 import { Prisma, SlideShow, SlideshowType } from "@prisma/client";
 import { AttachmentTypes } from "../../types/slideShow";
+import { getRedisClient } from "../../config/redis";
+import { slideShowKeyById, slideShowsKey } from "../../config/keys";
 
 export class slideShowLogic {
   constructor(
     private repository: slideShowRepository,
-    private validator: SlideShowValidator
+    private validator: SlideShowValidator,
   ) {}
 
   async getAllServices(
-    params: PaginationParams
+    lang: "EN" | "AR",
+    params: PaginationParams,
   ): Promise<PaginatedResponse<SlideShow>> {
     this.validator.validatePagination(params);
     const skip = params.skip || 0;
     const take = params.take || 10;
-
+    const redis = await getRedisClient();
+    const key = slideShowsKey(`${skip.toString()}-${take.toString()}`);
+    const hashData = await redis.get(key);
+    if (hashData) {
+      return JSON.parse(hashData) as any;
+    }
     const [slideShows, totalItems] = await Promise.all([
-      this.repository.findMany({ skip, take }),
+      this.repository.findMany( lang , { skip, take }),
       this.repository.count(),
     ]);
     const remainingItems = totalItems - (skip * take + slideShows.length);
-
-    return {
+    const data = {
       data: slideShows,
       pagination: {
         totalItems,
@@ -37,9 +44,14 @@ export class slideShowLogic {
         pageSize: take,
       },
     };
+    if (!slideShows?.length) return data;
+    await redis.setEx(key, 120, JSON.stringify(data));
+    return data;
   }
-  async getAllSlideShowsMinmal(): Promise<Partial<SlideShow>[] | undefined> {
-    const slideShows = await this.repository.findManyMinimal();
+  async getAllSlideShowsMinmal(
+    lang: "EN" | "AR",
+  ): Promise<Partial<SlideShow>[] | undefined> {
+    const slideShows = await this.repository.findManyMinimal(lang);
     return slideShows;
   }
   async create(data: unknown): Promise<SlideShow> {
@@ -52,14 +64,17 @@ export class slideShowLogic {
       throw new ServiceError(
         "error create services",
         400,
-        "SLIDESHOW_CREATION_ERROR"
+        "SLIDESHOW_CREATION_ERROR",
       );
 
     return slideShow;
   }
-  async update(data: unknown): Promise<SlideShow> {
+  async update(
+    lang: "EN" | "AR",
+    data: unknown,
+  ): Promise<Awaited<ReturnType<typeof this.repository.update>>> {
     const dataUpdate = this.validator.validateUpdate(data);
-    const updateSlideShow = await this.repository.update(dataUpdate);
+    const updateSlideShow = await this.repository.update(lang, dataUpdate);
     return updateSlideShow;
   }
   async delete(id: string): Promise<SlideShow> {
@@ -68,11 +83,23 @@ export class slideShowLogic {
     return deleteSlideShow;
   }
 
-  async findById(id: string): Promise<SlideShow | null> {
+  async findById(id: string) {
     const validId = this.validator.validateId(id);
-    const findSlideShow = await this.repository.findById(validId);
-
-    return findSlideShow;
+    const redis = await getRedisClient();
+    const key = slideShowKeyById(validId);
+    const hashData = await redis.get(key);
+    if (hashData) {
+      return JSON.parse(hashData) as SlideShow;
+    } else {
+      const findSlideShow = await this.repository.findById(validId);
+      if (!findSlideShow) return null;
+      try {
+        await redis.setEx(key, 10, JSON.stringify(findSlideShow));
+        return findSlideShow;
+      } catch (error) {
+        console.log(error);
+      }
+    }
   }
   async attach(data: unknown): Promise<AttachmentTypes> {
     const valid = this.validator.validateAttachGlobal(data);
@@ -86,20 +113,20 @@ export class slideShowLogic {
   }
   // ***
   async createAndAttachMany(
-    
-    data: unknown
+    lang: "EN" | "AR",
+    data: unknown,
   ): Promise<{ slideShow: SlideShow; attacheds: AttachmentTypes[] }> {
     const valid = this.validator.validCreateAndAttachManySchema(data);
     if (!valid)
       throw new ServiceError(
         "Invalid data for create and attach many",
         400,
-        "SLIDESHOW_CREATE_ATTACH_MANY_ERROR"
+        "SLIDESHOW_CREATE_ATTACH_MANY_ERROR",
       );
 
     const { slides, ...rest } = valid;
 
-    const createdAndAttached = await this.repository.createAndAttachMany({
+    const createdAndAttached = await this.repository.createAndAttachMany(lang, {
       slides: slides.map((slide) => ({
         id: slide.attachId,
         type: slide.attachType,
@@ -113,58 +140,52 @@ export class slideShowLogic {
     return createdAndAttached;
   }
   //*** */
-  async bulkSlideOperations(data: unknown) {
+  async bulkSlideOperations(lang: "EN" | "AR", data: unknown) {
+    const valid = this.validator.validateBulkSlideOperations(data);
 
-  const valid = this.validator.validateBulkSlideOperations(data);
-  
-  if (!valid) {
-    throw new ServiceError(
-      "Invalid data for bulk slide operations",
-      400,
-      "INVALID_BULK_OPERATIONS_DATA"
-    );
+    if (!valid) {
+      throw new ServiceError(
+        "Invalid data for bulk slide operations",
+        400,
+        "INVALID_BULK_OPERATIONS_DATA",
+      );
+    }
+
+    const result = await this.repository.bulkSlideOperations(lang, valid);
+
+    return {
+      success: true,
+      message: "Bulk operations completed successfully",
+      data: {
+        slideShow: result.slideShow,
+        summary: {
+          created: result.created.length,
+          updated: result.updated.length,
+          deleted: result.deleted.length,
+          reordered: result.reordered.length,
+        },
+        details: result,
+      },
+    };
   }
 
-  const result = await this.repository.bulkSlideOperations(valid);
-  
-  return {
-    success: true,
-    message: "Bulk operations completed successfully",
-    data: {
-      slideShow: result.slideShow,
-      summary: {
-        created: result.created.length,
-        updated: result.updated.length,
-        deleted: result.deleted.length,
-        reordered: result.reordered.length,
-      },
-      details: result,
-    },
-  };
-}
-  
-
-  
-  async updateAndAttachMany(
-    data: unknown
-  ) {
+  async updateAndAttachMany(data: unknown) {
     const valid = this.validator.validUpdateAndAttachManySchema(data);
     if (!valid)
       throw new ServiceError(
         "Invalid data for update and attach many",
         400,
-        "SLIDESHOW_UPDATE_ATTACH_MANY_ERROR"
+        "SLIDESHOW_UPDATE_ATTACH_MANY_ERROR",
       );
 
     const { slides, delete: delArr, update, ...rest } = valid;
     const updatedAndAttached = await this.repository.updateAndAttachMany({
       ...rest,
       slides,
-       delete : delArr ,
+      delete: delArr,
       update,
     });
-    return updatedAndAttached
-    
+    return updatedAndAttached;
   }
 
   // ***
@@ -184,8 +205,6 @@ export class slideShowLogic {
     >;
     perPage: number;
   }) {
-
-  
     const validId = this.validator.validateId(id);
     const slides = await this.repository.getSlidesPaged(validId, {
       page,
@@ -194,6 +213,40 @@ export class slideShowLogic {
     });
     return slides;
   }
+  async getSlideShowWithSlides({
+    skip,
+    take,
+    page,
+    pagesPerType,
+    perPage,
+  }: {
+    skip: number;
+    take: number;
+    page: number;
+    pagesPerType?: Partial<
+      Record<
+        "services" | "projects" | "clients" | "testimonials" | "team",
+        number
+      >
+    >;
+    perPage: number;
+  }) {
+    // const { skip, take } = this.validator.validatePagination(params);
+    const slides = await this.repository.getSlideShowsWithSlidesPaged(
+      {
+        skip,
+        take,
+      },
+      {
+        page,
+        pagesPerType,
+        perPage,
+      },
+    );
+    return slides;
+  }
+
+  // ***
   async attachMany(data: unknown): Promise<AttachmentTypes[]> {
     const valid = this.validator.validateBulkAttach(data);
     const updatedService = await this.repository.attachMany({
@@ -257,7 +310,7 @@ export class slideShowLogic {
       throw new ServiceError(
         "error get slide shows",
         400,
-        "SLIDESHOWS_GET_ERROR"
+        "SLIDESHOWS_GET_ERROR",
       );
     }
   }
@@ -308,12 +361,12 @@ export class slideShowLogic {
       throw new ServiceError(
         "error get slide shows",
         400,
-        "SLIDESHOWS_GET_ERROR"
+        "SLIDESHOWS_GET_ERROR",
       );
     }
   }
   async getAttachesByType(
-    data: unknown
+    data: unknown,
   ): Promise<
     PaginatedResponse<
       Prisma.PickEnumerable<Prisma.SlideShowGroupByOutputType, "type"[]>
@@ -359,7 +412,7 @@ export class slideShowLogic {
       throw new ServiceError(
         "error get slide shows",
         400,
-        "SLIDESHOWS_GET_ERROR"
+        "SLIDESHOWS_GET_ERROR",
       );
     }
   }
@@ -370,8 +423,5 @@ export class slideShowLogic {
     });
     return updatedService;
   }
-   //***  */
-   
-
-
+  //***  */
 }

@@ -1,23 +1,23 @@
 import { CompanyInfo } from "@prisma/client";
-import { CompanyInfoRepostery } from "./SettingsRepostery";
 import {
   CompanyInfoCreationError,
   CompanyInfoError,
 } from "../../errors/schema/companyInfo";
+import { CompanyInfoRepository } from "./SettingsRepostery";
 
 export class CompanyInfoLogic {
-  constructor(private settingsRepo: CompanyInfoRepostery) {}
+  constructor(private settingsRepo: CompanyInfoRepository) {}
 
 
-  async createSettings({
+  async createSettings(lang  :"EN" | "AR", {
     data,
     logo,
   }: {
-    data: Omit<CompanyInfo, "id" | "createdAt" | "updatedAt" | "logoId">;
+    data:any;
     logo?: Buffer ;
   }) {
     try {
-      const newSettings = await this.settingsRepo.createSettings({ data, logo });
+      const newSettings = await this.settingsRepo.createSettings(  { data , logo });
       return newSettings;
     } catch (error) {
       if (error instanceof CompanyInfoCreationError) {
@@ -43,15 +43,12 @@ export class CompanyInfoLogic {
 
 
   async updateSettings(
-    id: string,
-    data: {
-      CompanyInfo: Partial<CompanyInfo>;
-      logo?: Buffer;
-      LogoState: "KEEP" | "REMOVE" | "UPDATE";
-    }
+    lang :"EN" | "AR",
+     id: string,
+    data: any
   ) {
     try {
-      const updatedSettings = await this.settingsRepo.updateSettings(id, data);
+      const updatedSettings = await this.settingsRepo.updateSettings(   id, data);
       return updatedSettings;
     } catch (error) {
       if (error instanceof CompanyInfoError) throw error;
@@ -61,7 +58,7 @@ export class CompanyInfoLogic {
 
   async getMimalStats() {
     try {
-      const stats = await this.settingsRepo.getMimalStats();
+      const stats = await this.settingsRepo.getMinimalStats();
       return stats;
     } catch (error) {
       if (error instanceof CompanyInfoError) throw error;

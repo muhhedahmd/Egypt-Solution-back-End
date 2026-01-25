@@ -27,12 +27,12 @@ class HeroLogic {
         this.repository = repository;
         this.validator = validator;
     }
-    getAllHeroes(params) {
-        return __awaiter(this, void 0, void 0, function* () {
+    getAllHeroes() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", params) {
             const skip = params.skip || 0;
             const take = params.take || 10;
             const [heroes, totalItems] = yield Promise.all([
-                this.repository.findMany(skip, take),
+                this.repository.findMany(lang, skip, take),
                 this.repository.count(),
             ]);
             const remainingItems = totalItems - (skip * take + heroes.length);
@@ -49,10 +49,10 @@ class HeroLogic {
             };
         });
     }
-    getHeroById(id) {
-        return __awaiter(this, void 0, void 0, function* () {
+    getHeroById() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", id) {
             this.validator.validateId(id);
-            const hero = yield this.repository.findById(id);
+            const hero = yield this.repository.findById(lang, id);
             if (!hero) {
                 throw new hero_error_1.HeroNotFoundError(id);
             }
@@ -63,57 +63,68 @@ class HeroLogic {
             };
         });
     }
-    getActiveHero() {
-        return __awaiter(this, void 0, void 0, function* () {
-            const hero = yield this.repository.findActiveHero();
+    getActiveHero(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ lang, }) {
+            console.log(lang, "lang lang");
+            const hero = yield this.repository.findActiveHero(lang);
             if (!hero) {
-                throw new hero_error_1.HeroError('No active hero found', 404, 'NO_ACTIVE_HERO');
+                throw new hero_error_1.HeroError("No active hero found", 404, "NO_ACTIVE_HERO");
             }
             return hero;
         });
     }
-    createHero(data) {
-        return __awaiter(this, void 0, void 0, function* () {
+    createHero() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", data) {
             const valid = this.validator.validateCreate(data);
-            const hero = yield this.repository.create(valid);
+            const hero = yield this.repository.create(lang, valid);
             if (!hero)
-                throw new Error('error create hero');
+                throw new Error("error create hero");
             return hero;
+        });
+    }
+    ToggleActive(id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const valid = this.validator.validateId(id);
+            const res = yield this.repository.toggleActive(valid);
+            if (!res)
+                throw new Error("error change hero active");
+            return res;
         });
     }
     deleteHero(heroId) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 if (!heroId)
-                    throw new Error('id is required');
+                    throw new Error("id is required");
                 this.validator.validateId(heroId);
                 const deletedHero = yield this.repository.delete(heroId);
                 if (!deletedHero)
-                    throw new Error('error deleting hero');
+                    throw new Error("error deleting hero");
                 return deletedHero;
             }
             catch (error) {
                 console.error(error);
-                throw new Error('Error deleting hero');
+                throw new Error("Error deleting hero");
             }
         });
     }
     Search(q) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!q)
-                throw new hero_error_1.HeroError('search query is required', 400, 'SEARCH_QUERY_REQUIRED');
+                throw new hero_error_1.HeroError("search query is required", 400, "SEARCH_QUERY_REQUIRED");
             const heroes = yield this.repository.SearchHero(q, 0, 10);
             if (!heroes)
-                throw new hero_error_1.HeroError('error searching heroes', 400, 'ERROR_SEARCHING_HEROES');
+                throw new hero_error_1.HeroError("error searching heroes", 400, "ERROR_SEARCHING_HEROES");
             return heroes;
         });
     }
-    updateHero(data) {
-        return __awaiter(this, void 0, void 0, function* () {
+    updateHero() {
+        return __awaiter(this, arguments, void 0, function* (lang = "EN", data) {
             this.validator.validateUpdate(data);
-            const updatedHero = yield this.repository.update(data);
+            console.log(data.heroId);
+            const updatedHero = yield this.repository.update(lang, data);
             if (!updatedHero)
-                throw new hero_error_1.HeroError('error updating hero', 400, 'ERROR_UPDATING_HERO');
+                throw new hero_error_1.HeroError("error updating hero", 400, "ERROR_UPDATING_HERO");
             const { hero, backgroundImage } = updatedHero;
             return { hero, backgroundImage };
         });

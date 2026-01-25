@@ -6,31 +6,14 @@ import multer from "multer"
 // import { upload } from "../app"
 
 const router = Router()
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
-    fieldSize: 10 * 1024 * 1024, // 10MB for text fields
-    files: 10, // Allow multiple files
-    fields: 100, // Allow many fields
-    parts: 1000, // Allow many parts
-  },
-  fileFilter: (req, file, cb) => {
-    console.log("🔍 Multer processing file:", {
-      fieldname: file.fieldname,
-      originalname: file.originalname,
-      mimetype: file.mimetype,
-    })
-    cb(null, true) // Accept all files
-  },
-})
+
 
 
 router.put(
 
 
   "/profile/update",
-  upload.single("avatar"),
+  // upload.single("avatar"),
   requireAuth as any,
   (req, res, next) => {
 

@@ -107,12 +107,6 @@ const analytics =    await this.prisma.analytics.upsert({
       },
     });
 
-    console.log(
-      `✅ Aggregated ${uniqueVisitors} visitors for ${
-        startOfDay.toISOString().split("T")[0]
-      } ` ,
-       analytics
-    );
   }
 
   async createSession(data: {

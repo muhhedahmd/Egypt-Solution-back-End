@@ -178,8 +178,8 @@ class blogLogic {
     incrementViews(id) {
         return __awaiter(this, void 0, void 0, function* () {
             const validId = this.validator.validateId(id);
-            const blog = yield this.repository.incrementViews(validId);
-            return blog;
+            // const blog = await this.repository.incrementViews(validId);
+            // return blog;
         });
     }
     // CATEGORY METHODS

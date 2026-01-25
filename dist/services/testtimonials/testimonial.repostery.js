@@ -29,9 +29,18 @@ class TestimonialRepository {
     }
     findMany(skip, take) {
         return __awaiter(this, void 0, void 0, function* () {
-            return this.prisma.testimonial.findMany({
+            const testimonials = yield this.prisma.testimonial.findMany({
                 include: {
                     avatar: true,
+                    TestimonialTranslation: {
+                        select: {
+                            clientName: true,
+                            clientPosition: true,
+                            clientCompany: true,
+                            content: true,
+                            lang: true,
+                        },
+                    },
                     slideShows: {
                         include: {
                             slideShow: true,
@@ -43,6 +52,15 @@ class TestimonialRepository {
                 orderBy: {
                     order: 'asc',
                 },
+            });
+            return testimonials.map((testimonial) => {
+                const { avatar, TestimonialTranslation, slideShows } = testimonial, rest = __rest(testimonial, ["avatar", "TestimonialTranslation", "slideShows"]);
+                return {
+                    testimonial: Object.assign({}, rest),
+                    avatar: avatar || null,
+                    translation: TestimonialTranslation,
+                    slideShows,
+                };
             });
         });
     }
@@ -71,10 +89,19 @@ class TestimonialRepository {
     findById(id) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                return this.prisma.testimonial.findUnique({
+                const testimonial = yield this.prisma.testimonial.findUnique({
                     where: { id },
                     include: {
                         avatar: true,
+                        TestimonialTranslation: {
+                            select: {
+                                clientName: true,
+                                clientPosition: true,
+                                clientCompany: true,
+                                content: true,
+                                lang: true,
+                            },
+                        },
                         slideShows: {
                             include: {
                                 slideShow: true,
@@ -82,6 +109,15 @@ class TestimonialRepository {
                         },
                     },
                 });
+                if (!testimonial)
+                    return null;
+                const { avatar, TestimonialTranslation, slideShows } = testimonial, rest = __rest(testimonial, ["avatar", "TestimonialTranslation", "slideShows"]);
+                return {
+                    testimonial: Object.assign({}, rest),
+                    Avatar: avatar || null,
+                    translation: TestimonialTranslation,
+                    slideShows,
+                };
             }
             catch (error) {
                 console.error(error);
@@ -89,40 +125,66 @@ class TestimonialRepository {
             }
         });
     }
-    SearchTestimonial(searchTerm, skip, take) {
+    SearchTestimonial(lang, searchTerm, skip, take) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const testimonials = yield this.prisma.testimonial.findMany({
                     where: {
                         OR: [
                             {
-                                clientName: {
-                                    contains: searchTerm,
-                                    mode: 'insensitive',
+                                TestimonialTranslation: {
+                                    some: {
+                                        clientName: {
+                                            contains: searchTerm,
+                                            mode: 'insensitive',
+                                        },
+                                    },
                                 },
                             },
                             {
-                                clientPosition: {
-                                    contains: searchTerm,
-                                    mode: 'insensitive',
+                                TestimonialTranslation: {
+                                    some: {
+                                        clientPosition: {
+                                            contains: searchTerm,
+                                            mode: 'insensitive',
+                                        },
+                                    },
                                 },
                             },
                             {
-                                clientCompany: {
-                                    contains: searchTerm,
-                                    mode: 'insensitive',
+                                TestimonialTranslation: {
+                                    some: {
+                                        clientCompany: {
+                                            contains: searchTerm,
+                                            mode: 'insensitive',
+                                        },
+                                    },
                                 },
                             },
                             {
-                                content: {
-                                    contains: searchTerm,
-                                    mode: 'insensitive',
+                                TestimonialTranslation: {
+                                    some: {
+                                        content: {
+                                            contains: searchTerm,
+                                            mode: 'insensitive',
+                                        },
+                                    },
                                 },
                             },
                         ],
                     },
                     include: {
                         avatar: true,
+                        TestimonialTranslation: {
+                            where: { lang },
+                            select: {
+                                clientName: true,
+                                clientPosition: true,
+                                clientCompany: true,
+                                content: true,
+                                lang: true,
+                            },
+                        },
                     },
                     skip: skip * take,
                     take,
@@ -130,7 +192,10 @@ class TestimonialRepository {
                         createdAt: 'desc',
                     },
                 });
-                return testimonials;
+                return testimonials.map((testimonial) => {
+                    const { avatar, TestimonialTranslation } = testimonial, rest = __rest(testimonial, ["avatar", "TestimonialTranslation"]);
+                    return Object.assign(Object.assign({}, rest), { translation: TestimonialTranslation, avatar });
+                });
             }
             catch (error) {
                 console.error(error);
@@ -138,7 +203,7 @@ class TestimonialRepository {
             }
         });
     }
-    create(data) {
+    create(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const transaction = yield this.prisma.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
@@ -162,22 +227,43 @@ class TestimonialRepository {
                     }
                     const testimonial = yield tx.testimonial.create({
                         data: {
-                            clientName: data.clientName,
-                            clientPosition: data.clientPosition,
-                            clientCompany: data.clientCompany,
-                            content: data.content,
+                            clientName: "",
+                            content: "",
                             rating: data.rating || 5,
                             avatarId: avatarId,
                             isActive: (_a = data.isActive) !== null && _a !== void 0 ? _a : true,
                             isFeatured: (_b = data.isFeatured) !== null && _b !== void 0 ? _b : false,
                             order: data.order || 0,
+                            TestimonialTranslation: {
+                                create: {
+                                    clientName: data.clientName,
+                                    clientPosition: data.clientPosition,
+                                    clientCompany: data.clientCompany,
+                                    content: data.content,
+                                    lang: lang,
+                                },
+                            },
                         },
                         include: {
                             avatar: true,
+                            TestimonialTranslation: {
+                                where: { lang },
+                                select: {
+                                    clientName: true,
+                                    clientPosition: true,
+                                    clientCompany: true,
+                                    content: true,
+                                    lang: true,
+                                },
+                            },
                         },
                     });
-                    const { avatar } = testimonial, rest = __rest(testimonial, ["avatar"]);
-                    return { Avatar: avatar, testimonial: rest };
+                    const { avatar, TestimonialTranslation } = testimonial, rest = __rest(testimonial, ["avatar", "TestimonialTranslation"]);
+                    return {
+                        Avatar: avatar,
+                        translation: TestimonialTranslation,
+                        testimonial: rest,
+                    };
                 }), {
                     timeout: 20000,
                     isolationLevel: 'Serializable',
@@ -191,7 +277,7 @@ class TestimonialRepository {
             }
         });
     }
-    update(data) {
+    update(lang, data) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const transaction = yield this.prisma.$transaction((prismaTx) => __awaiter(this, void 0, void 0, function* () {
@@ -244,20 +330,45 @@ class TestimonialRepository {
                     const updatedTestimonial = yield prismaTx.testimonial.update({
                         where: { id: data.testimonialId },
                         data: {
-                            clientName: data.clientName || testimonial.clientName,
-                            clientPosition: data.clientPosition || testimonial.clientPosition,
-                            clientCompany: data.clientCompany || testimonial.clientCompany,
-                            content: data.content || testimonial.content,
                             rating: (_a = data.rating) !== null && _a !== void 0 ? _a : testimonial.rating,
                             avatarId: NewAvatarId,
                             isActive: (_b = data.isActive) !== null && _b !== void 0 ? _b : testimonial.isActive,
                             isFeatured: (_c = data.isFeatured) !== null && _c !== void 0 ? _c : testimonial.isFeatured,
                             order: (_d = data.order) !== null && _d !== void 0 ? _d : testimonial.order,
                         },
-                        include: { avatar: true },
+                        include: {
+                            avatar: true,
+                        },
+                    });
+                    // Update or create translation
+                    const t = yield prismaTx.testimonialTranslation.upsert({
+                        where: {
+                            testimonialId_lang: {
+                                testimonialId: data.testimonialId,
+                                lang: lang,
+                            },
+                        },
+                        update: {
+                            clientName: data.clientName,
+                            clientPosition: data.clientPosition,
+                            clientCompany: data.clientCompany,
+                            content: data.content,
+                        },
+                        create: {
+                            testimonialId: data.testimonialId,
+                            clientName: data.clientName || 'Client',
+                            clientPosition: data.clientPosition,
+                            clientCompany: data.clientCompany,
+                            content: data.content || '',
+                            lang: lang,
+                        },
                     });
                     const { avatar } = updatedTestimonial, rest = __rest(updatedTestimonial, ["avatar"]);
-                    return { Avatar: avatar, testimonial: rest };
+                    return {
+                        Avatar: avatar,
+                        translation: t,
+                        testimonial: rest,
+                    };
                 }), {
                     timeout: 20000,
                     maxWait: 5000,

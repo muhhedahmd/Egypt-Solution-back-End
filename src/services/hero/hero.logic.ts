@@ -7,11 +7,12 @@ import { HeroRepository } from "./hero.repostery";
 export class HeroLogic {
   constructor(
     private repository: HeroRepository,
-    private validator: HeroValidator
+    private validator: HeroValidator,
   ) {}
 
   async getAllHeroes(
-    params: PaginationParams
+    lang: "AR" | "EN" = "EN",
+    params: PaginationParams,
   ): Promise<
     PaginatedResponse<
       Awaited<ReturnType<typeof this.repository.findMany>>[number]
@@ -21,7 +22,7 @@ export class HeroLogic {
     const take = params.take || 10;
 
     const [heroes, totalItems] = await Promise.all([
-      this.repository.findMany(skip, take),
+      this.repository.findMany(lang, skip, take),
       this.repository.count(),
     ]);
 
@@ -40,9 +41,9 @@ export class HeroLogic {
     };
   }
 
-  async getHeroById(id: string): Promise<any> {
+  async getHeroById(lang: "AR" | "EN" = "EN", id: string): Promise<any> {
     this.validator.validateId(id);
-    const hero = await this.repository.findById(id);
+    const hero = await this.repository.findById(lang, id);
     if (!hero) {
       throw new HeroNotFoundError(id);
     }
@@ -53,60 +54,75 @@ export class HeroLogic {
     };
   }
 
-  async getActiveHero(): Promise<Awaited<
-    ReturnType<typeof this.repository.findActiveHero>
-  >> {
-    const hero = await this.repository.findActiveHero();
+  async getActiveHero({
+    lang,
+  }: {
+    lang: "AR" | "EN";
+  }): Promise<Awaited<ReturnType<typeof this.repository.findActiveHero>>> {
+    console.log(lang , "lang lang")
+    const hero = await this.repository.findActiveHero(lang);
     if (!hero) {
-      throw new HeroError('No active hero found', 404, 'NO_ACTIVE_HERO');
+      throw new HeroError("No active hero found", 404, "NO_ACTIVE_HERO");
     }
     return hero;
   }
 
   async createHero(
-    data: CreateHeroDTO
+    lang: "AR" | "EN" = "EN",
+    data: CreateHeroDTO,
   ): Promise<Awaited<ReturnType<typeof this.repository.create>>> {
     const valid = this.validator.validateCreate(data);
-    const hero = await this.repository.create(valid);
-    if (!hero) throw new Error('error create hero');
+    const hero = await this.repository.create(lang, valid);
+    if (!hero) throw new Error("error create hero");
     return hero;
+  }
+
+  async ToggleActive(
+    id: string,
+  ): Promise<Awaited<ReturnType<typeof this.repository.toggleActive>>> {
+    const valid = this.validator.validateId(id);
+    const res = await this.repository.toggleActive(valid);
+    if (!res) throw new Error("error change hero active");
+    return res;
   }
 
   async deleteHero(heroId: string) {
     try {
-      if (!heroId) throw new Error('id is required');
+      if (!heroId) throw new Error("id is required");
       this.validator.validateId(heroId);
       const deletedHero = await this.repository.delete(heroId);
-      if (!deletedHero) throw new Error('error deleting hero');
+      if (!deletedHero) throw new Error("error deleting hero");
       return deletedHero;
     } catch (error) {
       console.error(error);
-      throw new Error('Error deleting hero');
+      throw new Error("Error deleting hero");
     }
   }
 
   async Search(q: string) {
     if (!q)
       throw new HeroError(
-        'search query is required',
+        "search query is required",
         400,
-        'SEARCH_QUERY_REQUIRED'
+        "SEARCH_QUERY_REQUIRED",
       );
     const heroes = await this.repository.SearchHero(q, 0, 10);
     if (!heroes)
       throw new HeroError(
-        'error searching heroes',
+        "error searching heroes",
         400,
-        'ERROR_SEARCHING_HEROES'
+        "ERROR_SEARCHING_HEROES",
       );
     return heroes;
   }
 
-  async updateHero(data: UpdateHeroDTO) {
+  async updateHero(lang: "AR" | "EN" = "EN", data: UpdateHeroDTO) {
     this.validator.validateUpdate(data);
-    const updatedHero = await this.repository.update(data);
+    console.log(data.heroId);
+    const updatedHero = await this.repository.update(lang, data);
+
     if (!updatedHero)
-      throw new HeroError('error updating hero', 400, 'ERROR_UPDATING_HERO');
+      throw new HeroError("error updating hero", 400, "ERROR_UPDATING_HERO");
     const { hero, backgroundImage } = updatedHero;
     return { hero, backgroundImage };
   }

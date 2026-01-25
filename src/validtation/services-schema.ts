@@ -15,6 +15,7 @@ export class ServicesValidator {
     richDescription: z
       .string()
       .min(10, "Rich description must be at least 10 characters"),
+
     image: z.instanceof(Buffer).optional(),
     iconImage: z.instanceof(Buffer).optional(),
 
@@ -29,7 +30,7 @@ export class ServicesValidator {
     name: z.string().min(3).max(100).optional(),
     description: z.string().min(10).max(500).optional(),
     richDescription: z.string().min(10).optional(),
-    image: z.instanceof(Buffer).optional(),
+    image: z.instanceof(Buffer).optional().nullable(),
     imageState: z.enum(["KEEP", "REMOVE", "UPDATE"]).optional(),
     slug: z.string().optional(),
 
@@ -43,12 +44,15 @@ export class ServicesValidator {
   validateCreate(data: unknown): CreateServiceDTO {
     try {
       return this.createSchema.parse(data);
-    } catch (error) {
+    } catch (error : any) {
+      if(error instanceof z.ZodError){
+        throw new ServiceValidationError(error.issues[0].message);
+      }
       throw new ServiceValidationError("Invalid service data");
     }
   }
 
-  validateUpdate(data: unknown): UpdateServiceDTO {
+  validateUpdate(data: unknown) {
     try {
       console.log(data);
       return this.updateSchema.parse(data);

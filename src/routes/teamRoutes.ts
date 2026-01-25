@@ -2,6 +2,7 @@ import { Router } from "express";
 import { ClientController } from "../controllers/clientController";
 import multer from "multer";
 import { TeamController } from "../controllers/teamController";
+import { requireAuthv2 } from "../middlewares/auth";
 
 // const upload = multer({ storage: multer.memoryStorage() });
 
@@ -16,51 +17,62 @@ export class teamRoutes {
   }
 
   private initializeRoutes() {
-    const asyncHandler = (fn: any) => (req: any, res: any, next: any) => {
-      Promise.resolve(fn(req, res, next)).catch(next);
-    };
 
-    this.router.get("/", asyncHandler(this.controller.getAllTeamMembers.bind(this.controller)));
-    this.router.get("/active", asyncHandler(this.controller.getAllTeamMembersActive.bind(this.controller)));
+
+    this.router.get("/", this.controller.getAllTeamMembers.bind(this.controller))
+    this.router.get("/active", this.controller.getAllTeamMembersActive.bind(this.controller))
 
     this.router.get(
       "/search",
-      asyncHandler(this.controller.SearchTeamMembers.bind(this.controller))
+      requireAuthv2,
+
+      this.controller.SearchTeamMembers.bind(this.controller)
     );
 
     this.router.get(
       "/check-order",
-      asyncHandler(this.controller.isValidOrder.bind(this.controller))
+      requireAuthv2,
+
+      this.controller.isValidOrder.bind(this.controller)
     );
 
     this.router.get(
       "/:id",
-      asyncHandler(this.controller.getTeamMemberById.bind(this.controller))
+      requireAuthv2,
+
+      this.controller.getTeamMemberById.bind(this.controller)
     );
 
     this.router.get(
       "/slug/:slug",
-      asyncHandler(this.controller.getTeamMemberBySlug.bind(this.controller))
+      requireAuthv2,
+
+      this.controller.getTeamMemberBySlug.bind(this.controller)
     );
 
     // POST routes
     this.router.post(
       "/",
+      requireAuthv2,
+
     //   upload.any(),
-      asyncHandler(this.controller.createTeamMember.bind(this.controller))
+      this.controller.createTeamMember.bind(this.controller)
     );
 
     // PUT routes
     this.router.put(
       "/:id",
+      requireAuthv2,
      
-      asyncHandler(this.controller.updateTeamMember.bind(this.controller))
+      this.controller.updateTeamMember.bind(this.controller)
     );
 
     // DELETE routes
     this.router.delete(
       "/:id",
-      asyncHandler(this.controller.deleteTeamMember.bind(this.controller))
+      requireAuthv2,
+
+      this.controller.deleteTeamMember.bind(this.controller)
     );
   }
 

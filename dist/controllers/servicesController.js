@@ -19,8 +19,9 @@ class ServicesController {
     getAllServices(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const { skip, take, Active, isFeatured } = req.query;
-                const services = yield this.servicesLogic.getAllServices({
+                const { skip, take, Active, isFeatured, langEnd } = req.query;
+                const lang = langEnd ? langEnd : req.lang || "EN";
+                const services = yield this.servicesLogic.getAllServices(lang, {
                     skip: Number(skip) || 0,
                     take: Number(take) || 10,
                     Active: Active === "true" ? true : false,
@@ -39,9 +40,10 @@ class ServicesController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const { id } = req.params;
+                const lang = req.lang || "EN";
                 if (!id)
                     throw new services_error_1.ServiceNotFoundError("id is required");
-                const service = yield this.servicesLogic.getServiceById(id);
+                const service = yield this.servicesLogic.getServiceById(lang, id);
                 return res.json({
                     data: service,
                     message: "service fetched successfully",
@@ -91,24 +93,11 @@ class ServicesController {
     }
     createService(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b, _c, _d;
+            var _a, _b;
             try {
                 const data = req.body;
-                // name
-                // slug
-                // description
-                // richDescription
-                // price
-                // order
-                // isActive
-                // isFeatured
-                // icon
-                // image
-                // iconImage
-                console.log(Object.assign(Object.assign({}, data), { isActive: data.isActive === "true" ? true : false, isFeatured: data.isFeatured === "true" ? true : false, order: Number(data.order) || 0, icon: data.icon || "", 
-                    // iconImage: req.files || "",
-                    image: Array.isArray(req.files) && req.files.length > 0 ? (_a = req.files.find((f) => f.fieldname === "image")) === null || _a === void 0 ? void 0 : _a.buffer : null, iconImage: Array.isArray(req.files) && req.files.length > 0 ? (_b = req.files.find((f) => f.fieldname === "iconImage")) === null || _b === void 0 ? void 0 : _b.buffer : null }));
-                const newService = yield this.servicesLogic.createService(Object.assign(Object.assign({}, data), { isActive: data.isActive === "true" ? true : false, isFeatured: data.isFeatured === "true" ? true : false, order: Number(data.order) || 0, icon: data.icon || "", image: Array.isArray(req.files) && req.files.length > 0 ? (_c = req.files.find((f) => f.fieldname === "image")) === null || _c === void 0 ? void 0 : _c.buffer : null, iconImage: Array.isArray(req.files) && req.files.length > 0 ? (_d = req.files.find((f) => f.fieldname === "iconImage")) === null || _d === void 0 ? void 0 : _d.buffer : null }));
+                const lang = req.lang || "EN";
+                const newService = yield this.servicesLogic.createService(lang, Object.assign(Object.assign({}, data), { isActive: data.isActive === "true" ? true : false, isFeatured: data.isFeatured === "true" ? true : false, order: Number(data.order) || 0, icon: data.icon || "", image: Array.isArray(req.files) && req.files.length > 0 ? (_a = req.files.find((f) => f.fieldname === "image")) === null || _a === void 0 ? void 0 : _a.buffer : null, iconImage: Array.isArray(req.files) && req.files.length > 0 ? (_b = req.files.find((f) => f.fieldname === "iconImage")) === null || _b === void 0 ? void 0 : _b.buffer : null }));
                 return res.status(201).json({
                     data: newService,
                     message: "service created successfully",
@@ -124,11 +113,12 @@ class ServicesController {
             var _a;
             try {
                 const { id } = req.params;
+                const lang = req.lang || "EN";
                 const serviceData = req.body;
                 const data = Object.assign(Object.assign({}, serviceData), { serviceId: id, image: Array.isArray(req.files) && req.files.length > 0
                         ? (_a = req === null || req === void 0 ? void 0 : req.files[0]) === null || _a === void 0 ? void 0 : _a.buffer
                         : undefined, imageState: serviceData === null || serviceData === void 0 ? void 0 : serviceData.imageState });
-                const updatedService = yield this.servicesLogic.updateService(Object.assign(Object.assign({}, data), { isActive: data.isActive === "true" ? true : false, isFeatured: data.isFeatured === "true" ? true : false, order: Number(data.order) || 0, icon: data.icon || "" }));
+                const updatedService = yield this.servicesLogic.updateService(lang, Object.assign(Object.assign({}, data), { isActive: data.isActive === "true" ? true : false, isFeatured: data.isFeatured === "true" ? true : false, order: Number(data.order) || 0, icon: data.icon || "" }));
                 return res.json({
                     data: updatedService,
                     message: "service updated successfully",

@@ -61,12 +61,8 @@ export class ClientLogic {
     if (!client) {
       throw new ClientNotFoundError(id);
     }
-    const { image, logo, ...rest } = client;
-    return {
-      image: image,
-      logo: logo,
-      client: rest,
-    };
+   return client;
+    
   }
 
   async getClientBySlug(
@@ -85,13 +81,14 @@ export class ClientLogic {
   }
 
   async createClient(
+    lang : "EN" | "AR",
     data: CreateClientDTO
   ): Promise<IClientRepositoryCreateResponse> {
     const valid = this.validator.validateCreate(data);
     const slug = slugify(data.name + randomUUID().substring(0, 8), {
       lower: true,
     });
-    const client = await this.repository.create({
+    const client = await this.repository.create( lang , {
       ...valid,
       slug: slug,
     });
@@ -112,14 +109,14 @@ export class ClientLogic {
     }
   }
 
-  async Search(q: string)  {
+  async Search( lang : "EN" | "AR",q: string)  {
     if (!q)
       throw new ClientError(
         'search query is required',
         400,
         'SEARCH_QUERY_REQUIRED'
       );
-    const clients = await this.repository.SearchClient(q, 0, 10);
+    const clients = await this.repository.SearchClient( lang , q, 0, 10);
     if (!clients)
       throw new ClientError(
         'error searching clients',
@@ -129,9 +126,9 @@ export class ClientLogic {
     return clients;
   }
 
-  async updateClient(data: UpdateClient) {
+  async updateClient(lang : "EN" | "AR",data: UpdateClient) {
     this.validator.validateUpdate(data);
-    const updatedClient = await this.repository.update(data);
+    const updatedClient = await this.repository.update( lang ,data);
     if (!updatedClient)
       throw new ClientError(
         'error updating client',
