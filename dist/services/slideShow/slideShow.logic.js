@@ -39,12 +39,12 @@ class slideShowLogic {
             this.validator.validatePagination(params);
             const skip = params.skip || 0;
             const take = params.take || 10;
-            const redis = yield (0, redis_1.getRedisClient)();
-            const key = (0, keys_1.slideShowsKey)(`${skip.toString()}-${take.toString()}`);
-            const hashData = yield redis.get(key);
-            if (hashData) {
-                return JSON.parse(hashData);
-            }
+            // const redis = await getRedisClient();
+            // const key = slideShowsKey(`${skip.toString()}-${take.toString()}`);
+            // const hashData = await redis.get(key);
+            // if (hashData) {
+            //   return JSON.parse(hashData) as any;
+            // }
             const [slideShows, totalItems] = yield Promise.all([
                 this.repository.findMany(lang, { skip, take }),
                 this.repository.count(),
@@ -63,7 +63,7 @@ class slideShowLogic {
             };
             if (!(slideShows === null || slideShows === void 0 ? void 0 : slideShows.length))
                 return data;
-            yield redis.setEx(key, 120, JSON.stringify(data));
+            // await redis.setEx(key, 120, JSON.stringify(data));
             return data;
         });
     }

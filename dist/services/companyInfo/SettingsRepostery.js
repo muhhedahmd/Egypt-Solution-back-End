@@ -178,6 +178,18 @@ class CompanyInfoRepository {
                         },
                     },
                 });
+                const skip = 0;
+                const take = 3;
+                const totalItems = yield this.prisma.slideShow.count();
+                const remainingItems = totalItems - (skip * take + 0);
+                const data = {
+                    totalItems,
+                    remainingItems,
+                    nowCount: 0,
+                    totalPages: Math.ceil(totalItems / take),
+                    currentPage: skip + 1,
+                    pageSize: take,
+                };
                 if (!settings)
                     return null;
                 const { logo, companyTranslation } = settings, rest = __rest(settings, ["logo", "companyTranslation"]);
@@ -185,6 +197,7 @@ class CompanyInfoRepository {
                     company: Object.assign({}, rest),
                     logo: logo || null,
                     translation: companyTranslation,
+                    slideShowsPages: data
                 };
             }
             catch (error) {

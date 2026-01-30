@@ -99,7 +99,7 @@ export class CompanyInfoRepository {
               height: uploadImage?.height || 25,
               width: uploadImage?.width || 25,
             },
-            tx
+            tx,
           );
           if (!assignImage) {
             throw new CompanyInfoCreationError("Error assigning image to DB");
@@ -201,13 +201,27 @@ export class CompanyInfoRepository {
         },
       });
 
+      const skip = 0;
+      const take = 3;
+      const totalItems = await this.prisma.slideShow.count();
+      const remainingItems = totalItems - (skip * take + 0);
+      const data = {
+        totalItems,
+        remainingItems,
+        nowCount: 0,
+        totalPages: Math.ceil(totalItems / take),
+        currentPage: skip + 1,
+        pageSize: take,
+      };
+
       if (!settings) return null;
 
       const { logo, companyTranslation, ...rest } = settings;
       return {
         company: { ...rest },
         logo: logo || null,
-        translation: companyTranslation,
+        translation: companyTranslation, 
+        slideShowsPages: data
       };
     } catch (error) {
       console.log(error);
@@ -252,7 +266,7 @@ export class CompanyInfoRepository {
       };
       logo?: Buffer;
       LogoState: "KEEP" | "REMOVE" | "UPDATE";
-    }
+    },
   ) {
     try {
       const updatedSettings = await this.prisma.$transaction(async (tx) => {
@@ -283,7 +297,7 @@ export class CompanyInfoRepository {
           }
           const uploadImage = await UploadImage(
             data.logo,
-            data.CompanyInfo.name_en || "company-logo"
+            data.CompanyInfo.name_en || "company-logo",
           );
           if (!uploadImage?.data?.length) {
             throw new CompanyInfoCreationError("Error uploading image");
@@ -296,7 +310,7 @@ export class CompanyInfoRepository {
               height: uploadImage?.height || 25,
               width: uploadImage?.width || 25,
             },
-            tx
+            tx,
           );
           if (!assignImage) {
             throw new CompanyInfoCreationError("Error assigning image to DB");

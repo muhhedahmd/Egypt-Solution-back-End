@@ -201,6 +201,7 @@ export class slideShowController {
 
   async getPaginatedSlides(req: Request, res: Response, next: NextFunction) {
     try {
+  
       const { page, perPage, pagesPerType } = req.body;
       const { id } = req.params;
 
