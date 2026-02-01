@@ -7,7 +7,11 @@ import { PaginatedResponse, PaginationParams } from "../../types/services";
 import { Prisma, SlideShow, SlideshowType } from "@prisma/client";
 import { AttachmentTypes } from "../../types/slideShow";
 import { getRedisClient } from "../../config/redis";
-import { slideShowKeyById, slideShowsKey } from "../../config/keys";
+import {
+  slideShowKeyById,
+  slideShowsKey,
+  slideShowsSlidesKey,
+} from "../../config/keys";
 
 export class slideShowLogic {
   constructor(
@@ -15,25 +19,23 @@ export class slideShowLogic {
     private validator: SlideShowValidator,
   ) {}
 
-  
-
   async getAllServices(
-    
     lang: "EN" | "AR",
     params: PaginationParams,
+    visible : boolean,
   ): Promise<PaginatedResponse<SlideShow>> {
     this.validator.validatePagination(params);
     const skip = params.skip || 0;
     const take = params.take || 10;
-    // const redis = await getRedisClient();
-    // const key = slideShowsKey(`${skip.toString()}-${take.toString()}`);
-    // const hashData = await redis.get(key);
-    // if (hashData) {
-    //   return JSON.parse(hashData) as any;
-    // }
+    const redis = await getRedisClient();
+    const key = slideShowsKey(`${skip.toString()}-${take.toString()}`);
+    const hashData = await redis.get(key);
+    if (hashData) {
+      return JSON.parse(hashData) as any;
+    }
     const [slideShows, totalItems] = await Promise.all([
-      this.repository.findMany( lang , { skip, take }),
-      this.repository.count(),
+      this.repository.findMany(lang  , { skip, take } , visible),
+      this.repository.count(visible),
     ]);
     const remainingItems = totalItems - (skip * take + slideShows.length);
     const data = {
@@ -48,7 +50,7 @@ export class slideShowLogic {
       },
     };
     if (!slideShows?.length) return data;
-    // await redis.setEx(key, 120, JSON.stringify(data));
+    await redis.setEx(key, 900, JSON.stringify(data));
     return data;
   }
   async getAllSlideShowsMinmal(
@@ -97,7 +99,7 @@ export class slideShowLogic {
       const findSlideShow = await this.repository.findById(validId);
       if (!findSlideShow) return null;
       try {
-        await redis.setEx(key, 10, JSON.stringify(findSlideShow));
+        await redis.setEx(key, 120, JSON.stringify(findSlideShow));
         return findSlideShow;
       } catch (error) {
         console.log(error);
@@ -209,13 +211,37 @@ export class slideShowLogic {
     perPage: number;
   }) {
     const validId = this.validator.validateId(id);
-    const slides = await this.repository.getSlidesPaged(validId, {
-      page,
-      pagesPerType,
-      perPage,
-    });
-    return slides;
+    const slideShow = await this.repository.findById(validId);
+    const type = slideShow.slideShow?.type || SlideshowType.CUSTOM;
+
+    const redis = await getRedisClient();
+    const key = slideShowsSlidesKey(`slideshow:${validId}:${type}`);
+    const field = `page:${page}:per:${perPage}`;
+    const start = performance.now();
+
+    const cached = await redis.hGet(key, field);
+    if (cached) {
+      const duration = performance.now() - start;
+      console.log(
+        `[SlideShow] getSlidesPaged took redis ${duration.toFixed(2)} ms`,
+      );
+      return JSON.parse(cached) as any;
+    } else {
+      const slides = await this.repository.getSlidesPaged(validId, {
+        page,
+        pagesPerType,
+        perPage,
+      });
+
+      await redis.hSet(key, field, JSON.stringify(slides));
+      await redis.expire(key, 900);
+      const duration = performance.now() - start;
+      console.log(`[SlideShow] getSlidesPaged took ${duration.toFixed(2)} ms`);
+      return slides;
+    }
   }
+
+  // ***XXXXXXXXXXX
   async getSlideShowWithSlides({
     skip,
     take,

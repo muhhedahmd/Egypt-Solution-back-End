@@ -31,12 +31,12 @@ export class slideShowController {
 
   async getAllSlideShows(req: Request, res: Response, next: NextFunction) {
     try {
-      const { skip, take } = req.query;
+      const { skip, take  , visible} = req.query;
       const lang = (req.lang as "AR" | "EN") || "EN";
-      const slideShows = await this.logic.getAllServices(lang, {
+      const slideShows = await this.logic.getAllServices( lang, {
         skip: Number(skip) || 0,
         take: Number(take) || 10,
-      });
+      } , visible === 'true' ? true : false);
 
       return res.status(200).json({
         success: true,
@@ -47,6 +47,7 @@ export class slideShowController {
       next(error);
     }
   }
+
   async getAllSlideShowsMinmal(
     req: Request,
     res: Response,
