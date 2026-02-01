@@ -27,6 +27,7 @@ exports.slideShowRepository = void 0;
 const slugify_1 = __importDefault(require("slugify"));
 const services_error_1 = require("../../errors/services.error");
 const crypto_1 = require("crypto");
+const client_1 = require("@prisma/client");
 class slideShowRepository {
     constructor(prisma) {
         this.prisma = prisma;
@@ -203,18 +204,27 @@ class slideShowRepository {
             return find;
         });
     }
-    count() {
+    count(visible) {
         return __awaiter(this, void 0, void 0, function* () {
+            if (visible) {
+                return yield this.prisma.slideShow.count({
+                    where: {
+                        isActive: true
+                    }
+                });
+            }
             return yield this.prisma.slideShow.count();
         });
     }
     // crud
-    findMany(lang_1, _a) {
-        return __awaiter(this, arguments, void 0, function* (lang, { skip, take }) {
+    findMany(lang_1, _a, visible_1) {
+        return __awaiter(this, arguments, void 0, function* (lang, { skip, take }, visible) {
             try {
+                const whereClause = visible ? { isActive: true } : {};
                 const slideShows = yield this.prisma.slideShow.findMany({
                     skip: skip * take,
                     take,
+                    where: whereClause,
                     orderBy: {
                         order: "asc",
                     },
@@ -497,20 +507,217 @@ class slideShowRepository {
     }
     getSlidesPaged(slideShowId, opts, tx) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b, _c, _d, _e, _f, _g;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
             const prismaToUse = tx || this.prisma;
-            yield this.findById(slideShowId);
-            const perPageDefault = Math.min(Math.max((_a = opts === null || opts === void 0 ? void 0 : opts.perPage) !== null && _a !== void 0 ? _a : 10, 1), 100);
-            const pageDefault = Math.max((_b = opts === null || opts === void 0 ? void 0 : opts.page) !== null && _b !== void 0 ? _b : 1, 1);
+            const slideShow = yield this.findById(slideShowId);
+            const type = ((_a = slideShow.slideShow) === null || _a === void 0 ? void 0 : _a.type) || client_1.SlideshowType.CUSTOM;
+            const perPageDefault = Math.min(Math.max((_b = opts === null || opts === void 0 ? void 0 : opts.perPage) !== null && _b !== void 0 ? _b : 10, 1), 100);
+            const pageDefault = Math.max((_c = opts === null || opts === void 0 ? void 0 : opts.page) !== null && _c !== void 0 ? _c : 1, 1);
             const getSkipTake = (page, perPage = perPageDefault) => {
                 const p = Math.max(page !== null && page !== void 0 ? page : pageDefault, 1);
                 return { skip: (p - 1) * perPage, take: perPage + 1, page: p, perPage };
             };
-            const svc = getSkipTake((_c = opts === null || opts === void 0 ? void 0 : opts.pagesPerType) === null || _c === void 0 ? void 0 : _c.services);
-            const prj = getSkipTake((_d = opts === null || opts === void 0 ? void 0 : opts.pagesPerType) === null || _d === void 0 ? void 0 : _d.projects);
-            const cli = getSkipTake((_e = opts === null || opts === void 0 ? void 0 : opts.pagesPerType) === null || _e === void 0 ? void 0 : _e.clients);
-            const tst = getSkipTake((_f = opts === null || opts === void 0 ? void 0 : opts.pagesPerType) === null || _f === void 0 ? void 0 : _f.testimonials);
-            const tm = getSkipTake((_g = opts === null || opts === void 0 ? void 0 : opts.pagesPerType) === null || _g === void 0 ? void 0 : _g.team);
+            const process = (arr, perPage) => {
+                const hasMore = arr.length > perPage;
+                if (hasMore)
+                    arr = arr.slice(0, perPage);
+                return { items: arr, hasMore };
+            };
+            const toSlides = (rows, type, dataKey) => rows.map((r) => {
+                var _a, _b, _c, _d, _e;
+                const entity = (_a = r[dataKey]) !== null && _a !== void 0 ? _a : null;
+                const order = typeof r.order === "number" && r.order !== 0
+                    ? r.order
+                    : ((_b = entity === null || entity === void 0 ? void 0 : entity.order) !== null && _b !== void 0 ? _b : 1000);
+                const isVisible = typeof r.isVisible === "boolean"
+                    ? r.isVisible
+                    : ((_c = entity === null || entity === void 0 ? void 0 : entity.isActive) !== null && _c !== void 0 ? _c : true);
+                return {
+                    type,
+                    id: r.id,
+                    order,
+                    isVisible,
+                    data: entity,
+                    translation: (entity === null || entity === void 0 ? void 0 : entity.TeamMemberTranslation) ||
+                        (entity === null || entity === void 0 ? void 0 : entity.TestimonialTranslation) ||
+                        (entity === null || entity === void 0 ? void 0 : entity.ClientTranslation) ||
+                        (entity === null || entity === void 0 ? void 0 : entity.serviceTranslation) ||
+                        (entity === null || entity === void 0 ? void 0 : entity.ProjectTranslation) ||
+                        [],
+                    customDesc: (_d = r.customDesc) !== null && _d !== void 0 ? _d : null,
+                    customTitle: (_e = r.customTitle) !== null && _e !== void 0 ? _e : null,
+                };
+            });
+            // Handle specific slideshow types
+            if (type === client_1.SlideshowType.SERVICES) {
+                const svc = getSkipTake((_d = opts === null || opts === void 0 ? void 0 : opts.pagesPerType) === null || _d === void 0 ? void 0 : _d.services);
+                const rawSvc = yield prismaToUse.serviceSlideShow.findMany({
+                    where: { slideShowId },
+                    orderBy: { order: "asc" },
+                    skip: svc.skip,
+                    take: svc.take,
+                    include: {
+                        service: {
+                            include: {
+                                image: true,
+                                serviceTranslation: true,
+                            },
+                        },
+                    },
+                });
+                const svcPage = process(rawSvc, svc.perPage);
+                return {
+                    pages: {
+                        services: {
+                            page: svc.page,
+                            perPage: svc.perPage,
+                            hasMore: svcPage.hasMore,
+                        },
+                    },
+                    slides: toSlides(svcPage.items, "service", "service"),
+                    slidesCount: yield this.slideShowSlidesCount(slideShowId),
+                };
+            }
+            if (type === client_1.SlideshowType.PROJECTS) {
+                const prj = getSkipTake((_e = opts === null || opts === void 0 ? void 0 : opts.pagesPerType) === null || _e === void 0 ? void 0 : _e.projects);
+                const rawPrj = yield prismaToUse.projectSlideShow.findMany({
+                    where: { slideShowId },
+                    orderBy: { order: "asc" },
+                    skip: prj.skip,
+                    take: prj.take,
+                    include: {
+                        project: {
+                            include: {
+                                image: true,
+                                ProjectTranslation: true,
+                                services: {
+                                    select: {
+                                        name: true,
+                                        icon: true,
+                                    },
+                                },
+                                technologies: {
+                                    select: {
+                                        technology: {
+                                            select: {
+                                                icon: true,
+                                                name: true,
+                                                category: true,
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                });
+                const prjPage = process(rawPrj, prj.perPage);
+                return {
+                    pages: {
+                        projects: {
+                            page: prj.page,
+                            perPage: prj.perPage,
+                            hasMore: prjPage.hasMore,
+                        },
+                    },
+                    slides: toSlides(prjPage.items, "project", "project"),
+                    slidesCount: yield this.slideShowSlidesCount(slideShowId),
+                };
+            }
+            if (type === client_1.SlideshowType.CLIENTS) {
+                const cli = getSkipTake((_f = opts === null || opts === void 0 ? void 0 : opts.pagesPerType) === null || _f === void 0 ? void 0 : _f.clients);
+                const rawCli = yield prismaToUse.clientSlideShow.findMany({
+                    where: { slideShowId },
+                    orderBy: { order: "asc" },
+                    skip: cli.skip,
+                    take: cli.take,
+                    include: {
+                        client: {
+                            include: {
+                                image: true,
+                                logo: true,
+                                ClientTranslation: true,
+                            },
+                        },
+                    },
+                });
+                const cliPage = process(rawCli, cli.perPage);
+                return {
+                    pages: {
+                        clients: {
+                            page: cli.page,
+                            perPage: cli.perPage,
+                            hasMore: cliPage.hasMore,
+                        },
+                    },
+                    slides: toSlides(cliPage.items, "client", "client"),
+                    slidesCount: yield this.slideShowSlidesCount(slideShowId),
+                };
+            }
+            if (type === client_1.SlideshowType.TESTIMONIALS) {
+                const tst = getSkipTake((_g = opts === null || opts === void 0 ? void 0 : opts.pagesPerType) === null || _g === void 0 ? void 0 : _g.testimonials);
+                const rawTst = yield prismaToUse.testimonialSlideShow.findMany({
+                    where: { slideShowId },
+                    orderBy: { order: "asc" },
+                    skip: tst.skip,
+                    take: tst.take,
+                    include: {
+                        testimonial: {
+                            include: {
+                                avatar: true,
+                                TestimonialTranslation: true,
+                            },
+                        },
+                    },
+                });
+                const tstPage = process(rawTst, tst.perPage);
+                return {
+                    pages: {
+                        testimonials: {
+                            page: tst.page,
+                            perPage: tst.perPage,
+                            hasMore: tstPage.hasMore,
+                        },
+                    },
+                    slides: toSlides(tstPage.items, "testimonial", "testimonial"),
+                    slidesCount: yield this.slideShowSlidesCount(slideShowId),
+                };
+            }
+            if (type === client_1.SlideshowType.TEAM) {
+                const tm = getSkipTake((_h = opts === null || opts === void 0 ? void 0 : opts.pagesPerType) === null || _h === void 0 ? void 0 : _h.team);
+                const rawTm = yield prismaToUse.teamSlideShow.findMany({
+                    where: { slideShowId },
+                    orderBy: { order: "asc" },
+                    skip: tm.skip,
+                    take: tm.take,
+                    include: {
+                        team: {
+                            include: {
+                                image: true,
+                                TeamMemberTranslation: true,
+                            },
+                        },
+                    },
+                });
+                const tmPage = process(rawTm, tm.perPage);
+                return {
+                    pages: {
+                        team: {
+                            page: tm.page,
+                            perPage: tm.perPage,
+                            hasMore: tmPage.hasMore,
+                        },
+                    },
+                    slides: toSlides(tmPage.items, "team", "team"),
+                    slidesCount: yield this.slideShowSlidesCount(slideShowId),
+                };
+            }
+            // Handle CUSTOM, HERO, or any other type - fetch all types
+            const svc = getSkipTake((_j = opts === null || opts === void 0 ? void 0 : opts.pagesPerType) === null || _j === void 0 ? void 0 : _j.services);
+            const prj = getSkipTake((_k = opts === null || opts === void 0 ? void 0 : opts.pagesPerType) === null || _k === void 0 ? void 0 : _k.projects);
+            const cli = getSkipTake((_l = opts === null || opts === void 0 ? void 0 : opts.pagesPerType) === null || _l === void 0 ? void 0 : _l.clients);
+            const tst = getSkipTake((_m = opts === null || opts === void 0 ? void 0 : opts.pagesPerType) === null || _m === void 0 ? void 0 : _m.testimonials);
+            const tm = getSkipTake((_o = opts === null || opts === void 0 ? void 0 : opts.pagesPerType) === null || _o === void 0 ? void 0 : _o.team);
             const [rawSvc, rawPrj, rawCli, rawTst, rawTm] = yield Promise.all([
                 prismaToUse.serviceSlideShow.findMany({
                     where: { slideShowId },
@@ -601,45 +808,11 @@ class slideShowRepository {
                     },
                 }),
             ]);
-            const process = (arr, perPage) => {
-                const hasMore = arr.length > perPage;
-                if (hasMore)
-                    arr = arr.slice(0, perPage);
-                return { items: arr, hasMore };
-            };
             const svcPage = process(rawSvc, svc.perPage);
             const prjPage = process(rawPrj, prj.perPage);
             const cliPage = process(rawCli, cli.perPage);
             const tstPage = process(rawTst, tst.perPage);
             const tmPage = process(rawTm, tm.perPage);
-            const toSlides = (rows, type, dataKey) => rows.map((r) => {
-                var _a, _b, _c, _d, _e;
-                // r = pivot row (e.g. clientSlideShow), r[dataKey] = actual client/project object
-                const entity = (_a = r[dataKey]) !== null && _a !== void 0 ? _a : null;
-                const order = typeof r.order === "number" && r.order !== 0
-                    ? r.order
-                    : ((_b = entity === null || entity === void 0 ? void 0 : entity.order) !== null && _b !== void 0 ? _b : 1000);
-                const isVisible = typeof r.isVisible === "boolean"
-                    ? r.isVisible
-                    : ((_c = entity === null || entity === void 0 ? void 0 : entity.isActive) !== null && _c !== void 0 ? _c : true);
-                return {
-                    type,
-                    // slide id should be pivot id (the slideshow item id), data.id is resource id
-                    id: r.id,
-                    order,
-                    isVisible,
-                    data: entity,
-                    translation: (entity === null || entity === void 0 ? void 0 : entity.TeamMemberTranslation) ||
-                        (entity === null || entity === void 0 ? void 0 : entity.TestimonialTranslation) ||
-                        (entity === null || entity === void 0 ? void 0 : entity.ClientTranslation) ||
-                        (entity === null || entity === void 0 ? void 0 : entity.serviceTranslation) ||
-                        (entity === null || entity === void 0 ? void 0 : entity.ProjectTranslation) ||
-                        [],
-                    // copy any custom fields from pivot if exist
-                    customDesc: (_d = r.customDesc) !== null && _d !== void 0 ? _d : null,
-                    customTitle: (_e = r.customTitle) !== null && _e !== void 0 ? _e : null,
-                };
-            });
             const slides = [
                 ...toSlides(svcPage.items, "service", "service"),
                 ...toSlides(prjPage.items, "project", "project"),
@@ -669,50 +842,15 @@ class slideShowRepository {
                         perPage: tst.perPage,
                         hasMore: tstPage.hasMore,
                     },
-                    team: { page: tm.page, perPage: tm.perPage, hasMore: tmPage.hasMore },
+                    team: {
+                        page: tm.page,
+                        perPage: tm.perPage,
+                        hasMore: tmPage.hasMore,
+                    },
                 },
                 slides,
                 slidesCount: yield this.slideShowSlidesCount(slideShowId),
             };
-        });
-    }
-    getSlideShowsWithSlidesPaged(_a, opts_1) {
-        return __awaiter(this, arguments, void 0, function* (
-        // slideShowId: string,
-        { skip, take }, opts) {
-            try {
-                const transaction = this.prisma.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
-                    const slideShows = yield tx.slideShow.findMany({
-                        where: {
-                            isActive: true,
-                        },
-                        orderBy: {
-                            order: "asc",
-                        },
-                        skip: skip * take,
-                        take: take,
-                    });
-                    if (slideShows.length) {
-                        const slideShowWithSlides = slideShows.map((slideShow) => __awaiter(this, void 0, void 0, function* () {
-                            return {
-                                slideShow,
-                                slides: yield this.getSlidesPaged(slideShow.id, opts, tx),
-                            };
-                        }));
-                        const slides = yield Promise.all(slideShowWithSlides);
-                        return slides;
-                    }
-                    return null;
-                    // return await this.getSlideShowsWithSlidesPaged(tx, opts);
-                }), {
-                    maxWait: 10000,
-                    timeout: 20000,
-                });
-                return transaction;
-            }
-            catch (error) {
-                throw new services_error_1.ServiceError("error getting slide shows", 400, "SLIDESHOW_ERROR");
-            }
         });
     }
     // attaches
@@ -1277,6 +1415,45 @@ class slideShowRepository {
                     throw error;
                 }
                 throw new services_error_1.ServiceError("Error performing bulk slide operations", 400, "BULK_SLIDE_OPERATIONS_ERROR");
+            }
+        });
+    }
+    getSlideShowsWithSlidesPaged(_a, opts_1) {
+        return __awaiter(this, arguments, void 0, function* (
+        // slideShowId: string,
+        { skip, take }, opts) {
+            try {
+                const transaction = this.prisma.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
+                    const slideShows = yield tx.slideShow.findMany({
+                        where: {
+                            isActive: true,
+                        },
+                        orderBy: {
+                            order: "asc",
+                        },
+                        skip: skip * take,
+                        take: take,
+                    });
+                    if (slideShows.length) {
+                        const slideShowWithSlides = slideShows.map((slideShow) => __awaiter(this, void 0, void 0, function* () {
+                            return {
+                                slideShow,
+                                slides: yield this.getSlidesPaged(slideShow.id, opts, tx),
+                            };
+                        }));
+                        const slides = yield Promise.all(slideShowWithSlides);
+                        return slides;
+                    }
+                    return null;
+                    // return await this.getSlideShowsWithSlidesPaged(tx, opts);
+                }), {
+                    maxWait: 10000,
+                    timeout: 20000,
+                });
+                return transaction;
+            }
+            catch (error) {
+                throw new services_error_1.ServiceError("error getting slide shows", 400, "SLIDESHOW_ERROR");
             }
         });
     }

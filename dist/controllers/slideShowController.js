@@ -34,12 +34,12 @@ class slideShowController {
     getAllSlideShows(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const { skip, take } = req.query;
+                const { skip, take, visible } = req.query;
                 const lang = req.lang || "EN";
                 const slideShows = yield this.logic.getAllServices(lang, {
                     skip: Number(skip) || 0,
                     take: Number(take) || 10,
-                });
+                }, visible === 'true' ? true : false);
                 return res.status(200).json(Object.assign({ success: true, message: "Slideshows fetched successfully" }, slideShows));
             }
             catch (error) {

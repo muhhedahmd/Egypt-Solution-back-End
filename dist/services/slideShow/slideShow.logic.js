@@ -27,6 +27,7 @@ exports.slideShowLogic = void 0;
 const crypto_1 = require("crypto");
 const slugify_1 = __importDefault(require("slugify"));
 const services_error_1 = require("../../errors/services.error");
+const client_1 = require("@prisma/client");
 const redis_1 = require("../../config/redis");
 const keys_1 = require("../../config/keys");
 class slideShowLogic {
@@ -34,20 +35,20 @@ class slideShowLogic {
         this.repository = repository;
         this.validator = validator;
     }
-    getAllServices(lang, params) {
+    getAllServices(lang, params, visible) {
         return __awaiter(this, void 0, void 0, function* () {
             this.validator.validatePagination(params);
             const skip = params.skip || 0;
             const take = params.take || 10;
-            // const redis = await getRedisClient();
-            // const key = slideShowsKey(`${skip.toString()}-${take.toString()}`);
-            // const hashData = await redis.get(key);
-            // if (hashData) {
-            //   return JSON.parse(hashData) as any;
-            // }
+            const redis = yield (0, redis_1.getRedisClient)();
+            const key = (0, keys_1.slideShowsKey)(`${skip.toString()}-${take.toString()}`);
+            const hashData = yield redis.get(key);
+            if (hashData) {
+                return JSON.parse(hashData);
+            }
             const [slideShows, totalItems] = yield Promise.all([
-                this.repository.findMany(lang, { skip, take }),
-                this.repository.count(),
+                this.repository.findMany(lang, { skip, take }, visible),
+                this.repository.count(visible),
             ]);
             const remainingItems = totalItems - (skip * take + slideShows.length);
             const data = {
@@ -63,7 +64,7 @@ class slideShowLogic {
             };
             if (!(slideShows === null || slideShows === void 0 ? void 0 : slideShows.length))
                 return data;
-            // await redis.setEx(key, 120, JSON.stringify(data));
+            yield redis.setEx(key, 900, JSON.stringify(data));
             return data;
         });
     }
@@ -113,7 +114,7 @@ class slideShowLogic {
                 if (!findSlideShow)
                     return null;
                 try {
-                    yield redis.setEx(key, 10, JSON.stringify(findSlideShow));
+                    yield redis.setEx(key, 120, JSON.stringify(findSlideShow));
                     return findSlideShow;
                 }
                 catch (error) {
@@ -191,15 +192,35 @@ class slideShowLogic {
     // ***
     getSlidesInSlideShow(_a) {
         return __awaiter(this, arguments, void 0, function* ({ id, page, pagesPerType, perPage, }) {
+            var _b;
             const validId = this.validator.validateId(id);
-            const slides = yield this.repository.getSlidesPaged(validId, {
-                page,
-                pagesPerType,
-                perPage,
-            });
-            return slides;
+            const slideShow = yield this.repository.findById(validId);
+            const type = ((_b = slideShow.slideShow) === null || _b === void 0 ? void 0 : _b.type) || client_1.SlideshowType.CUSTOM;
+            const redis = yield (0, redis_1.getRedisClient)();
+            const key = (0, keys_1.slideShowsSlidesKey)(`slideshow:${validId}:${type}`);
+            const field = `page:${page}:per:${perPage}`;
+            const start = performance.now();
+            const cached = yield redis.hGet(key, field);
+            if (cached) {
+                const duration = performance.now() - start;
+                console.log(`[SlideShow] getSlidesPaged took redis ${duration.toFixed(2)} ms`);
+                return JSON.parse(cached);
+            }
+            else {
+                const slides = yield this.repository.getSlidesPaged(validId, {
+                    page,
+                    pagesPerType,
+                    perPage,
+                });
+                yield redis.hSet(key, field, JSON.stringify(slides));
+                yield redis.expire(key, 900);
+                const duration = performance.now() - start;
+                console.log(`[SlideShow] getSlidesPaged took ${duration.toFixed(2)} ms`);
+                return slides;
+            }
         });
     }
+    // ***XXXXXXXXXXX
     getSlideShowWithSlides(_a) {
         return __awaiter(this, arguments, void 0, function* ({ skip, take, page, pagesPerType, perPage, }) {
             // const { skip, take } = this.validator.validatePagination(params);
