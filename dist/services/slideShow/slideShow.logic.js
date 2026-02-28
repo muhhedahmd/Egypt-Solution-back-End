@@ -198,7 +198,9 @@ class slideShowLogic {
             const type = ((_b = slideShow.slideShow) === null || _b === void 0 ? void 0 : _b.type) || client_1.SlideshowType.CUSTOM;
             const redis = yield (0, redis_1.getRedisClient)();
             const key = (0, keys_1.slideShowsSlidesKey)(`slideshow:${validId}:${type}`);
-            const field = `page:${page}:per:${perPage}`;
+            // Include pagesPerType in the cache field to avoid stale data
+            const pptKey = pagesPerType ? JSON.stringify(pagesPerType) : "none";
+            const field = `page:${page}:per:${perPage}:ppt:${pptKey}`;
             const start = performance.now();
             const cached = yield redis.hGet(key, field);
             if (cached) {
@@ -207,10 +209,12 @@ class slideShowLogic {
                 return JSON.parse(cached);
             }
             else {
+                // Pass preloadedType to skip redundant findById inside getSlidesPaged
                 const slides = yield this.repository.getSlidesPaged(validId, {
                     page,
                     pagesPerType,
                     perPage,
+                    preloadedType: type,
                 });
                 yield redis.hSet(key, field, JSON.stringify(slides));
                 yield redis.expire(key, 900);

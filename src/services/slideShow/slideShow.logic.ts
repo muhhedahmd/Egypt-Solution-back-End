@@ -22,7 +22,7 @@ export class slideShowLogic {
   async getAllServices(
     lang: "EN" | "AR",
     params: PaginationParams,
-    visible : boolean,
+    visible: boolean,
   ): Promise<PaginatedResponse<SlideShow>> {
     this.validator.validatePagination(params);
     const skip = params.skip || 0;
@@ -34,7 +34,7 @@ export class slideShowLogic {
       return JSON.parse(hashData) as any;
     }
     const [slideShows, totalItems] = await Promise.all([
-      this.repository.findMany(lang  , { skip, take } , visible),
+      this.repository.findMany(lang, { skip, take }, visible),
       this.repository.count(visible),
     ]);
     const remainingItems = totalItems - (skip * take + slideShows.length);
@@ -216,7 +216,9 @@ export class slideShowLogic {
 
     const redis = await getRedisClient();
     const key = slideShowsSlidesKey(`slideshow:${validId}:${type}`);
-    const field = `page:${page}:per:${perPage}`;
+    // Include pagesPerType in the cache field to avoid stale data
+    const pptKey = pagesPerType ? JSON.stringify(pagesPerType) : "none";
+    const field = `page:${page}:per:${perPage}:ppt:${pptKey}`;
     const start = performance.now();
 
     const cached = await redis.hGet(key, field);
@@ -227,10 +229,12 @@ export class slideShowLogic {
       );
       return JSON.parse(cached) as any;
     } else {
+      // Pass preloadedType to skip redundant findById inside getSlidesPaged
       const slides = await this.repository.getSlidesPaged(validId, {
         page,
         pagesPerType,
         perPage,
+        preloadedType: type,
       });
 
       await redis.hSet(key, field, JSON.stringify(slides));

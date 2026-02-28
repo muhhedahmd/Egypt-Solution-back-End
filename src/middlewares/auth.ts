@@ -3,13 +3,11 @@ import jwt from "jsonwebtoken";
 import { ServiceError } from "../errors/services.error";
 import prisma from "../config/prisma";
 
-
-
 export class AuthError extends ServiceError {
   constructor(
     message: string = "Access denied. Authentication required.",
     code: string = "AUTH_UNAUTHORIZED",
-    statusCode: number = 401
+    statusCode: number = 401,
   ) {
     super(message, statusCode, code);
     this.name = "AuthError";
@@ -17,17 +15,15 @@ export class AuthError extends ServiceError {
 }
 
 export const requireAuth = async (
-
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
-    
     const token = req.headers.authorization?.split(" ")[1];
 
     if (!token) throw new AuthError();
-    
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET!);
     if (typeof decoded === "string") throw new AuthError();
 
@@ -41,42 +37,29 @@ export const requireAuth = async (
 
     next();
   } catch (error) {
-    next(error); 
-
+    next(error);
   }
 };
-
 
 export const requireAuthv2 = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
-    const token = req.cookies.accessToken;
+    const token =
+      req.cookies.accessToken || req.cookies["__Secure-accessToken"];
     if (!token) {
       return res.status(401).json({ error: "Unauthorized" });
     }
-  
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET!);
     if (typeof decoded === "string")
       return res.status(401).json({ error: "Unauthorized" });
 
-    const findUser = await prisma.user.findUnique({
-      where: {
-        id: decoded.userId,
-      },
-      select :{
-        id: true, 
-        role : true 
-      }
-    })
-
-    if (!findUser) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    
-    if(findUser.role !== "ADMIN" ) return res.status(401).json({ error: "you do not have permission" });
+    // Trust the JWT payload — it's signed by us, no need to hit DB on every request
+    if (decoded.role !== "ADMIN")
+      return res.status(401).json({ error: "you do not have permission" });
 
     req.user = {
       email: decoded.email,
@@ -91,5 +74,4 @@ export const requireAuthv2 = async (
     console.log(error);
     return res.status(401).json({ error: "Unauthorized" });
   }
-  // next();
 };

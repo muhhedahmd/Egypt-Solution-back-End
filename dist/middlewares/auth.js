@@ -15,7 +15,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.requireAuthv2 = exports.requireAuth = exports.AuthError = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const services_error_1 = require("../errors/services.error");
-const prisma_1 = __importDefault(require("../config/prisma"));
 class AuthError extends services_error_1.ServiceError {
     constructor(message = "Access denied. Authentication required.", code = "AUTH_UNAUTHORIZED", statusCode = 401) {
         super(message, statusCode, code);
@@ -48,26 +47,15 @@ const requireAuth = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
 exports.requireAuth = requireAuth;
 const requireAuthv2 = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const token = req.cookies.accessToken;
+        const token = req.cookies.accessToken || req.cookies["__Secure-accessToken"];
         if (!token) {
             return res.status(401).json({ error: "Unauthorized" });
         }
         const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
         if (typeof decoded === "string")
             return res.status(401).json({ error: "Unauthorized" });
-        const findUser = yield prisma_1.default.user.findUnique({
-            where: {
-                id: decoded.userId,
-            },
-            select: {
-                id: true,
-                role: true
-            }
-        });
-        if (!findUser) {
-            return res.status(401).json({ error: "Unauthorized" });
-        }
-        if (findUser.role !== "ADMIN")
+        // Trust the JWT payload — it's signed by us, no need to hit DB on every request
+        if (decoded.role !== "ADMIN")
             return res.status(401).json({ error: "you do not have permission" });
         req.user = {
             email: decoded.email,
@@ -82,6 +70,5 @@ const requireAuthv2 = (req, res, next) => __awaiter(void 0, void 0, void 0, func
         console.log(error);
         return res.status(401).json({ error: "Unauthorized" });
     }
-    // next();
 });
 exports.requireAuthv2 = requireAuthv2;

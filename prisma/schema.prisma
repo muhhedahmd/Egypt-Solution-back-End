@@ -775,6 +775,7 @@ model SlideShow {
 
   @@index([slug])
   @@index([type])
+  @@index([isActive, order])
   @@map("slideshows")
 }
 

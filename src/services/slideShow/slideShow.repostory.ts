@@ -100,16 +100,18 @@ export class slideShowRepository {
           title: true,
           description: true,
         },
-      });
-      const findTranslation = await (
-        prismaTouse || this.prisma
-      ).slideShowTranslation.findMany({
-        where: {
-          slideShowId: id,
+        include: {
+          SlideShowTranslation: true,
         },
       });
 
-      return { slideShow: find, translation: findTranslation };
+      const { SlideShowTranslation, ...rest } = find || {
+        SlideShowTranslation: [],
+      };
+      return {
+        slideShow: find ? (rest as any) : null,
+        translation: SlideShowTranslation,
+      };
     } catch (error) {
       throw new ServiceError(
         "slideShow not found id: " + id,
@@ -236,11 +238,11 @@ export class slideShowRepository {
     return find;
   }
   async count(visible?: boolean) {
-    if(visible) {
-      return await this.prisma.slideShow.count( {
-        where : {
-          isActive : true
-        }
+    if (visible) {
+      return await this.prisma.slideShow.count({
+        where: {
+          isActive: true,
+        },
       });
     }
     return await this.prisma.slideShow.count();
@@ -251,16 +253,15 @@ export class slideShowRepository {
   async findMany(
     lang: "EN" | "AR",
     { skip, take }: { skip: number; take: number },
-     visible : boolean,
-
+    visible: boolean,
   ) {
     try {
-      const whereClause = visible ? { isActive : true }  : {} ;
+      const whereClause = visible ? { isActive: true } : {};
 
       const slideShows = await this.prisma.slideShow.findMany({
         skip: skip * take,
         take,
-        where : whereClause,
+        where: whereClause,
         orderBy: {
           order: "asc",
         },
@@ -593,7 +594,6 @@ export class slideShowRepository {
     }
   }
   async getSlidesPaged(
-
     slideShowId: string,
     opts?: {
       perPage?: number;
@@ -604,12 +604,17 @@ export class slideShowRepository {
           number
         >
       >;
+      /** Pre-loaded type to skip an extra findById query */
+      preloadedType?: SlideshowType;
     },
     tx?: txInstance,
   ) {
     const prismaToUse = tx || this.prisma;
-    const slideShow = await this.findById(slideShowId);
-    const type = slideShow.slideShow?.type || SlideshowType.CUSTOM;
+    let type = opts?.preloadedType;
+    if (!type) {
+      const slideShow = await this.findById(slideShowId, tx);
+      type = slideShow.slideShow?.type || SlideshowType.CUSTOM;
+    }
     const perPageDefault = Math.min(Math.max(opts?.perPage ?? 10, 1), 100);
     const pageDefault = Math.max(opts?.page ?? 1, 1);
 
@@ -673,7 +678,10 @@ export class slideShowRepository {
           },
         },
       });
-      const svcPage = process(rawSvc, svc.perPage);
+      const [svcPage, slidesCount] = await Promise.all([
+        Promise.resolve(process(rawSvc, svc.perPage)),
+        this.slideShowSlidesCount(slideShowId),
+      ]);
 
       return {
         pages: {
@@ -684,7 +692,7 @@ export class slideShowRepository {
           },
         },
         slides: toSlides(svcPage.items, "service", "service"),
-        slidesCount: await this.slideShowSlidesCount(slideShowId),
+        slidesCount,
       };
     }
 
@@ -721,7 +729,10 @@ export class slideShowRepository {
           },
         },
       });
-      const prjPage = process(rawPrj, prj.perPage);
+      const [prjPage, slidesCount] = await Promise.all([
+        Promise.resolve(process(rawPrj, prj.perPage)),
+        this.slideShowSlidesCount(slideShowId),
+      ]);
 
       return {
         pages: {
@@ -732,7 +743,7 @@ export class slideShowRepository {
           },
         },
         slides: toSlides(prjPage.items, "project", "project"),
-        slidesCount: await this.slideShowSlidesCount(slideShowId),
+        slidesCount,
       };
     }
 
@@ -753,7 +764,10 @@ export class slideShowRepository {
           },
         },
       });
-      const cliPage = process(rawCli, cli.perPage);
+      const [cliPage, slidesCount] = await Promise.all([
+        Promise.resolve(process(rawCli, cli.perPage)),
+        this.slideShowSlidesCount(slideShowId),
+      ]);
 
       return {
         pages: {
@@ -764,7 +778,7 @@ export class slideShowRepository {
           },
         },
         slides: toSlides(cliPage.items, "client", "client"),
-        slidesCount: await this.slideShowSlidesCount(slideShowId),
+        slidesCount,
       };
     }
 
@@ -784,7 +798,10 @@ export class slideShowRepository {
           },
         },
       });
-      const tstPage = process(rawTst, tst.perPage);
+      const [tstPage, slidesCount] = await Promise.all([
+        Promise.resolve(process(rawTst, tst.perPage)),
+        this.slideShowSlidesCount(slideShowId),
+      ]);
 
       return {
         pages: {
@@ -795,7 +812,7 @@ export class slideShowRepository {
           },
         },
         slides: toSlides(tstPage.items, "testimonial", "testimonial"),
-        slidesCount: await this.slideShowSlidesCount(slideShowId),
+        slidesCount,
       };
     }
 
@@ -815,7 +832,10 @@ export class slideShowRepository {
           },
         },
       });
-      const tmPage = process(rawTm, tm.perPage);
+      const [tmPage, slidesCount] = await Promise.all([
+        Promise.resolve(process(rawTm, tm.perPage)),
+        this.slideShowSlidesCount(slideShowId),
+      ]);
 
       return {
         pages: {
@@ -826,7 +846,7 @@ export class slideShowRepository {
           },
         },
         slides: toSlides(tmPage.items, "team", "team"),
-        slidesCount: await this.slideShowSlidesCount(slideShowId),
+        slidesCount,
       };
     }
 
@@ -934,13 +954,18 @@ export class slideShowRepository {
     const tstPage = process(rawTst, tst.perPage);
     const tmPage = process(rawTm, tm.perPage);
 
-    const slides = [
-      ...toSlides(svcPage.items, "service", "service"),
-      ...toSlides(prjPage.items, "project", "project"),
-      ...toSlides(cliPage.items, "client", "client"),
-      ...toSlides(tstPage.items, "testimonial", "testimonial"),
-      ...toSlides(tmPage.items, "team", "team"),
-    ].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const [slides, slidesCount] = await Promise.all([
+      Promise.resolve(
+        [
+          ...toSlides(svcPage.items, "service", "service"),
+          ...toSlides(prjPage.items, "project", "project"),
+          ...toSlides(cliPage.items, "client", "client"),
+          ...toSlides(tstPage.items, "testimonial", "testimonial"),
+          ...toSlides(tmPage.items, "team", "team"),
+        ].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+      ),
+      this.slideShowSlidesCount(slideShowId),
+    ]);
 
     return {
       pages: {
@@ -971,7 +996,7 @@ export class slideShowRepository {
         },
       },
       slides,
-      slidesCount: await this.slideShowSlidesCount(slideShowId),
+      slidesCount,
     };
   }
 
@@ -1642,7 +1667,9 @@ export class slideShowRepository {
     slideShowId: string;
     type: "service" | "client" | "project" | "testimonial" | "teamMember";
   }) {
-    const d = await (this.modelAttachMap(this.prisma)[type] as any).count({});
+    const d = await (this.modelAttachMap(this.prisma)[type] as any).count({
+      where: { slideShowId },
+    });
     return d;
   }
   async getAttachesByType({
@@ -1854,15 +1881,17 @@ export class slideShowRepository {
             const slideShowWithSlides = slideShows.map(async (slideShow) => {
               return {
                 slideShow,
-                slides: await this.getSlidesPaged(slideShow.id, opts, tx),
+                slides: await this.getSlidesPaged(
+                  slideShow.id,
+                  { ...opts, preloadedType: slideShow.type },
+                  tx,
+                ),
               };
             });
             const slides = await Promise.all(slideShowWithSlides);
             return slides;
           }
           return null;
-
-          // return await this.getSlideShowsWithSlidesPaged(tx, opts);
         },
         {
           maxWait: 10000,

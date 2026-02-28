@@ -14,6 +14,7 @@
     "seed2": "ts-node src/seeds/fixaxpectimage.ts",
     "seedSlideShow": "ts-node src/seeds/seedSlideShow.ts",
     "seedAnalytic": "ts-node src/seeds/analytic.ts",
+    "seedCompanyInfo": "ts-node src/seeds/seedCompanyInfo.ts",
     "lint": "eslint . --ext .ts,.tsx"
   },
   "keywords": [],
