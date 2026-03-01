@@ -1,6 +1,4 @@
 import { Router } from "express";
-import { ClientController } from "../controllers/clientController";
-import multer from "multer";
 import { TeamController } from "../controllers/teamController";
 import { requireAuthv2, requireRole } from "../middlewares/auth";
 
