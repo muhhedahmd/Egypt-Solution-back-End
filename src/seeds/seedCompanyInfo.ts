@@ -13,18 +13,22 @@ async function getRealImage(
   fallbackSize = "1200x800",
 ): Promise<Buffer | null> {
   try {
-    const response = await axios.get("https://api.pexels.com/v1/search", {
-      headers: {
-        Authorization: PEXELS_API_KEY,
+    const response = await axios.get(
+      // "https://api.pexels.com/v1/search",
+      "https://api.pexels.com/v1/photos/1203777",
+      {
+        headers: {
+          Authorization: PEXELS_API_KEY,
+        },
+        // params: {
+        //   query,
+        //   per_page: 1,
+        //   orientation: "landscape",
+        // },
       },
-      params: {
-        query,
-        per_page: 1,
-        orientation: "landscape",
-      },
-    });
+    );
 
-    const photo = response.data.photos?.[0];
+    const photo = response.data;
 
     if (photo && photo.src && photo.src.large2x) {
       console.log(

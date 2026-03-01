@@ -6,3 +6,12 @@ node_modules
 /generated/prisma
 
 .vercel
+
+# build
+dist
+
+# logs
+logs
+
+# temp
+temp
