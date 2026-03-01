@@ -75,8 +75,19 @@ createRateLimiter()
   })
   .catch((err) => console.error("Failed to initialize rate limiter:", err));
 
-// Mount Swagger UI
-app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+// Mount Swagger UI (using CDN for Vercel serverless compatibility)
+app.use(
+  "/api/docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerDocs, {
+    customCssUrl:
+      "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui.min.css",
+    customJs: [
+      "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-bundle.min.js",
+      "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-standalone-preset.min.js",
+    ],
+  }),
+);
 
 app.use(asyncHandler(i18nMiddleware));
 app.use("/api/auth", authRoutes);

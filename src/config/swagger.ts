@@ -39,4 +39,14 @@ const options: swaggerJsdoc.Options = {
   apis: ["./src/routes/*.ts", "./src/controllers/*.ts"],
 };
 
-export const swaggerDocs = swaggerJsdoc(options);
+// Use pre-generated JSON to bypass Vercel stripping comments during build
+let swaggerDocs = {};
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  swaggerDocs = require("../swagger.json");
+} catch (e) {
+  // Fallback to dynamic generation if the json isn't generated yet (e.g. dev mode)
+  swaggerDocs = swaggerJsdoc(options);
+}
+
+export { swaggerDocs };
