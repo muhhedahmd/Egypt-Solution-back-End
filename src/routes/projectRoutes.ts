@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { projectController } from "../controllers/projectController";
-import { requireAuthv2 } from "../middlewares/auth";
+import { requireAuthv2, requireRole } from "../middlewares/auth";
 
 export class projectRoutes {
   private router: Router;
@@ -10,99 +10,89 @@ export class projectRoutes {
   }
 
   initializeRoutes() {
-
-
     // Get featured projects
     this.router.get(
       "/featured/all",
 
-      this.controller.getFeaturedProjects.bind(this.controller)
+      this.controller.getFeaturedProjects.bind(this.controller),
     );
 
     // Get projects by status
     this.router.get(
       "/status/:status",
-      requireAuthv2, 
-      
+      requireAuthv2,
 
-      this.controller.getProjectsByStatus.bind(this.controller)
+      this.controller.getProjectsByStatus.bind(this.controller),
     );
 
     // Search projects
     this.router.get(
       "/search/query",
-      requireAuthv2, 
-      
+      requireAuthv2,
 
-      this.controller.searchProjects.bind(this.controller)
+      this.controller.searchProjects.bind(this.controller),
     );
-    
+
     // TECHNOLOGY ROUTES
     this.router.get(
       "/tech-search",
-      requireAuthv2, 
-      
+      requireAuthv2,
 
-      this.controller.techSearch.bind(this.controller)
+      this.controller.techSearch.bind(this.controller),
     );
 
     // Get all technologies
     this.router.get(
       "/technologies/all",
-      requireAuthv2, 
-      
+      requireAuthv2,
 
-      this.controller.getAllTechnologies.bind(this.controller)
+      this.controller.getAllTechnologies.bind(this.controller),
     );
 
     // Create new technology
     this.router.post(
       "/technology",
-      requireAuthv2, 
-      
-      this.controller.createTechnology.bind(this.controller)
+      requireAuthv2,
+      requireRole(["ADMIN", "EDITOR"]),
+      this.controller.createTechnology.bind(this.controller),
     );
 
     // Get technology by ID
     this.router.get(
       "/technology/:id",
-      this.controller.getTechnologyById.bind(this.controller)
+      this.controller.getTechnologyById.bind(this.controller),
     );
 
     // Update technology
     this.router.put(
       "/technology/:id",
-      requireAuthv2, 
-      
-      this.controller.updateTechnology.bind(this.controller)
+      requireAuthv2,
+      requireRole(["ADMIN", "EDITOR"]),
+      this.controller.updateTechnology.bind(this.controller),
     );
 
     // Delete technology
     this.router.delete(
       "/technology/:id",
-      requireAuthv2, 
-      
-      this.controller.deleteTechnology.bind(this.controller)
+      requireAuthv2,
+      requireRole(["ADMIN"]),
+      this.controller.deleteTechnology.bind(this.controller),
     );
 
     // Get technologies by category
     this.router.get(
       "/technologies/category/:category",
-      requireAuthv2, 
-      
+      requireAuthv2,
 
-      
-        this.controller.getTechnologiesByCategory.bind(this.controller
-      )
+      this.controller.getTechnologiesByCategory.bind(this.controller),
     );
 
     // Get all categories
     this.router.get(
       "/categories/all",
-      requireAuthv2, 
-      
+      requireAuthv2,
 
-      this.controller.getAllCategories.bind(this.controller)
+      this.controller.getAllCategories.bind(this.controller),
     );
 
     // PROJECT-TECHNOLOGY RELATIONSHIP ROUTES
@@ -110,120 +100,106 @@ export class projectRoutes {
     // Assign projects to technology (bulk)
     this.router.post(
       "/assign-technology",
-      requireAuthv2, 
-      
-      
-        this.controller.assignProjectToTechnology.bind(this.controller
-      )
+      requireAuthv2,
+      requireRole(["ADMIN", "EDITOR"]),
+
+      this.controller.assignProjectToTechnology.bind(this.controller),
     );
 
     // Remove projects from technology (bulk)
     this.router.delete(
       "/remove-technology",
-      requireAuthv2, 
-      
-      
-        this.controller.removeProjectFromTechnology.bind(this.controller
-      )
+      requireAuthv2,
+      requireRole(["ADMIN"]),
+
+      this.controller.removeProjectFromTechnology.bind(this.controller),
     );
 
-    // cerate project and assign techs 
+    // cerate project and assign techs
     this.router.post(
       "/projects-assign-technologies",
-      requireAuthv2, 
-      
-      
-        this.controller.createProjectAndAssignTechnology.bind(this.controller
-      )
+      requireAuthv2,
+      requireRole(["ADMIN", "EDITOR"]),
+
+      this.controller.createProjectAndAssignTechnology.bind(this.controller),
     );
 
     // Create project with technologies
     this.router.post(
       "/projects-with-technologies",
-      requireAuthv2, 
-      
-      
-        this.controller.createProjectWithTechnologies.bind(this.controller
-      )
+      requireAuthv2,
+      requireRole(["ADMIN", "EDITOR"]),
+
+      this.controller.createProjectWithTechnologies.bind(this.controller),
     );
 
     this.router.post(
       "/technology-with-projects",
-      requireAuthv2, 
-      
-      
-        this.controller.createTechnologyWithProjects.bind(this.controller
-      )
+      requireAuthv2,
+
+      this.controller.createTechnologyWithProjects.bind(this.controller),
     );
 
     // Get all projects by technology ID
     this.router.get(
       "/by-technology/:id",
-      requireAuthv2, 
-      
+      requireAuthv2,
 
-      
-        this.controller.getProjectsByTechnology.bind(this.controller
-      )
+      this.controller.getProjectsByTechnology.bind(this.controller),
     );
 
     // Get all technologies by project ID
     this.router.get(
       "/project-technologies/:id",
-      requireAuthv2, 
-      
+      requireAuthv2,
 
-      
-        this.controller.getTechnologiesByProject.bind(this.controller
-      )
+      this.controller.getTechnologiesByProject.bind(this.controller),
     );
 
     this.router.get(
       "/",
-      requireAuthv2, 
-      
+      requireAuthv2,
 
-      this.controller.getAllProjects.bind(this.controller)
+      this.controller.getAllProjects.bind(this.controller),
     );
 
     // Get single project by ID
     this.router.get(
       "/:slug",
-      requireAuthv2, 
-      
+      requireAuthv2,
 
-      this.controller.getProjectBySlugFull.bind(this.controller)
+      this.controller.getProjectBySlugFull.bind(this.controller),
     );
 
     // Create new project (with image upload)
     this.router.post(
       "/",
-      requireAuthv2, 
-      
+      requireAuthv2,
+      requireRole(["ADMIN", "EDITOR"]),
       // upload.single("image"),
-      this.controller.createProject.bind(this.controller)
+      this.controller.createProject.bind(this.controller),
     );
 
     // Update project (with optional image upload)
     this.router.put(
       "/:id",
-      requireAuthv2, 
-      
-      this.controller.updateProject.bind(this.controller)
+      requireAuthv2,
+      requireRole(["ADMIN", "EDITOR"]),
+      this.controller.updateProject.bind(this.controller),
     );
     this.router.put(
       "/update-project-bulk/:id",
-      requireAuthv2, 
-      
-      this.controller.updateProjectWithTechsServices.bind(this.controller)
+      requireAuthv2,
+      requireRole(["ADMIN", "EDITOR"]),
+      this.controller.updateProjectWithTechsServices.bind(this.controller),
     );
 
     // Delete project
     this.router.delete(
       "/:id",
-      requireAuthv2, 
-      
-      this.controller.deleteProject.bind(this.controller)
+      requireAuthv2,
+      requireRole(["ADMIN"]),
+      this.controller.deleteProject.bind(this.controller),
     );
   }
   getRoutes() {

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { ClientController } from "../controllers/clientController";
-import { requireAuthv2 } from "../middlewares/auth";
+import { requireAuthv2, requireRole } from "../middlewares/auth";
 
 // const upload = multer({ storage: multer.memoryStorage() });
 
@@ -15,59 +15,56 @@ export class ClientRoutes {
   }
 
   private initializeRoutes() {
-    
-
-
-    this.router.get("/", this.controller.getAllClients.bind(this.controller))
+    this.router.get("/", this.controller.getAllClients.bind(this.controller));
 
     this.router.get(
       "/search",
       requireAuthv2,
-      this.controller.SearchClients.bind(this.controller)
+      this.controller.SearchClients.bind(this.controller),
     );
 
     this.router.get(
       "/check-order",
       requireAuthv2,
 
-      this.controller.isValidOrder.bind(this.controller)
+      this.controller.isValidOrder.bind(this.controller),
     );
 
     this.router.get(
       "/:id",
       requireAuthv2,
-      this.controller.getClientById.bind(this.controller)
+      this.controller.getClientById.bind(this.controller),
     );
 
     this.router.get(
       "/slug/:slug",
       requireAuthv2,
 
-      this.controller.getClientBySlug.bind(this.controller)
+      this.controller.getClientBySlug.bind(this.controller),
     );
 
     // POST routes
     this.router.post(
       "/",
       requireAuthv2,
-      this.controller.createClient.bind(this.controller)
+      requireRole(["ADMIN", "EDITOR"]),
+      this.controller.createClient.bind(this.controller),
     );
 
     // PUT routes
     this.router.put(
       "/:id",
       requireAuthv2,
-
-     
-      this.controller.updateClient.bind(this.controller)
+      requireRole(["ADMIN", "EDITOR"]),
+      this.controller.updateClient.bind(this.controller),
     );
 
     // DELETE routes
     this.router.delete(
       "/:id",
       requireAuthv2,
-
-      this.controller.deleteClient.bind(this.controller)
+      requireRole(["ADMIN"]),
+      this.controller.deleteClient.bind(this.controller),
     );
   }
 

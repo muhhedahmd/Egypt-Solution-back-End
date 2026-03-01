@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { slideShowController } from "../controllers/slideShowController";
-import { requireAuthv2 } from "../middlewares/auth";
+import { requireAuthv2, requireRole } from "../middlewares/auth";
 export class slideShowRoutes {
   private router: Router;
   constructor(private controller: slideShowController) {
@@ -43,18 +43,21 @@ export class slideShowRoutes {
     this.router.post(
       "/create-attach-many",
       requireAuthv2,
+      requireRole(["ADMIN", "EDITOR"]),
       this.controller.CreateAndAttachMany.bind(this.controller),
     );
     // ***
     this.router.post(
       "/update-attach-many",
       requireAuthv2,
+      requireRole(["ADMIN", "EDITOR"]),
       this.controller.UpdateAndAttachMany.bind(this.controller),
     );
 
     this.router.post(
       "/",
       requireAuthv2,
+      requireRole(["ADMIN", "EDITOR"]),
       this.controller.createSlideShow.bind(this.controller),
     );
 
@@ -83,11 +86,13 @@ export class slideShowRoutes {
     this.router.delete(
       "/detach-many",
       requireAuthv2,
+      requireRole(["ADMIN"]),
       this.controller.deAttachMany.bind(this.controller),
     );
     this.router.put(
       "/reorder-bulk",
       requireAuthv2,
+      requireRole(["ADMIN", "EDITOR"]),
       this.controller.reorderBulkSlideShow.bind(this.controller),
     );
     this.router.get(
@@ -98,12 +103,13 @@ export class slideShowRoutes {
     this.router.delete(
       "/:id",
       requireAuthv2,
-
+      requireRole(["ADMIN"]),
       this.controller.deleteSlideShow.bind(this.controller),
     );
     this.router.put(
       "/:id",
       requireAuthv2,
+      requireRole(["ADMIN", "EDITOR"]),
       this.controller.updateSlideShow.bind(this.controller),
     );
 

@@ -23,6 +23,10 @@ import { CompanyInfoModule as companyInfo } from "./services/companyInfo/setting
 import { HeroModule as HeroMod } from "./services/hero/hero.modules";
 import { AnalyticModule as AnalyticMod } from "./services/analytic/analytic.module";
 import { i18nMiddleware } from "./middlewares/lang.middleware";
+import { htmlContent } from "./lib/htmlContent";
+import { createRateLimiter } from "./middlewares/rateLimiter";
+import swaggerUi from "swagger-ui-express";
+import { swaggerDocs } from "./config/swagger";
 
 const app = express();
 app.use(cookieParser());
@@ -37,7 +41,7 @@ app.use(
       "https://end-user-landing-manager-grodjgoj6.vercel.app",
     ],
     credentials: true,
-  })
+  }),
 );
 
 //  Configure multer properly
@@ -57,11 +61,21 @@ app.use(
     config: {
       isDev: true,
     },
-  })
+  }),
 );
 const asyncHandler = (fn: any) => (req: any, res: any, next: any) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
+
+// Initialize Rate Limiter
+createRateLimiter()
+  .then((limiter) => {
+    app.use("/api", limiter);
+  })
+  .catch((err) => console.error("Failed to initialize rate limiter:", err));
+
+// Mount Swagger UI
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 app.use(asyncHandler(i18nMiddleware));
 app.use("/api/auth", authRoutes);
@@ -98,6 +112,10 @@ app.use("/api/hero", HeroModule.getRoutes());
 
 const AnalyticModule = new AnalyticMod(prisma);
 app.use("/api/analytics", AnalyticModule.getRoutes());
+
+app.get("/", (req, res) => {
+  res.send(htmlContent);
+});
 
 app.use(errorHandler as any);
 
