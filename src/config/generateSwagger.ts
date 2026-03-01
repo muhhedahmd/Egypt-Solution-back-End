@@ -1,9 +1,11 @@
 import { writeFileSync } from "fs";
-import { swaggerDocs } from "./swagger";
+import { swaggerOptions } from "./swagger";
 import path from "path";
+import swaggerJsdoc from "swagger-jsdoc";
 
 const outputPath = path.resolve(__dirname, "../swagger.json");
 
-writeFileSync(outputPath, JSON.stringify(swaggerDocs, null, 2));
+const freshDocs = swaggerJsdoc(swaggerOptions);
+writeFileSync(outputPath, JSON.stringify(freshDocs, null, 2));
 
 console.log(`Swagger documentation generated at ${outputPath}`);

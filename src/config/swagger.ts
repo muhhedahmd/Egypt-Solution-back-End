@@ -1,6 +1,6 @@
 import swaggerJsdoc from "swagger-jsdoc";
 
-const options: swaggerJsdoc.Options = {
+export const swaggerOptions: swaggerJsdoc.Options = {
   definition: {
     openapi: "3.0.0",
     info: {
@@ -9,6 +9,10 @@ const options: swaggerJsdoc.Options = {
       description: "API Documentation for the Landing Manager Backend",
     },
     servers: [
+      {
+        url: "https://egypt-solution-back-end.vercel.app",
+        description: "Production Server",
+      },
       {
         url: "http://localhost:5000",
         description: "Development Server",
@@ -50,7 +54,7 @@ try {
   swaggerDocs = require("../swagger.json");
 } catch (e) {
   // Fallback to dynamic generation if the json isn't generated yet (e.g. dev mode)
-  swaggerDocs = swaggerJsdoc(options);
+  swaggerDocs = swaggerJsdoc(swaggerOptions);
 }
 
 export { swaggerDocs };
