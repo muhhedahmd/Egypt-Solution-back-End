@@ -25,6 +25,7 @@ import { AnalyticModule as AnalyticMod } from "./services/analytic/analytic.modu
 import { i18nMiddleware } from "./middlewares/lang.middleware";
 import { htmlContent } from "./lib/htmlContent";
 import { createRateLimiter } from "./middlewares/rateLimiter";
+
 import swaggerUi from "swagger-ui-express";
 import { swaggerDocs } from "./config/swagger";
 
@@ -59,7 +60,7 @@ app.use(
   createRouteHandler({
     router: uploadRouter,
     config: {
-      isDev: true,
+      isDev: process.env.NODE_ENV === "development" || true,
     },
   }),
 );

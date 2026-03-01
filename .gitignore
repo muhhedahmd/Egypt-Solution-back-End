@@ -6,6 +6,7 @@ node_modules
 /generated/prisma
 
 .vercel
+vercel.json
 
 # build
 dist
