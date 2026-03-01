@@ -1,0 +1,78 @@
+components:
+  schemas:
+    TeamMemberInput:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+        order:
+          type: integer
+        active:
+          type: boolean
+
+paths:
+  /api/team:
+    get:
+      tags:
+        - Team
+      summary: Retrieve all team members
+      responses:
+        "200":
+          description: List of team members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamMemberInput"
+
+    post:
+      tags:
+        - Team
+      summary: Add a new team member
+      security:
+        - cookieAuth: []
+      responses:
+        "201":
+          description: Created
+        "401":
+          description: Unauthorized (Requires ADMIN or EDITOR)
+
+  /api/team/{id}:
+    put:
+      tags:
+        - Team
+      summary: Update a team member's details
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Team member updated
+        "401":
+          description: Unauthorized
+
+    delete:
+      tags:
+        - Team
+      summary: Delete a team member
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Removed successfully
+        "401":
+          description: Unauthorized (Requires ADMIN)

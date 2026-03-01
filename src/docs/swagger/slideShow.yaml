@@ -1,0 +1,102 @@
+components:
+  schemas:
+    SlideShowInput:
+      type: object
+      properties:
+        title:
+          type: string
+        type:
+          type: string
+        active:
+          type: boolean
+
+paths:
+  /api/slide-show:
+    get:
+      tags:
+        - SlideShow
+      summary: Retrieve all slideshows
+      responses:
+        "200":
+          description: List of slideshows returned successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SlideShowInput"
+
+    post:
+      tags:
+        - SlideShow
+      summary: Create a new slideshow record
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                image:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Created successfully
+        "401":
+          description: Unauthorized (Requires ADMIN or EDITOR)
+
+  /api/slide-show/{id}:
+    get:
+      tags:
+        - SlideShow
+      summary: Retrieve single slideshow
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Shows the details of the slideshow
+
+    put:
+      tags:
+        - SlideShow
+      summary: Update a slideshow
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated successfully
+        "401":
+          description: Unauthorized (Requires ADMIN or EDITOR)
+
+    delete:
+      tags:
+        - SlideShow
+      summary: Delete a slideshow
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted successfully
+        "401":
+          description: Unauthorized (Requires ADMIN)

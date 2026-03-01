@@ -1,0 +1,80 @@
+components:
+  schemas:
+    CompanyInfoInput:
+      type: object
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        phones:
+          type: array
+          items:
+            type: string
+        emails:
+          type: array
+          items:
+            type: string
+        socialLinks:
+          type: object
+        lang:
+          type: string
+          enum: [en, ar]
+
+paths:
+  /api/company-info:
+    get:
+      tags:
+        - Company Info
+      summary: Retrieve company information
+      responses:
+        "200":
+          description: Company info returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanyInfoInput"
+
+    post:
+      tags:
+        - Company Info
+      summary: Create new company settings
+      security:
+        - cookieAuth: []
+      responses:
+        "201":
+          description: Created
+        "401":
+          description: Unauthorized (Requires ADMIN)
+
+  /api/company-info/{id}:
+    put:
+      tags:
+        - Company Info
+      summary: Update existing company info
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated successfully
+        "401":
+          description: Unauthorized (Requires ADMIN)
+
+  /api/company-info/switch-lang:
+    post:
+      tags:
+        - Company Info
+      summary: Toggle active language
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Language switched
+        "401":
+          description: Unauthorized (Requires ADMIN)

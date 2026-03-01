@@ -1,0 +1,92 @@
+components:
+  schemas:
+    HeroInput:
+      type: object
+      properties:
+        title:
+          type: string
+        subtitle:
+          type: string
+        ctaText:
+          type: string
+        ctaLink:
+          type: string
+        active:
+          type: boolean
+
+paths:
+  /api/hero:
+    get:
+      tags:
+        - Hero
+      summary: Retrieve all hero banners
+      responses:
+        "200":
+          description: List of banners
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HeroInput"
+
+    post:
+      tags:
+        - Hero
+      summary: Create a new hero banner
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                image:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Created
+        "401":
+          description: Unauthorized (Requires ADMIN or EDITOR)
+
+  /api/hero/{id}:
+    put:
+      tags:
+        - Hero
+      summary: Update a hero banner
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Banner updated
+        "401":
+          description: Unauthorized (Requires ADMIN or EDITOR)
+
+    delete:
+      tags:
+        - Hero
+      summary: Delete a hero banner
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Removed successfully
+        "401":
+          description: Unauthorized (Requires ADMIN)

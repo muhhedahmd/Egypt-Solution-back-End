@@ -35,8 +35,12 @@ const options: swaggerJsdoc.Options = {
       },
     ],
   },
-  // Look for swagger definitions in routing and controller files
-  apis: ["./src/routes/*.ts", "./src/controllers/*.ts"],
+  // Look for swagger definitions in routing, controller, and dedicated documentation YAML files
+  apis: [
+    "./src/routes/*.ts",
+    "./src/controllers/*.ts",
+    "./src/docs/swagger/*.yaml",
+  ],
 };
 
 // Use pre-generated JSON to bypass Vercel stripping comments during build

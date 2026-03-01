@@ -1,0 +1,95 @@
+components:
+  schemas:
+    ClientInput:
+      type: object
+      properties:
+        name:
+          type: string
+        link:
+          type: string
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+paths:
+  /api/clients:
+    get:
+      tags:
+        - Clients
+      summary: Retrieve all clients
+      responses:
+        "200":
+          description: A list of clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClientInput"
+
+    post:
+      tags:
+        - Clients
+      summary: Create a new client
+      security:
+        - cookieAuth: []
+      responses:
+        "201":
+          description: Client created
+        "401":
+          description: Unauthorized (Requires ADMIN or EDITOR)
+        "403":
+          description: Forbidden
+
+  /api/clients/{id}:
+    get:
+      tags:
+        - Clients
+      summary: Get a specific client
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The client details
+
+    put:
+      tags:
+        - Clients
+      summary: Update a client
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Client updated successfully
+        "401":
+          description: Unauthorized
+
+    delete:
+      tags:
+        - Clients
+      summary: Delete a client
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Client deleted successfully
+        "401":
+          description: Unauthorized (Requires ADMIN)

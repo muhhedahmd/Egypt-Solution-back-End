@@ -1,0 +1,103 @@
+components:
+  schemas:
+    UserRegisterInput:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: newuser@example.com
+        password:
+          type: string
+          example: P@ssword123!
+
+    UserLoginInput:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+paths:
+  /api/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserRegisterInput"
+      responses:
+        "201":
+          description: User registered successfully
+        "400":
+          description: Validation error
+        "429":
+          description: Too many registration attempts
+
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserLoginInput"
+      responses:
+        "200":
+          description: User logged in successfully
+        "401":
+          description: Invalid credentials
+        "429":
+          description: Too many login attempts
+
+  /api/auth/send-otp:
+    post:
+      tags:
+        - Authentication
+      summary: Send OTP for verification
+      responses:
+        "200":
+          description: OTP sent successfully
+        "429":
+          description: Too many attempts
+
+  /api/auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Logged out successfully
+        "401":
+          description: Unauthorized
+
+  /api/auth/sync-user:
+    post:
+      tags:
+        - Authentication
+      summary: Sync authenticated user data
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Sync successful
+        "401":
+          description: Unauthorized

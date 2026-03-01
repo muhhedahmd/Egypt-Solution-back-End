@@ -1,0 +1,130 @@
+components:
+  schemas:
+    ProjectCreateInput:
+      type: object
+      required:
+        - title
+        - description
+        - link
+      properties:
+        title:
+          type: string
+          example: Landing Manager Platform
+        description:
+          type: string
+          example: A fully scalable backend architecture solution.
+        link:
+          type: string
+          example: https://github.com
+        active:
+          type: boolean
+          default: false
+        createdAt:
+          type: string
+          format: date-time
+
+paths:
+  /api/projects:
+    get:
+      tags:
+        - Projects
+      summary: Get a list of all projects
+      responses:
+        "200":
+          description: A list of projects returned successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProjectCreateInput"
+
+    post:
+      tags:
+        - Projects
+      summary: Create a new project
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                image:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Project created successfully
+        "401":
+          description: Unauthorized (Requires ADMIN or EDITOR)
+        "403":
+          description: Forbidden Role access
+
+  /api/projects/{id}:
+    get:
+      tags:
+        - Projects
+      summary: Get a single project by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The project data
+
+    put:
+      tags:
+        - Projects
+      summary: Update a project by ID
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+      responses:
+        "200":
+          description: Project updated
+        "401":
+          description: Unauthorized
+
+    delete:
+      tags:
+        - Projects
+      summary: Delete a project
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Project deleted
+        "401":
+          description: Unauthorized (Requires ADMIN)

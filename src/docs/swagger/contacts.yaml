@@ -1,0 +1,65 @@
+components:
+  schemas:
+    ContactInput:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        message:
+          type: string
+        status:
+          type: string
+          enum: [NEW, READ, REPLIED]
+
+paths:
+  /api/contacts:
+    get:
+      tags:
+        - Contacts
+      summary: Retrieve paginated contacts
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Paginated List of contacts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContactInput"
+
+    post:
+      tags:
+        - Contacts
+      summary: Submit a new contact form message (Public)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactInput"
+      responses:
+        "201":
+          description: Message submitted successfully
+
+  /api/contacts/{id}:
+    put:
+      tags:
+        - Contacts
+      summary: Update contact status
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Contact status updated
+        "401":
+          description: Unauthorized (Requires ADMIN or EDITOR)
