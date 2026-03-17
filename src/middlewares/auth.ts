@@ -49,12 +49,17 @@ export const requireAuthv2 = async (
 ) => {
   try {
     const token =
-      req.cookies.accessToken || req.cookies["__Secure-accessToken"];
+      req.cookies.accessToken ||
+      req.cookies["__Secure-accessToken"] ||
+      req.headers.authorization?.split(" ")[1];
+
+
     if (!token) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!);
+    console.log(token);
     if (typeof decoded === "string")
       return res.status(401).json({ error: "Unauthorized" });
 

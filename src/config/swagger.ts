@@ -47,10 +47,8 @@ export const swaggerOptions: swaggerJsdoc.Options = {
   ],
 };
 
-// Use pre-generated JSON to bypass Vercel stripping comments during build
 let swaggerDocs = {};
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   swaggerDocs = require("../swagger.json");
 } catch (e) {
   // Fallback to dynamic generation if the json isn't generated yet (e.g. dev mode)

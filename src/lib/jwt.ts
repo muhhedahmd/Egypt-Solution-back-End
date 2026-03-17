@@ -40,7 +40,7 @@ export const generateAccessToken = ({
       type: "access", 
     },
     process.env.JWT_SECRET as string,
-    { expiresIn: "30D" }, 
+    { expiresIn: "100D" }, 
   )
 }
 
@@ -51,7 +51,7 @@ export const generateRefreshToken = (userId: string) => {
       type: "refresh", 
     },
     process.env.JWT_REFRESH_SECRET as string, 
-    { expiresIn: "3d" }, 
+    { expiresIn: "100D" }, 
   )
 }
 

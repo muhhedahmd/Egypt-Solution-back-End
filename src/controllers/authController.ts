@@ -95,7 +95,9 @@ export class AuthController {
             secure: isProd,
             sameSite: isProd ? "none" : "lax",
             path: "/",
-            maxAge: tokens.refreshExpiresIn * 1000,
+            maxAge :100 * 24 * 60 * 60 * 1000
+
+            // maxAge: tokens.refreshExpiresIn * 1000,
           }
         )
         .cookie(
@@ -107,11 +109,12 @@ export class AuthController {
             secure: isProd,
             sameSite: isProd ? "none" : "lax",
             path: "/",
-            maxAge: tokens.expiresIn * 1000,
+            maxAge :100 * 24 * 60 * 60 * 1000
+            // maxAge: tokens.expiresIn * 1000,
           }
         )
         .status(201)
-        .json({ success: true, user });
+        .json({ success: true, user  ,tokens  } );
     } catch (error) {
       console.log(error);
       return res.status(500).json({ error: "Internal server error" });
