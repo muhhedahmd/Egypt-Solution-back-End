@@ -133,12 +133,11 @@ export class HeroRepository {
       throw new HeroError(
         "Error toggling active hero",
         400,
-        "HERO_TOGGLE_ERROR"
+        "HERO_TOGGLE_ERROR",
       );
     }
   }
   async findActiveHero(lang: "AR" | "EN" = "EN") {
-    console.log(lang , "lang") 
     try {
       const hero = await this.prisma.hero.findFirst({
         where: { isActive: true },
@@ -176,7 +175,7 @@ export class HeroRepository {
       throw new HeroError(
         "Error finding active hero",
         400,
-        "HERO_SEARCH_ERROR"
+        "HERO_SEARCH_ERROR",
       );
     }
   }
@@ -272,7 +271,7 @@ export class HeroRepository {
           if (data.backgroundImage) {
             const createImage = await UploadImage(
               data.backgroundImage,
-              data.name || "hero-background"
+              data.name || "hero-background",
             );
             if (!createImage) throw new Error("error upload image");
 
@@ -284,7 +283,7 @@ export class HeroRepository {
                 height: createImage.height,
                 data: createImage.data,
               },
-              tx
+              tx,
             );
             if (!imageToDB) throw new Error("error create imageToDB");
             imageId = imageToDB.id;
@@ -370,7 +369,7 @@ export class HeroRepository {
           timeout: 20000,
           isolationLevel: "Serializable",
           maxWait: 5000,
-        }
+        },
       );
       return transaction;
     } catch (error) {
@@ -420,7 +419,7 @@ export class HeroRepository {
 
             const createImage = await UploadImage(
               data.backgroundImage,
-              data.name || "hero-update"
+              data.name || "hero-update",
             );
 
             if (!createImage) throw new Error("error upload image");
@@ -433,7 +432,7 @@ export class HeroRepository {
                 height: createImage.height,
                 data: createImage.data,
               },
-              prismaTx
+              prismaTx,
             );
 
             if (!imageToDB) throw new Error("error create imageToDB");
@@ -551,7 +550,7 @@ export class HeroRepository {
         {
           timeout: 20000,
           maxWait: 5000,
-        }
+        },
       );
 
       return transaction;
@@ -582,7 +581,7 @@ export class HeroRepository {
         {
           timeout: 20000,
           maxWait: 5000,
-        }
+        },
       );
       return transaction;
     } catch (error) {

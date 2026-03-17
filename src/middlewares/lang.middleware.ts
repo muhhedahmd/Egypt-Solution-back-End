@@ -6,7 +6,7 @@ const DEFAULT_LANGUAGE = "EN";
 export function i18nMiddleware(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   let lang = DEFAULT_LANGUAGE;
 
@@ -20,16 +20,12 @@ export function i18nMiddleware(
     SUPPORTED_LANGUAGES.includes(req.query.lang.toUpperCase())
   ) {
     lang = req.query.lang.toUpperCase();
-  }
-
-  else if (
+  } else if (
     req.cookies.user_lang &&
     SUPPORTED_LANGUAGES.includes(req.cookies.user_lang)
   ) {
     lang = req.cookies.user_lang;
-  }
-
-  else if (req.headers["accept-language"]) {
+  } else if (req.headers["accept-language"]) {
     const browserLang = req.headers["accept-language"]
       .split(",")[0]
       .split("-")[0]

@@ -22,7 +22,6 @@ export class AnalyticsRepository {
       },
     });
 
-    // console.log(sessions);
     // 2. Get all page views for this day
     const pageViews = await this.prisma.pageView.findMany({
       where: {
@@ -34,7 +33,7 @@ export class AnalyticsRepository {
     const uniqueVisitors = sessions.length;
     const totalPageViews = pageViews.length;
     const totalBlogViews = pageViews.filter(
-      (pv) => pv.pageType === "blog"
+      (pv) => pv.pageType === "blog",
     ).length;
     const contacts = sessions.filter((s) => s.converted).length;
 
@@ -51,26 +50,26 @@ export class AnalyticsRepository {
     // Device breakdown
     const mobileVisitors = sessions.filter((s) => s.device === "mobile").length;
     const desktopVisitors = sessions.filter(
-      (s) => s.device === "desktop"
+      (s) => s.device === "desktop",
     ).length;
     const tabletVisitors = sessions.filter((s) => s.device === "tablet").length;
 
     // Traffic sources by medium
     const directVisitors = sessions.filter(
-      (s) => !s.utmMedium || s.utmMedium === "none" || s.utmMedium === "direct"
+      (s) => !s.utmMedium || s.utmMedium === "none" || s.utmMedium === "direct",
     ).length;
     const searchVisitors = sessions.filter(
-      (s) => s.utmMedium === "organic"
+      (s) => s.utmMedium === "organic",
     ).length;
     const socialVisitors = sessions.filter(
-      (s) => s.utmMedium === "social"
+      (s) => s.utmMedium === "social",
     ).length;
     const referralVisitors = sessions.filter(
-      (s) => s.utmMedium === "referral"
+      (s) => s.utmMedium === "referral",
     ).length;
 
     // 4. Create or update Analytics row for this date
-const analytics =    await this.prisma.analytics.upsert({
+    const analytics = await this.prisma.analytics.upsert({
       where: { date: startOfDay },
       create: {
         date: startOfDay,
@@ -106,7 +105,6 @@ const analytics =    await this.prisma.analytics.upsert({
         referralVisitors,
       },
     });
-
   }
 
   async createSession(data: {
@@ -145,7 +143,7 @@ const analytics =    await this.prisma.analytics.upsert({
       pageCount: number;
       totalDuration: number;
       isBounce: boolean;
-    }
+    },
   ) {
     return this.prisma.sessionAnalytics.update({
       where: { sessionId },

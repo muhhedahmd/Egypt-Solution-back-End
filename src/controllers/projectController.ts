@@ -133,7 +133,7 @@ export class projectController {
   async updateProjectWithTechsServices(
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) {
     try {
       const id = req.params.id;
@@ -257,7 +257,7 @@ export class projectController {
         {
           skip: Number(skip) || 0,
           take: Number(take) || 10,
-        }
+        },
       );
 
       return res.status(200).json({
@@ -276,11 +276,6 @@ export class projectController {
     try {
       const body = req.body;
 
-      console.log({
-        name: body.name,
-        // icon: Array.isArray(req.files) && req.files ? req.files[0]?.buffer :  null,
-        category: body.category || "",
-      });
       const newTechnology = await this.logic.createTechnology({
         name: body.name,
         icon:
@@ -380,7 +375,7 @@ export class projectController {
   async getTechnologiesByCategory(
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) {
     try {
       const { category } = req.params;
@@ -391,7 +386,7 @@ export class projectController {
         {
           skip: Number(skip) || 0,
           take: Number(take) || 10,
-        }
+        },
       );
 
       return res.status(200).json({
@@ -428,7 +423,7 @@ export class projectController {
   async assignProjectToTechnology(
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) {
     try {
       const body = req.body;
@@ -449,7 +444,7 @@ export class projectController {
   async createProjectAndAssignTechnology(
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) {
     try {
       const { technologyIds, serviceIds, ...project } = req.body;
@@ -479,7 +474,7 @@ export class projectController {
   async removeProjectFromTechnology(
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) {
     try {
       const body = req.body;
@@ -499,7 +494,7 @@ export class projectController {
   async createTechnologyWithProjects(
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) {
     try {
       const technologyRaw = req.body.technology;
@@ -529,7 +524,7 @@ export class projectController {
 
       const result = await this.logic.createTechnologyAndProject(
         lang,
-        FixedBody
+        FixedBody,
       );
 
       return res.status(201).json({
@@ -545,7 +540,7 @@ export class projectController {
   async createProjectWithTechnologies(
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) {
     try {
       const projectRaw = req.body.project;
@@ -579,7 +574,7 @@ export class projectController {
   async getProjectsByTechnology(
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) {
     try {
       const { id } = req.params;
@@ -603,7 +598,7 @@ export class projectController {
   async getTechnologiesByProject(
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) {
     try {
       const { id } = req.params;

@@ -52,7 +52,7 @@ export class projectRepository {
               order: att.order - 1,
             },
           });
-        })
+        }),
       );
 
       return promises;
@@ -61,7 +61,7 @@ export class projectRepository {
       throw new ServiceError(
         "error updating a projects Reorder",
         400,
-        "SLIDESHOW_UPDATE_ERROR"
+        "SLIDESHOW_UPDATE_ERROR",
       );
     }
   }
@@ -97,7 +97,7 @@ export class projectRepository {
       throw new ServiceError(
         "error updating a projects Reorder",
         400,
-        "SLIDESHOW_UPDATE_ERROR"
+        "SLIDESHOW_UPDATE_ERROR",
       );
     }
   }
@@ -136,11 +136,11 @@ export class projectRepository {
   async findBySlugFull(
     lang: "AR" | "EN" = "EN",
     slug: string,
-    prismaTouse?: txInstance
+    prismaTouse?: txInstance,
   ): Promise<{
     image: Image | null;
     technologies: Partial<Technology>[];
-    translation : Partial<ProjectTranslation>[]
+    translation: Partial<ProjectTranslation>[];
     project: Project;
     servicesData: {
       image: Image | null;
@@ -186,9 +186,8 @@ export class projectRepository {
             },
           },
           ProjectTranslation: {
-           
             select: {
-              id:true ,
+              id: true,
               title: true,
               description: true,
               richDescription: true,
@@ -201,34 +200,33 @@ export class projectRepository {
       if (!project) return null;
       const { image, technologies, services, ProjectTranslation, ...rest } =
         project;
-      
+
       return {
         image,
         servicesData: services.map((service) => {
-
           const { image, ...rest } = service;
           return {
             image: image || null,
             service: rest,
           };
         }),
-        translation: ProjectTranslation ,
+        translation: ProjectTranslation,
 
         technologies: technologies.map((tech) => tech.technology),
 
         project: {
           ...rest,
           ...ProjectTranslation.find(
-            (t) => t.lang?.toLowerCase() === lang.toLowerCase()
+            (t) => t.lang?.toLowerCase() === lang.toLowerCase(),
           ),
-        } as any ,
-      } ;
+        } as any,
+      };
     } catch (error) {
       console.log(error);
       throw new ServiceError(
         "error finding project by ID",
         400,
-        "PROJECT_GET_ERROR"
+        "PROJECT_GET_ERROR",
       );
     }
   }
@@ -240,7 +238,7 @@ export class projectRepository {
   async findById(
     id: string,
     lang: "AR" | "EN" = "EN",
-    prismaTouse?: txInstance
+    prismaTouse?: txInstance,
   ): Promise<(Project & { image: Image | null }) | null> {
     try {
       const project = await (prismaTouse || this.prisma).project.findUnique({
@@ -280,7 +278,7 @@ export class projectRepository {
       throw new ServiceError(
         "error finding project by ID",
         400,
-        "PROJECT_GET_ERROR"
+        "PROJECT_GET_ERROR",
       );
     }
   }
@@ -288,7 +286,7 @@ export class projectRepository {
   async create(
     lang: "EN" | "AR",
     data: CreateProjectDTO & { slug: string; imageId?: string },
-    prismaTouse?: txInstance
+    prismaTouse?: txInstance,
   ): Promise<{ project: Project; Image: Image | null }> {
     try {
       const transication = await this.prisma.$transaction(
@@ -309,7 +307,7 @@ export class projectRepository {
                 height: createImage.height,
                 data: createImage.data,
               },
-              tx
+              tx,
             );
             data.imageId = imageToDB.id;
           }
@@ -366,7 +364,7 @@ export class projectRepository {
         {
           timeout: 20000,
           maxWait: 5000,
-        }
+        },
       );
       return transication;
     } catch (error) {
@@ -374,7 +372,7 @@ export class projectRepository {
       throw new ServiceError(
         "error creating a project",
         400,
-        "PROJECT_CREATE_ERROR"
+        "PROJECT_CREATE_ERROR",
       );
     }
   }
@@ -382,7 +380,7 @@ export class projectRepository {
   async createTransiaction(
     lang: "EN" | "AR",
     data: CreateProjectDTO & { slug: string; imageId?: string },
-    prismaTouse?: txInstance
+    prismaTouse?: txInstance,
   ): Promise<{ project: Project; Image: Image | null }> {
     try {
       const prismaTx = prismaTouse || this.prisma;
@@ -403,7 +401,7 @@ export class projectRepository {
             height: createImage.height,
             data: createImage.data,
           },
-          prismaTx
+          prismaTx,
         );
         data.imageId = imageToDB.id;
       }
@@ -465,7 +463,7 @@ export class projectRepository {
       throw new ServiceError(
         "error creating a project",
         400,
-        "PROJECT_CREATE_ERROR"
+        "PROJECT_CREATE_ERROR",
       );
     }
   }
@@ -480,7 +478,7 @@ export class projectRepository {
       project: CreateProjectDTO;
       technologies?: string[];
       services?: string[];
-    }
+    },
   ) {
     const slug = slugify(project.title, { lower: true });
     const transaction = await this.prisma.$transaction(
@@ -488,7 +486,7 @@ export class projectRepository {
         const createdProject = await this.createTransiaction(
           lang,
           { ...project, slug },
-          prismaTx
+          prismaTx,
         );
         let projectTechnologies: Technology[] = [];
         let projectServices: Service[] = [];
@@ -505,7 +503,7 @@ export class projectRepository {
                 },
               });
               return Tech.technology;
-            })
+            }),
           );
         }
         if (services) {
@@ -527,9 +525,9 @@ export class projectRepository {
                 },
               });
               return serviceTech.services.filter(
-                (s, index) => s.id === service
+                (s, index) => s.id === service,
               )[0];
-            })
+            }),
           );
         }
         return { createdProject, projectTechnologies, projectServices };
@@ -537,13 +535,13 @@ export class projectRepository {
       {
         timeout: 20000,
         maxWait: 5000,
-      }
+      },
     );
     return transaction;
   }
   async update(
     lang: "EN" | "AR",
-    data: UpdateProjectDTO
+    data: UpdateProjectDTO,
   ): Promise<{ project: Project; Image: Image | null }> {
     try {
       const transaction = await this.prisma.$transaction(
@@ -583,7 +581,7 @@ export class projectRepository {
 
             const createImage = await UploadImage(
               data.image,
-              data.title || "update"
+              data.title || "update",
             );
 
             if (!createImage) throw new Error("error upload image");
@@ -596,7 +594,7 @@ export class projectRepository {
                 height: createImage.height,
                 data: createImage.data,
               },
-              prismaTx
+              prismaTx,
             );
 
             if (!imageToDB) throw new Error("error create imageToDB");
@@ -682,7 +680,7 @@ export class projectRepository {
         {
           timeout: 20000,
           maxWait: 5000,
-        }
+        },
       );
 
       return transaction;
@@ -702,7 +700,7 @@ export class projectRepository {
       deletedServiceIds: string[];
       newServiceIds: string[];
     },
-    lang: "EN" | "AR" = "EN"
+    lang: "EN" | "AR" = "EN",
   ): Promise<{
     project: Project;
     image: Image | null;
@@ -719,7 +717,7 @@ export class projectRepository {
             throw new ServiceError(
               "Project not found",
               404,
-              "PROJECT_NOT_FOUND"
+              "PROJECT_NOT_FOUND",
             );
           }
 
@@ -747,14 +745,14 @@ export class projectRepository {
             if (data.projectData.image) {
               const uploadedImage = await UploadImage(
                 data.projectData.image,
-                data.projectData.title || existingProject.title
+                data.projectData.title || existingProject.title,
               );
 
               if (!uploadedImage) {
                 throw new ServiceError(
                   "Failed to upload image",
                   400,
-                  "IMAGE_UPLOAD_ERROR"
+                  "IMAGE_UPLOAD_ERROR",
                 );
               }
 
@@ -766,7 +764,7 @@ export class projectRepository {
                   height: uploadedImage.height,
                   data: uploadedImage.data,
                 },
-                tx
+                tx,
               );
               imageId = dbImage.id;
             }
@@ -782,7 +780,7 @@ export class projectRepository {
               data.projectData.title + randomUUID().substring(0, 8),
               {
                 lower: true,
-              }
+              },
             );
           }
 
@@ -807,8 +805,10 @@ export class projectRepository {
               title: "",
               description: "",
               richDescription: "",
-              clientCompany: data.projectData.clientCompany ?? existingProject.clientCompany,
-              clientName: data.projectData.clientName ?? existingProject.clientName,
+              clientCompany:
+                data.projectData.clientCompany ?? existingProject.clientCompany,
+              clientName:
+                data.projectData.clientName ?? existingProject.clientName,
               projectUrl:
                 data.projectData.projectUrl ?? existingProject.projectUrl,
               githubUrl:
@@ -876,7 +876,7 @@ export class projectRepository {
               throw new ServiceError(
                 "One or more technologies not found",
                 404,
-                "TECHNOLOGY_NOT_FOUND"
+                "TECHNOLOGY_NOT_FOUND",
               );
             }
 
@@ -911,7 +911,7 @@ export class projectRepository {
               throw new ServiceError(
                 "One or more services not found",
                 404,
-                "SERVICE_NOT_FOUND"
+                "SERVICE_NOT_FOUND",
               );
             }
 
@@ -954,7 +954,7 @@ export class projectRepository {
             throw new ServiceError(
               "Failed to retrieve updated project",
               500,
-              "PROJECT_RETRIEVAL_ERROR"
+              "PROJECT_RETRIEVAL_ERROR",
             );
           }
 
@@ -969,7 +969,7 @@ export class projectRepository {
         {
           timeout: 20000,
           maxWait: 5000,
-        }
+        },
       );
 
       return transaction;
@@ -979,7 +979,7 @@ export class projectRepository {
       throw new ServiceError(
         "Failed to update project",
         500,
-        "PROJECT_UPDATE_ERROR"
+        "PROJECT_UPDATE_ERROR",
       );
     }
   }
@@ -1005,7 +1005,7 @@ export class projectRepository {
         {
           timeout: 20000,
           maxWait: 5000,
-        }
+        },
       );
       return transaction;
     } catch (error) {
@@ -1025,14 +1025,14 @@ export class projectRepository {
         throw new ServiceError(
           " technology not found",
           404,
-          "TECHNOLOGY_GET_ERROR"
+          "TECHNOLOGY_GET_ERROR",
         );
       }
       console.log(error);
       throw new ServiceError(
         "error finding technology by ID",
         400,
-        "TECHNOLOGY_GET_ERROR"
+        "TECHNOLOGY_GET_ERROR",
       );
     }
   }
@@ -1045,14 +1045,14 @@ export class projectRepository {
       throw new ServiceError(
         "Error counting technologies",
         400,
-        "TECHNOLOGY_COUNT_ERROR"
+        "TECHNOLOGY_COUNT_ERROR",
       );
     }
   }
 
   async findManyTechnologies(
     skip: number,
-    take: number
+    take: number,
   ): Promise<Technology[]> {
     try {
       return await this.prisma.technology.findMany({
@@ -1074,13 +1074,13 @@ export class projectRepository {
       throw new ServiceError(
         "Error finding technologies",
         400,
-        "TECHNOLOGY_GET_ERROR"
+        "TECHNOLOGY_GET_ERROR",
       );
     }
   }
   async createTechnology(
     data: CreateTechnologyDTO & { icon?: Buffer | null },
-    tx?: txInstance
+    tx?: txInstance,
   ): Promise<Technology> {
     try {
       const slug = slugify(data.name + randomUUID().substring(0, 8), {
@@ -1105,14 +1105,14 @@ export class projectRepository {
       throw new ServiceError(
         "error creating technology",
         400,
-        "TECHNOLOGY_CREATE_ERROR"
+        "TECHNOLOGY_CREATE_ERROR",
       );
     }
   }
 
   async updateTechnology(
     id: string,
-    data: Partial<CreateTechnologyDTO>
+    data: Partial<CreateTechnologyDTO>,
   ): Promise<Technology> {
     try {
       const technology = await this.prisma.technology.update({
@@ -1129,14 +1129,14 @@ export class projectRepository {
         throw new ServiceError(
           "Technology not found",
           404,
-          "TECHNOLOGY_NOT_FOUND"
+          "TECHNOLOGY_NOT_FOUND",
         );
       }
       console.error(error);
       throw new ServiceError(
         "Error updating technology",
         400,
-        "TECHNOLOGY_UPDATE_ERROR"
+        "TECHNOLOGY_UPDATE_ERROR",
       );
     }
   }
@@ -1156,20 +1156,20 @@ export class projectRepository {
         throw new ServiceError(
           "Technology not found",
           404,
-          "TECHNOLOGY_NOT_FOUND"
+          "TECHNOLOGY_NOT_FOUND",
         );
       }
       console.error(error);
       throw new ServiceError(
         "Error deleting technology",
         400,
-        "TECHNOLOGY_DELETE_ERROR"
+        "TECHNOLOGY_DELETE_ERROR",
       );
     }
   }
   async assignProjectToTechnolgy(
     lang: "EN" | "AR" = "EN",
-    data: ProjectWithTechnologiesDTO[]
+    data: ProjectWithTechnologiesDTO[],
   ): Promise<ProjectTechnology[]> {
     try {
       const transaction = await this.prisma.$transaction(
@@ -1185,10 +1185,10 @@ export class projectRepository {
                     technologyId: data.technologyId,
                   },
                   include: { project: true, technology: true },
-                }
+                },
               );
               return projectTechnology;
-            })
+            }),
           );
 
           return promises;
@@ -1196,7 +1196,7 @@ export class projectRepository {
         {
           timeout: 20000,
           maxWait: 5000,
-        }
+        },
       );
       return transaction;
     } catch (error) {
@@ -1204,7 +1204,7 @@ export class projectRepository {
       throw new ServiceError(
         "error assign project to technology",
         400,
-        "ASSIGN_PROJECT_TO_TECHNOLOGY_ERROR"
+        "ASSIGN_PROJECT_TO_TECHNOLOGY_ERROR",
       );
     }
   }
@@ -1212,7 +1212,7 @@ export class projectRepository {
   async removeProjectToTechnolgy(
     lang: "EN" | "AR" = "EN",
 
-    data: ProjectWithTechnologiesDTO[]
+    data: ProjectWithTechnologiesDTO[],
   ): Promise<ProjectTechnology[]> {
     try {
       const transaction = await this.prisma.$transaction(
@@ -1230,10 +1230,10 @@ export class projectRepository {
                       technologyId: data.technologyId,
                     },
                   },
-                }
+                },
               );
               return projectTechnology;
-            })
+            }),
           );
 
           return promises;
@@ -1241,7 +1241,7 @@ export class projectRepository {
         {
           timeout: 20000,
           maxWait: 5000,
-        }
+        },
       );
       return transaction;
     } catch (error) {
@@ -1249,7 +1249,7 @@ export class projectRepository {
       throw new ServiceError(
         "error remove project to technology",
         400,
-        "REMOVE_PROJECT_TO_TECHNOLOGY_ERROR"
+        "REMOVE_PROJECT_TO_TECHNOLOGY_ERROR",
       );
     }
   }
@@ -1258,7 +1258,7 @@ export class projectRepository {
     data: {
       CreateTechnology: CreateTechnologyDTO;
       CreateProject: (CreateProjectDTO & { slug: string })[];
-    }
+    },
   ) {
     try {
       const transaction = await this.prisma.$transaction(
@@ -1269,18 +1269,16 @@ export class projectRepository {
               name: data.CreateTechnology.name,
               category: data.CreateTechnology.category,
             },
-            prismaTx
+            prismaTx,
           );
 
           const projectIds = (
             await Promise.all(
               data.CreateProject.map((project) =>
-                this.create(lang, project, prismaTx)
-              )
+                this.create(lang, project, prismaTx),
+              ),
             )
           ).map((project) => project.project.id);
-
-          console.log(projectIds, technology.id);
 
           const dataToAssign = projectIds.map((projectId) => ({
             projectId,
@@ -1297,10 +1295,10 @@ export class projectRepository {
                     technologyId: data.technologyId,
                   },
                   include: { project: true, technology: true },
-                }
+                },
               );
               return projectTechnology;
-            })
+            }),
           );
 
           return { technology, projectWithTechnology };
@@ -1308,13 +1306,13 @@ export class projectRepository {
         {
           timeout: 20000,
           maxWait: 5000,
-        }
+        },
       );
       const result = transaction.projectWithTechnology.map(
         (projectWithTechnology) => {
           return projectWithTechnology.project;
           // technology: projectWithTechnology.technology,
-        }
+        },
       );
       return { technology: transaction.technology, projects: { ...result } };
     } catch (error) {
@@ -1322,7 +1320,7 @@ export class projectRepository {
       throw new ServiceError(
         "error creating technology and project",
         400,
-        "TECHNOLOGY_CREATE_ERROR"
+        "TECHNOLOGY_CREATE_ERROR",
       );
     }
   }
@@ -1343,8 +1341,8 @@ export class projectRepository {
 
           const createdTechnologies = await Promise.all(
             technologies.map((tech) =>
-              this.createTechnology(tech as any, prismaTx)
-            )
+              this.createTechnology(tech as any, prismaTx),
+            ),
           );
 
           const projectTechnologies = await Promise.all(
@@ -1355,7 +1353,7 @@ export class projectRepository {
                   technologyId: tech.id,
                 },
               });
-            })
+            }),
           );
 
           return { createdProject, createdTechnologies };
@@ -1363,7 +1361,7 @@ export class projectRepository {
         {
           timeout: 20000,
           maxWait: 5000,
-        }
+        },
       );
       return transaction;
     } catch (error) {
@@ -1371,14 +1369,14 @@ export class projectRepository {
       throw new ServiceError(
         "error creating project and technologies",
         400,
-        "PROJECT_CREATE_ERROR"
+        "PROJECT_CREATE_ERROR",
       );
     }
   }
   async findTechnologiesByProject(
     projectId: string,
     skip: number,
-    take: number
+    take: number,
   ): Promise<Array<ProjectTechnology & { technology: Technology }>> {
     try {
       const technologies = await this.prisma.projectTechnology.findMany({
@@ -1393,7 +1391,7 @@ export class projectRepository {
       throw new ServiceError(
         "error finding technologies by project",
         400,
-        "TECHNOLOGY_GET_ERROR"
+        "TECHNOLOGY_GET_ERROR",
       );
     }
   }
@@ -1408,7 +1406,7 @@ export class projectRepository {
       throw new ServiceError(
         "error finding technologies by project",
         400,
-        "TECHNOLOGY_GET_ERROR"
+        "TECHNOLOGY_GET_ERROR",
       );
     }
   }
@@ -1416,7 +1414,7 @@ export class projectRepository {
   async findProjectsByTechnology(
     technologyId: string,
     skip: number,
-    take: number
+    take: number,
   ) {
     try {
       const projects = await this.prisma.projectTechnology.findMany({
@@ -1431,7 +1429,7 @@ export class projectRepository {
       throw new ServiceError(
         "error finding projects by technology",
         400,
-        "PROJECT_GET_ERROR"
+        "PROJECT_GET_ERROR",
       );
     }
   }
@@ -1446,14 +1444,14 @@ export class projectRepository {
       throw new ServiceError(
         "error finding projects by technology count",
         400,
-        "PROJECT_GET_ERROR"
+        "PROJECT_GET_ERROR",
       );
     }
   }
   async searchProjects(
     searchTerm: string,
     skip: number,
-    take: number
+    take: number,
   ): Promise<
     {
       project: Project;
@@ -1509,7 +1507,7 @@ export class projectRepository {
         throw new ServiceError(
           "No projects found",
           400,
-          "PROJECT_SEARCH_ERROR"
+          "PROJECT_SEARCH_ERROR",
         );
       }
 
@@ -1537,7 +1535,7 @@ export class projectRepository {
       throw new ServiceError(
         "Error searching projects",
         400,
-        "PROJECT_SEARCH_ERROR"
+        "PROJECT_SEARCH_ERROR",
       );
     }
   }
@@ -1581,7 +1579,7 @@ export class projectRepository {
       throw new ServiceError(
         "Error counting featured projects",
         400,
-        "PROJECT_COUNT_ERROR"
+        "PROJECT_COUNT_ERROR",
       );
     }
   }
@@ -1605,7 +1603,7 @@ export class projectRepository {
       throw new ServiceError(
         "Error searching technologies",
         400,
-        "TECHNOLOGY_SEARCH_ERROR"
+        "TECHNOLOGY_SEARCH_ERROR",
       );
     }
   }
@@ -1624,7 +1622,7 @@ export class projectRepository {
       throw new ServiceError(
         "Error counting search results",
         400,
-        "TECHNOLOGY_COUNT_ERROR"
+        "TECHNOLOGY_COUNT_ERROR",
       );
     }
   }
@@ -1653,7 +1651,7 @@ export class projectRepository {
       throw new ServiceError(
         "Error getting featured projects",
         400,
-        "PROJECT_GET_ERROR"
+        "PROJECT_GET_ERROR",
       );
     }
   }
@@ -1669,7 +1667,7 @@ export class projectRepository {
       throw new ServiceError(
         "Error counting featured projects",
         400,
-        "PROJECT_COUNT_ERROR"
+        "PROJECT_COUNT_ERROR",
       );
     }
   }
@@ -1686,7 +1684,7 @@ export class projectRepository {
       throw new ServiceError(
         "Error counting projects by status",
         400,
-        "PROJECT_COUNT_ERROR"
+        "PROJECT_COUNT_ERROR",
       );
     }
   }
@@ -1694,7 +1692,7 @@ export class projectRepository {
   async getProjectsByStatus(
     status: ProjectStatus,
     skip: number,
-    take: number
+    take: number,
   ): Promise<Project[]> {
     try {
       return await this.prisma.project.findMany({
@@ -1720,7 +1718,7 @@ export class projectRepository {
       throw new ServiceError(
         "Error getting projects by status",
         400,
-        "PROJECT_GET_ERROR"
+        "PROJECT_GET_ERROR",
       );
     }
   }
@@ -1728,7 +1726,7 @@ export class projectRepository {
   async getTechnologiesByCategory(
     category: string,
     skip: number,
-    take: number
+    take: number,
   ): Promise<Technology[]> {
     try {
       return await this.prisma.technology.findMany({
@@ -1756,7 +1754,7 @@ export class projectRepository {
       throw new ServiceError(
         "Error getting technologies by category",
         400,
-        "TECHNOLOGY_GET_ERROR"
+        "TECHNOLOGY_GET_ERROR",
       );
     }
   }
@@ -1775,7 +1773,7 @@ export class projectRepository {
       throw new ServiceError(
         "Error getting technologies count by category",
         400,
-        "TECHNOLOGY_GET_ERROR"
+        "TECHNOLOGY_GET_ERROR",
       );
     }
   }
@@ -1821,7 +1819,7 @@ export class projectRepository {
       throw new ServiceError(
         "Error getting categories",
         400,
-        "TECHNOLOGY_GET_ERROR"
+        "TECHNOLOGY_GET_ERROR",
       );
     }
   }
@@ -1848,7 +1846,7 @@ export class projectRepository {
       throw new ServiceError(
         "Error getting categories",
         400,
-        "TECHNOLOGY_GET_ERROR"
+        "TECHNOLOGY_GET_ERROR",
       );
     }
   }

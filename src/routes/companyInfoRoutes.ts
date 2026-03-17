@@ -30,15 +30,15 @@ export class companyInfoRoutes {
 
     this.router.post(
       "/switch-lang",
-      requireAuthv2,
-      requireRole(["ADMIN"]),
+      // requireAuthv2,
+      // requireRole(["ADMIN", "USER"]),
 
       this.controller.SwitchLang.bind(this.controller),
     );
 
     this.router.get(
       "/current-lang",
-      requireAuthv2,
+      // requireAuthv2,
 
       this.controller.currentLang.bind(this.controller),
     );

@@ -1,16 +1,20 @@
-import prisma from "../config/prisma"
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../lib/jwt"
+import prisma from "../config/prisma";
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+} from "../lib/jwt";
 
 export class TokenService {
   // Use 24 hours for access tokens, 30 days for refresh tokens
-  static ACCESS_TOKEN_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
-  static REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
+  static ACCESS_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+  static REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
   static async generateTokenPair(
     userId: string,
     userAgent?: string,
     ipAddress?: string,
-    needAvatar: boolean = false
+    needAvatar: boolean = false,
   ) {
     try {
       // Get user data for access token
@@ -24,11 +28,11 @@ export class TokenService {
             },
           },
         },
-      })
+      });
 
-      if (!user) throw new Error("User not found")
+      if (!user) throw new Error("User not found");
 
-      let avatarUrl: string = ""
+      let avatarUrl: string = "";
       if (needAvatar) {
         const avatar = await prisma.profile.findUnique({
           where: {
@@ -41,8 +45,8 @@ export class TokenService {
               },
             },
           },
-        })
-        avatarUrl = avatar?.avatar?.url || ""
+        });
+        avatarUrl = avatar?.avatar?.url || "";
       }
 
       // Generate tokens (assumes these functions create tokens but don't persist expiration themselves)
@@ -55,24 +59,26 @@ export class TokenService {
         deviceVerification: true,
         profileId: user.profile?.id,
         profileComplete: user.profile?.isProfileComplete,
-        avatarUrl: avatarUrl || ""
-      })
+        avatarUrl: avatarUrl || "",
+      });
 
-      const refreshToken = generateRefreshToken(userId)
+      const refreshToken = generateRefreshToken(userId);
 
       const session = await prisma.session.create({
         data: {
           userId,
           token: accessToken,
           refreshToken,
-          refreshTokenExpiresAt: new Date(Date.now() + TokenService.REFRESH_TOKEN_TTL_MS), // 30 days
+          refreshTokenExpiresAt: new Date(
+            Date.now() + TokenService.REFRESH_TOKEN_TTL_MS,
+          ), // 30 days
           userAgent: userAgent || "",
           ipAddress: ipAddress || "",
           deviceVerification: true,
           expiresAt: new Date(Date.now() + TokenService.ACCESS_TOKEN_TTL_MS), // access token expires at (24 hours)
           isActive: true,
         },
-      })
+      });
 
       return {
         accessToken,
@@ -80,19 +86,19 @@ export class TokenService {
         sessionId: session.id,
         expiresIn: Math.floor(TokenService.ACCESS_TOKEN_TTL_MS / 1000), // in seconds
         refreshExpiresIn: Math.floor(TokenService.REFRESH_TOKEN_TTL_MS / 1000), // in seconds
-      }
+      };
     } catch (error) {
-      console.error("Generate token pair error:", error)
-      return null
+      console.error("Generate token pair error:", error);
+      return null;
     }
   }
 
   static async refreshAccessToken(refreshToken: string) {
     try {
       // Verify refresh token (your verifyRefreshToken should return payload with userId or null on fail)
-      const decoded = verifyRefreshToken(refreshToken)
+      const decoded = verifyRefreshToken(refreshToken);
       if (!decoded) {
-        return { error: "Invalid refresh token" }
+        return { error: "Invalid refresh token" };
       }
 
       // Find active session for this refresh token
@@ -117,10 +123,10 @@ export class TokenService {
             },
           },
         },
-      })
+      });
 
       if (!session) {
-        throw new Error("Refresh token not found or expired")
+        throw new Error("Refresh token not found or expired");
       }
 
       // Generate new access token
@@ -133,7 +139,7 @@ export class TokenService {
         deviceVerification: session.deviceVerification,
         profileId: session.user.profile?.id,
         profileComplete: session.user.profile?.isProfileComplete,
-      })
+      });
 
       // If you want to rotate refresh tokens uncomment this and use generateRefreshToken:
       // const newRefreshToken = generateRefreshToken(session.user.id)
@@ -146,10 +152,12 @@ export class TokenService {
           // If rotating refresh tokens, set refreshToken: newRefreshToken
           // refreshToken: newRefreshToken,
           // extend refresh token expiry only if you want sliding expiration (optional)
-          refreshTokenExpiresAt: new Date(Date.now() + TokenService.REFRESH_TOKEN_TTL_MS), // extend 30 days from now (optional)
+          refreshTokenExpiresAt: new Date(
+            Date.now() + TokenService.REFRESH_TOKEN_TTL_MS,
+          ), // extend 30 days from now (optional)
           expiresAt: new Date(Date.now() + TokenService.ACCESS_TOKEN_TTL_MS), // new access token expiry (24 hours)
         },
-      })
+      });
 
       return {
         accessToken: newAccessToken,
@@ -161,10 +169,10 @@ export class TokenService {
           email: session.user.email,
           role: session.user.role,
         },
-      }
+      };
     } catch (error) {
-      console.error("Refresh token error:", error)
-      return { error: "Failed to refresh token" }
+      console.error("Refresh token error:", error);
+      return { error: "Failed to refresh token" };
     }
   }
 
@@ -173,11 +181,11 @@ export class TokenService {
       await prisma.session.updateMany({
         where: { refreshToken },
         data: { isActive: false },
-      })
-      return { success: true }
+      });
+      return { success: true };
     } catch (error) {
-      console.error("Logout error:", error)
-      throw new Error("Failed to logout")
+      console.error("Logout error:", error);
+      throw new Error("Failed to logout");
     }
   }
 
@@ -186,11 +194,11 @@ export class TokenService {
       await prisma.session.updateMany({
         where: { userId },
         data: { isActive: false },
-      })
-      return { success: true }
+      });
+      return { success: true };
     } catch (error) {
-      console.error("Logout all devices error:", error)
-      return { error: "Failed to logout all devices" }
+      console.error("Logout all devices error:", error);
+      return { error: "Failed to logout all devices" };
     }
   }
 
@@ -203,12 +211,11 @@ export class TokenService {
             { isActive: false },
           ],
         },
-      })
-      console.log(`Cleaned ${result.count} expired sessions`)
-      return result.count
+      });
+      return result.count;
     } catch (error) {
-      console.error("Clean expired tokens error:", error)
-      return 0
+      console.error("Clean expired tokens error:", error);
+      return 0;
     }
   }
 }

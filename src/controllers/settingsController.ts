@@ -7,9 +7,9 @@ export class companyInfoController {
 
   async createSettings(req: Request, res: Response, next: NextFunction) {
     try {
-      const lang = req.lang as "AR" | "EN" || "EN";
+      const lang = (req.lang as "AR" | "EN") || "EN";
       const body = req.body;
-      const newSettings = await this.logic.createSettings( lang,{
+      const newSettings = await this.logic.createSettings(lang, {
         data: body,
         logo:
           Array.isArray(req.files) && req.files
@@ -37,7 +37,7 @@ export class companyInfoController {
       next(error);
     }
   }
-    async SwitchLang(req: Request, res: Response, next: NextFunction) {
+  async SwitchLang(req: Request, res: Response, next: NextFunction) {
     try {
       const { lang } = req.body;
       if (!["EN", "AR"].includes(lang)) {
@@ -99,23 +99,14 @@ export class companyInfoController {
 
   async updateSettings(req: Request, res: Response, next: NextFunction) {
     try {
-      const lang = req.lang as "AR" | "EN" || "EN";
+      const lang = (req.lang as "AR" | "EN") || "EN";
 
       const { id } = req.params;
       const body = req.body;
 
       const { LogoState, ...CompanyInfo } = body;
-      console.log(
-        id, {
-        CompanyInfo,
-        LogoState,
-        logo:
-          Array.isArray(req.files) && req.files
-            ? req.files[0]?.buffer
-            : undefined,
-      }
-      )
-      const updatedSettings = await this.logic.updateSettings( lang , id, {
+
+      const updatedSettings = await this.logic.updateSettings(lang, id, {
         CompanyInfo,
         LogoState,
         logo:

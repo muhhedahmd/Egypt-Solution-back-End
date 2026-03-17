@@ -1,7 +1,7 @@
 import { NextFunction, Response, Request } from "express";
 import { ServicesLogic } from "../services/service-parts/serices.logic";
 import { ServiceError, ServiceNotFoundError } from "../errors/services.error";
-import {TeamMemberTranslation } from "@prisma/client"
+import { TeamMemberTranslation } from "@prisma/client";
 
 export class ServicesController {
   private servicesLogic: ServicesLogic;
@@ -11,16 +11,17 @@ export class ServicesController {
 
   // Add methods to handle services-related operations here // pagniate
   async getAllServices(req: Request, res: Response, next: NextFunction) {
-
     try {
-      const { skip, take  , Active , isFeatured , langEnd} = req.query;
-      const lang : "AR" | "EN" = langEnd ? langEnd as "AR" | "EN" : (req.lang as "AR" | "EN") || "EN";
+      const { skip, take, Active, isFeatured, langEnd } = req.query;
+      const lang: "AR" | "EN" = langEnd
+        ? (langEnd as "AR" | "EN")
+        : (req.lang as "AR" | "EN") || "EN";
 
-      const services = await this.servicesLogic.getAllServices( lang , {
+      const services = await this.servicesLogic.getAllServices(lang, {
         skip: Number(skip) || 0,
         take: Number(take) || 10,
-        Active : Active === "true" ? true : false,
-        isFeatured : isFeatured === "true" ? true : false
+        Active: Active === "true" ? true : false,
+        isFeatured: isFeatured === "true" ? true : false,
       });
       if (!services) throw new ServiceNotFoundError("error get services");
 
@@ -35,12 +36,11 @@ export class ServicesController {
   }
 
   async getServiceById(req: Request, res: Response, next: NextFunction) {
-    
     try {
       const { id } = req.params;
-      const lang : "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
+      const lang: "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
       if (!id) throw new ServiceNotFoundError("id is required");
-      const service = await this.servicesLogic.getServiceById(lang ,id);
+      const service = await this.servicesLogic.getServiceById(lang, id);
       return res.json({
         data: service,
         message: "service fetched successfully",
@@ -49,7 +49,7 @@ export class ServicesController {
       next(error);
     }
   }
-  async getServiceBySlug (req: Request, res: Response, next: NextFunction) {
+  async getServiceBySlug(req: Request, res: Response, next: NextFunction) {
     try {
       const { slug } = req.params;
       const service = await this.servicesLogic.getServiceBySlug(slug);
@@ -83,19 +83,23 @@ export class ServicesController {
   async createService(req: Request, res: Response, next: NextFunction) {
     try {
       const data = req.body;
-      const lang : "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
-     
-      const newService = await this.servicesLogic.createService( lang, {
+      const lang: "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
+
+      const newService = await this.servicesLogic.createService(lang, {
         ...data,
         isActive: data.isActive === "true" ? true : false,
         isFeatured: data.isFeatured === "true" ? true : false,
         order: Number(data.order) || 0,
         icon: data.icon || "",
- 
-   
-         image:  Array.isArray(req.files) && req.files.length > 0 ? req.files.find((f)=> f.fieldname === "image")?.buffer  : null,
-        iconImage:  Array.isArray(req.files) && req.files.length > 0 ? req.files.find((f)=> f.fieldname === "iconImage")?.buffer : null
 
+        image:
+          Array.isArray(req.files) && req.files.length > 0
+            ? req.files.find((f) => f.fieldname === "image")?.buffer
+            : null,
+        iconImage:
+          Array.isArray(req.files) && req.files.length > 0
+            ? req.files.find((f) => f.fieldname === "iconImage")?.buffer
+            : null,
       });
 
       return res.status(201).json({
@@ -109,7 +113,7 @@ export class ServicesController {
   async updateService(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const lang : "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
+      const lang: "AR" | "EN" = (req.lang as "AR" | "EN") || "EN";
       const serviceData = req.body;
       const data = {
         ...serviceData,
@@ -125,7 +129,7 @@ export class ServicesController {
           | undefined,
       };
 
-      const updatedService = await this.servicesLogic.updateService( lang , {
+      const updatedService = await this.servicesLogic.updateService(lang, {
         ...data,
         isActive: data.isActive === "true" ? true : false,
         isFeatured: data.isFeatured === "true" ? true : false,
@@ -145,7 +149,6 @@ export class ServicesController {
   async deleteService(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      console.log("id3m[fom3[mf]] ", id);
       if (!id) throw new ServiceNotFoundError("id is required");
       const deletedService = await this.servicesLogic.deleteService(id);
       if (!deletedService)
@@ -163,8 +166,11 @@ export class ServicesController {
     try {
       const { q } = req.query;
       if (!q || typeof q !== "string")
-        throw new ServiceError("search query is required" , 400, "SEARCH_QUERY_REQUIRED");
-      console.log("q", q);
+        throw new ServiceError(
+          "search query is required",
+          400,
+          "SEARCH_QUERY_REQUIRED",
+        );
       const services = await this.servicesLogic.Search(q);
       if (!services) throw new ServiceNotFoundError("error searching services");
       return res.json({

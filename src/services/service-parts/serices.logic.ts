@@ -19,7 +19,7 @@ import {
 export class ServicesLogic {
   constructor(
     private repository: ServicesRepository,
-    private validator: ServicesValidator
+    private validator: ServicesValidator,
   ) {}
 
   async isValidOrder({ order }: { order: number }) {
@@ -30,7 +30,7 @@ export class ServicesLogic {
   }
   async getAllServices(
     lang: "EN" | "AR" = "EN",
-    params: PaginationParams & { Active: boolean; isFeatured: boolean }
+    params: PaginationParams & { Active: boolean; isFeatured: boolean },
   ): Promise<PaginatedResponse<IService>> {
     const skip = params.skip || 0;
     const take = params.take || 10;
@@ -57,9 +57,6 @@ export class ServicesLogic {
   }
 
   async getServiceById(lang: "EN" | "AR" = "EN", id: string): Promise<any> {
-    console.log({
-      id,
-    });
     this.validator.validateId(id);
     const service = await this.repository.findById(lang, id);
     if (!service) {
@@ -73,7 +70,7 @@ export class ServicesLogic {
   }
 
   async getServiceBySlug(
-    slug: string
+    slug: string,
   ): Promise<Awaited<ReturnType<typeof this.repository.findBySlug>>> {
     this.validator.validateSlug(slug);
     const service = await this.repository.findBySlug(slug);
@@ -81,7 +78,7 @@ export class ServicesLogic {
       throw new ServiceError(
         `service with slug not found ${slug} `,
         404,
-        "SERVICE_NOT_FOUND"
+        "SERVICE_NOT_FOUND",
       );
     }
     return service;
@@ -89,7 +86,7 @@ export class ServicesLogic {
 
   async createService(
     lang: "EN" | "AR",
-    data: CreateServiceDTO
+    data: CreateServiceDTO,
   ): Promise<Awaited<ReturnType<typeof this.repository.create>>> {
     const valid = this.validator.validateCreate(data);
     const slug = slugify(data.name + randomUUID().substring(0, 8), {
@@ -120,30 +117,25 @@ export class ServicesLogic {
       throw new ServiceError(
         "search query is required",
         400,
-        "SEARCH_QUERY_REQUIRED"
+        "SEARCH_QUERY_REQUIRED",
       );
     const services = await this.repository.SearchService(q, 0, 10);
     if (!services)
       throw new ServiceError(
         "error searching services",
         400,
-        "ERROR_SEARCHING_SERVICES"
+        "ERROR_SEARCHING_SERVICES",
       );
     return services;
   }
   async updateService(lang: "EN" | "AR" = "EN", data: updateService) {
-
-    console.log( { 
-      lang , 
-      data 
-    })
     this.validator.validateUpdate(data);
     const updatedService = await this.repository.update(lang, data);
     if (!updatedService)
       throw new ServiceError(
         "error updating service",
         400,
-        "ERROR_UPDATING_SERVICE"
+        "ERROR_UPDATING_SERVICE",
       );
     const { Image, ...rest } = updatedService;
     return { Image, ...rest };

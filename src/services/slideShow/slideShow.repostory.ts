@@ -1034,7 +1034,6 @@ export class slideShowRepository {
         where: { id: attachId },
       });
 
-      console.log(findAttach);
       if (!findAttach) {
         throw new ServiceError(
           "Attach entity not found id: " + attachId,
@@ -1181,7 +1180,6 @@ export class slideShowRepository {
         attachType,
         prismaTouse,
       );
-      console.log(findTheAttachedTable);
 
       if (!findTheAttachedTable) {
         throw new ServiceError(
@@ -1241,7 +1239,6 @@ export class slideShowRepository {
       //   attachType,
       //   prismaTouse
       // );
-      // console.log( findTheAttachedTable)
 
       // if (!findTheAttachedTable) {
       //   throw new ServiceError(
@@ -1381,7 +1378,6 @@ export class slideShowRepository {
           timeout: 20000,
         },
       );
-      console.log(transiction);
       return transiction;
     } catch (error) {
       console.error(error);

@@ -59,7 +59,6 @@ export class HeroLogic {
   }: {
     lang: "AR" | "EN";
   }): Promise<Awaited<ReturnType<typeof this.repository.findActiveHero>>> {
-    console.log(lang , "lang lang")
     const hero = await this.repository.findActiveHero(lang);
     if (!hero) {
       throw new HeroError("No active hero found", 404, "NO_ACTIVE_HERO");

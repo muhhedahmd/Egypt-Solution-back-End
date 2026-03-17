@@ -54,7 +54,7 @@ export class userService {
           name: name,
           email: email,
           password: hashedpassword,
-          role: role ,
+          role: role,
           profile: {
             create: {},
           },
@@ -92,7 +92,7 @@ export class userService {
       }
       const isPasswordCorrect = await bcrypt.compare(
         password,
-        finduser.password
+        finduser.password,
       );
       if (!isPasswordCorrect) {
         return "Incorrect password";
@@ -139,15 +139,13 @@ export class userService {
         },
       });
 
-      // console.log("User found:", user)
-
       if (!user) return { success: false, error: "User not found" };
 
       // if (Method === "email") {
 
       //     if (!user.email) return { success: false, error: "Email not found" }
 
-      //     // console.log("Sending OTP to email:", user.email)
+      //     // ("Sending OTP to email:", user.email)
 
       //     // Add timeout wrapper
       //     const otpPromise = await supabaseAdmin.auth.signInWithOtp({
@@ -159,13 +157,10 @@ export class userService {
       //         }
       //     })
 
-      //     // console.log("OTP response:", otpPromise)
-
       //     return { success: true, data: otpPromise }
       // }
 
       // if (Method === "phone" && user.profile?.phone) {
-      //     // console.log("Sending OTP to phone:", user.profile.phone)
 
       //     const otpPromise = await supabaseAdmin.auth.signInWithOtp({
       //         phone: user.profile.phone,
@@ -174,8 +169,6 @@ export class userService {
       //             shouldCreateUser: false
       //         }
       //     })
-
-      //     // console.log("OTP response:", otpPromise)
 
       //     return { success: true, data: otpPromise }
       // }
@@ -192,7 +185,7 @@ export class userService {
   static async verifyOtp(
     otp: string,
     Method: "phone" | "email",
-    userId: string
+    userId: string,
   ) {
     try {
       if (!userId) return "User not found";
@@ -360,7 +353,7 @@ export class userService {
                   data: imageUpload?.data,
                   height: imageUpload?.height,
                   width: imageUpload?.width,
-                  imageType : "PROFILE" as ImageType
+                  imageType: "PROFILE" as ImageType,
 
                   // type: "PROFILE_PICTURE"
                 });
@@ -424,7 +417,7 @@ export class userService {
                   imageUpload = await UploadImage(avatar);
                   const insert = await AssignImageToDBImage({
                     ...imageUpload,
-                        imageType : "PROFILE" as ImageType
+                    imageType: "PROFILE" as ImageType,
 
                     // type: "PROFILE_PICTURE"
                   });
@@ -468,7 +461,7 @@ export class userService {
         },
         {
           timeout: 60000,
-        }
+        },
       );
 
       return transaction;
@@ -527,7 +520,7 @@ export class userService {
                         fileHash: "_google",
                         alt: "_google",
                         url: image,
-                        type : "_google",
+                        type: "_google",
                         imageType: "PROFILE",
                       },
                     },
@@ -607,7 +600,7 @@ export class userService {
               imageUpload = await UploadImage(avatar);
               insert = await AssignImageToDBImage({
                 ...imageUpload,
-                imageType : "PROFILE" as ImageType
+                imageType: "PROFILE" as ImageType,
                 // type: "PROFILE_PICTURE"
               });
             }
@@ -679,7 +672,6 @@ export class userService {
                   },
                 });
               }
-              console.log("isIn", dateOfBirth, role, gender);
               await tx.profile.update({
                 where: {
                   userId,
@@ -729,9 +721,8 @@ export class userService {
         },
         {
           timeout: 60000,
-        }
+        },
       );
-      console.log(tx);
       return tx;
     } catch (error: any) {
       console.log(error);

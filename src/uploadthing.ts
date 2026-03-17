@@ -13,9 +13,7 @@ export const uploadRouter = {
       maxFileSize: "4MB",
       maxFileCount: 1,
     },
-  }).onUploadComplete((data) => {
-    console.log("upload completed", data);
-  }),
+  }).onUploadComplete((data) => {}),
 } satisfies FileRouter;
 
 export type OurFileRouter = typeof uploadRouter;

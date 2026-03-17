@@ -31,14 +31,12 @@ export async function generateBlurhash_with_size(buffer: Buffer): Promise<{
       info.width,
       info.height,
       4,
-      4
+      4,
     ),
   };
 }
 
 export const UploadImage = async (logo: Buffer | null, name?: string) => {
-  
-
   let logoUpload: {
     blurhash: string;
     width: number;
@@ -74,10 +72,11 @@ export const UploadImage = async (logo: Buffer | null, name?: string) => {
     }
   }
 };
-export const UploadImageWithoutBlurHAsh = async (logo: Buffer | null, name?: string) => {
-  
+export const UploadImageWithoutBlurHAsh = async (
+  logo: Buffer | null,
+  name?: string,
+) => {
   let logoUpload: {
-   
     data: UploadFileResult[];
   } | null = null;
   if (logo) {
@@ -116,7 +115,7 @@ export const AssignImageToDBImage = async (
         imageType: ImageType;
       }
     | undefined,
-  txInstance?: txInstance
+  txInstance?: txInstance,
 ) => {
   if (!data) throw new Error("image Data error");
   const prismaTx = txInstance || prisma;
@@ -218,16 +217,10 @@ export const deleteImageById = async (
   txInstance?: Omit<
     PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
     "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
-  >
+  >,
 ) => {
   try {
     const prismaToUse = txInstance ?? prisma;
-    console.log(
-      "Deleting image with ID:",
-      id,
-      "using txInstance:",
-      !!txInstance
-    );
     const image = await prismaToUse.image.findUnique({
       where: { id },
     });
@@ -236,7 +229,6 @@ export const deleteImageById = async (
       where: { id },
     });
     if (deletedImage.key) await utapi.deleteFiles(deletedImage.key);
-    console.log("Deleted image:", deletedImage);
     return deletedImage;
   } catch (error) {
     console.log(error);

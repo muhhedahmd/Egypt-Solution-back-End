@@ -23,7 +23,7 @@ export class ServicesRepository {
     skip: number,
     take: number,
     Active: boolean,
-    isFeatured: boolean
+    isFeatured: boolean,
   ) {
     const _Where: Record<string, boolean> = {};
     if (Active) _Where.isActive = true;
@@ -82,7 +82,6 @@ export class ServicesRepository {
   }
 
   async isValidOrder({ order }: { order: number }) {
-    console.log({ order });
     try {
       const find = await this.prisma.service.findFirst({
         where: { order },
@@ -149,13 +148,13 @@ export class ServicesRepository {
     }
   }
 
-  async findBySlug( slug: string) {
+  async findBySlug(slug: string) {
     try {
       const findedService = await this.prisma.service.findUnique({
         where: { slug },
         include: {
           image: true,
-          serviceTranslation:  true ,
+          serviceTranslation: true,
           projects: {
             include: {
               image: true,
@@ -186,14 +185,14 @@ export class ServicesRepository {
       throw new ServiceError(
         "Error finding service",
         400,
-        "SERVICE_SEARCH_ERROR"
+        "SERVICE_SEARCH_ERROR",
       );
     }
   }
   async SearchService(
     searchTerm: string,
     skip: number,
-    take: number
+    take: number,
   ): Promise<interFaceSearchService[]> {
     try {
       const Services = await this.prisma.service.findMany({
@@ -241,7 +240,7 @@ export class ServicesRepository {
       throw new ServiceError(
         "Error searching service",
         400,
-        "SERVICE_SEARCH_ERROR"
+        "SERVICE_SEARCH_ERROR",
       );
     }
   }
@@ -265,7 +264,7 @@ export class ServicesRepository {
               height: createImage.height,
               data: createImage.data,
             },
-            tx
+            tx,
           );
           if (!imageToDB) throw new Error("error create imageToDB");
 
@@ -273,7 +272,7 @@ export class ServicesRepository {
           if (!iconUrl && data.iconImage) {
             const createIconImage = await UploadImageWithoutBlurHAsh(
               data.iconImage,
-              data.name + "icon"
+              data.name + "icon",
             );
             if (createIconImage)
               iconUrl = createIconImage.data?.[0]?.data?.ufsUrl;
@@ -320,7 +319,7 @@ export class ServicesRepository {
         {
           timeout: 20000,
           maxWait: 5000,
-        }
+        },
       );
       return transication;
     } catch (error) {
@@ -371,7 +370,7 @@ export class ServicesRepository {
 
             const createImage = await UploadImage(
               data.image,
-              data.name || "update"
+              data.name || "update",
             );
 
             if (!createImage) throw new Error("error upload image");
@@ -384,7 +383,7 @@ export class ServicesRepository {
                 height: createImage.height,
                 data: createImage.data,
               },
-              prismaTx
+              prismaTx,
             );
 
             if (!imageToDB) throw new Error("error create imageToDB");
@@ -468,7 +467,7 @@ export class ServicesRepository {
         {
           timeout: 20000,
           maxWait: 5000,
-        }
+        },
       );
 
       return transaction;
@@ -495,7 +494,7 @@ export class ServicesRepository {
         {
           timeout: 20000, // (milliseconds)
           maxWait: 5000, // default: 2000
-        }
+        },
       );
       return transaction;
     } catch (error) {

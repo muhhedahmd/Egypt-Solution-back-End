@@ -44,8 +44,8 @@ export class ServicesValidator {
   validateCreate(data: unknown): CreateServiceDTO {
     try {
       return this.createSchema.parse(data);
-    } catch (error : any) {
-      if(error instanceof z.ZodError){
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
         throw new ServiceValidationError(error.issues[0].message);
       }
       throw new ServiceValidationError("Invalid service data");
@@ -54,7 +54,6 @@ export class ServicesValidator {
 
   validateUpdate(data: unknown) {
     try {
-      console.log(data);
       return this.updateSchema.parse(data);
     } catch (error) {
       throw new ServiceValidationError("Invalid update data");

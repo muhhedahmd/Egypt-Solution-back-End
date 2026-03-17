@@ -7,5 +7,3 @@ const outputPath = path.resolve(__dirname, "../swagger.json");
 
 const freshDocs = swaggerJsdoc(swaggerOptions);
 writeFileSync(outputPath, JSON.stringify(freshDocs, null, 2));
-
-console.log(`Swagger documentation generated at ${outputPath}`);
